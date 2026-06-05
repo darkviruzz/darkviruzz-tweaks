@@ -1,0 +1,11 @@
+# Build artifact (generated for releases)
+module.zip
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+node_modules/

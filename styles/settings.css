@@ -1,0 +1,23 @@
+/*
+ * Per-feature category headers injected into the Configure Settings window
+ * (see scripts/lib/settings-categories.js). Keeps all of this module's settings
+ * in one tab, grouped by feature.
+ */
+
+.dt-category {
+  margin: 0.85rem 0 0.35rem;
+}
+
+.dt-category__title {
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #888);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.dt-category__hint {
+  margin: 2px 0 0;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.8;
+}

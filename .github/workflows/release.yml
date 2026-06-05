@@ -1,0 +1,51 @@
+name: Release Module
+
+# Push a version tag (e.g. `git tag v1.1.0 && git push origin v1.1.0`) to build the
+# module zip and publish a GitHub release with module.json + module.zip attached.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Inject version and release URLs into module.json
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          tmp="$(mktemp)"
+          jq \
+            --arg v "$VERSION" \
+            --arg dl "https://github.com/${REPO}/releases/download/${TAG}/module.zip" \
+            --arg mf "https://github.com/${REPO}/releases/latest/download/module.json" \
+            '.version = $v | .download = $dl | .manifest = $mf' \
+            module.json > "$tmp"
+          mv "$tmp" module.json
+          echo "----- module.json -----"
+          cat module.json
+
+      - name: Build module.zip
+        run: zip -r module.zip module.json scripts styles lang README.md LICENSE
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          files: |
+            module.json
+            module.zip
+          fail_on_unmatched_files: true

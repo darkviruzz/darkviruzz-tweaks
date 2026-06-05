@@ -1,0 +1,7 @@
+# Normalise line endings to LF for all text files (cross-platform module repo).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.zip binary

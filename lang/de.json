@@ -1,0 +1,15 @@
+{
+  "DT.Categories.AbilityScoreProminence.Label": "Fähigkeitswert-Prominenz (D&D 5e)",
+  "DT.Categories.AbilityScoreProminence.Hint": "Anzeige-Anpassungen für Fähigkeitswerte auf dnd5e-Charakterbögen. Pro Benutzer.",
+  "DT.Settings.AbilitySwapScoreAndMod.Name": "Fähigkeitswert groß anzeigen",
+  "DT.Settings.AbilitySwapScoreAndMod.Hint": "Verschiebt den Wert direkt unter den Fähigkeitsnamen und zeigt ihn groß; der Modifikator rutscht darunter und wird klein angezeigt.",
+  "DT.Settings.AbilityExpandedRollTargets.Name": "Wert / Modifikator zum Würfeln anklicken",
+  "DT.Settings.AbilityExpandedRollTargets.Hint": "Ermöglicht das Anklicken von Fähigkeitswert oder Modifikator (nicht nur des Namens), um eine Attributsprobe zu würfeln.",
+
+  "DT.Categories.Pause.Label": "Pause",
+  "DT.Categories.Pause.Hint": "Verhalten der Spiel-Pause. Welt-Ebene (von der Spielleitung gesetzt).",
+  "DT.Settings.UnpauseOnWorldLoad.Name": "Beim Laden der Welt entpausen (SL)",
+  "DT.Settings.UnpauseOnWorldLoad.Hint": "Welten starten normalerweise pausiert. Wenn aktiv, wird das Spiel automatisch entpausiert, sobald die Spielleitung die Welt lädt (gilt beim nächsten Welt-Start / Serverstart). Hinweis: entpausiert auch, wenn eine SL die Seite bei pausiertem Spiel neu lädt.",
+
+  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
+}

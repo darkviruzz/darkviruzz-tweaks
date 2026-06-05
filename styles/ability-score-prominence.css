@@ -1,0 +1,36 @@
+/*
+ * Feature: Ability Score Prominence
+ * Applied when the per-user setting adds `.dt-asp-swap` to the dnd5e actor-sheet root.
+ *
+ * 1. Reorder each tile: ability name -> score -> modifier.
+ *    `order` is forced because the dnd5e sheet sets its own order on `.score` for the
+ *    top ("flipped") row and inside its responsive container query.
+ * 2. Size emphasis: score large, modifier small.
+ *
+ * Sizes are conservative because the tiles use a fixed-size shield background; tweak
+ * the font-size values if your theme needs different sizing.
+ */
+
+/* 1. Reorder */
+.dt-asp-swap .ability-scores .ability-score .label { order: 0 !important; }
+.dt-asp-swap .ability-scores .ability-score .score { order: 1 !important; }
+.dt-asp-swap .ability-scores .ability-score .mod   { order: 2 !important; }
+
+/* 2. Size emphasis */
+.dt-asp-swap .ability-scores .ability-score .score,
+.dt-asp-swap .ability-scores .ability-score .score > input {
+  font-size: var(--font-size-16, 16px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dt-asp-swap .ability-scores .ability-score .mod,
+.dt-asp-swap .ability-scores .ability-score .mod > button {
+  font-size: var(--font-size-11, 11px);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Expanded roll targets: clickable score / modifier. */
+.dt-asp-rollable { cursor: pointer; }
+.dt-asp-rollable:hover { text-shadow: 0 0 6px var(--dnd5e-color-gold, currentColor); }
