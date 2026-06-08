@@ -6,10 +6,5 @@
   "DT.Settings.AbilityExpandedRollTargets.Name": "Wert / Modifikator zum Würfeln anklicken",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Ermöglicht das Anklicken von Fähigkeitswert oder Modifikator (nicht nur des Namens), um eine Attributsprobe zu würfeln.",
 
-  "DT.Categories.Pause.Label": "Pause",
-  "DT.Categories.Pause.Hint": "Verhalten der Spiel-Pause. Welt-Ebene (von der Spielleitung gesetzt).",
-  "DT.Settings.UnpauseOnWorldLoad.Name": "Beim Laden der Welt entpausen",
-  "DT.Settings.UnpauseOnWorldLoad.Hint": "Welten starten normalerweise pausiert. Wenn aktiv, entpausiert der erste Client, der sich verbindet (SL oder Spieler), das Spiel automatisch. Gilt beim nächsten Welt-Start / Serverstart. Hinweis: entpausiert auch, wenn jemand die Seite neu lädt, während das Spiel absichtlich pausiert ist.",
-
-  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
+"DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
 }

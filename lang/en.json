@@ -6,10 +6,5 @@
   "DT.Settings.AbilityExpandedRollTargets.Name": "Click Score / Modifier to Roll",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Lets you click the ability score or modifier (not just the ability name) to roll an ability check.",
 
-  "DT.Categories.Pause.Label": "Pause",
-  "DT.Categories.Pause.Hint": "Game pause behaviour. World-level (set by the GM).",
-  "DT.Settings.UnpauseOnWorldLoad.Name": "Unpause When World Loads",
-  "DT.Settings.UnpauseOnWorldLoad.Hint": "Worlds normally start paused. When enabled, the first client to connect (GM or player) automatically unpauses the game. Applies on the next world load / server start. Note: also unpauses if anyone reloads the page while the game is intentionally paused.",
-
-  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
+"DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }

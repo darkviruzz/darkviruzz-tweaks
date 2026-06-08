@@ -150,4 +150,3 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
 | Feature | id | File | System | Scope | Settings (default) |
 |---|---|---|---|---|---|
 | Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off), `abilityExpandedRollTargets` (off) |
-| Unpause When World Loads | `unpauseOnLoad` | `features/unpause-on-load.js` | any | world | `unpauseOnWorldLoad` (off) |
