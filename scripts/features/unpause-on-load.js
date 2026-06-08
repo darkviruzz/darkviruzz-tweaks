@@ -3,16 +3,18 @@
  * ---------------------------------------------------
  * Foundry VTT v14+ · any system
  *
- * Foundry always activates a world in the paused state (game.paused = true is set on
- * world activation). When enabled, the first GM to load the world unpauses it and
- * broadcasts the change to everyone. We only act while the game is currently paused,
- * so once unpaused it stays unpaused (normal reloads do nothing).
+ * Foundry always activates a world in the paused state. When enabled, the first client
+ * (GM or player) to connect unpauses the game. GMs use the standard togglePause API;
+ * non-GMs use a direct socket emit that bypasses the GM-only permission check.
  *
  * World-scoped (set by the GM), default off.
  *
- * Caveat: a GM reloading their browser while the game is intentionally paused will also
- * trigger an unpause — there is no reliable client-side signal that distinguishes a
- * fresh world activation from a GM page reload. Pause again afterwards if needed.
+ * Caveat: any page reload while the game is intentionally paused will also trigger an
+ * unpause — there is no reliable client-side signal that separates a fresh world
+ * activation from a reconnect. Pause again afterwards if needed.
+ *
+ * Non-GM path: game.socket.emit('pause', false) is confirmed working in Foundry v14+
+ * but is not an official API and may break in future Foundry updates.
  */
 
 import { MODULE_ID } from "../constants.js";
@@ -20,11 +22,20 @@ import { MODULE_ID } from "../constants.js";
 const KEY = "unpauseOnWorldLoad";
 
 function onReady() {
-  if (!game.user?.isGM) return;
   if (!game.settings.get(MODULE_ID, KEY)) return;
   if (!game.paused) return;
 
-  game.togglePause(false, { broadcast: true });
+  if (game.user?.isGM) {
+    game.togglePause(false, { broadcast: true });
+  } else {
+    // FRAGILE: bypasses GM-only permission check via direct socket emit.
+    // Confirmed working in Foundry v14+; may break if Foundry adds server-side validation.
+    game.data.paused = false;
+    game.socket.emit("pause", false);
+    ui.pause?.render();
+    Hooks.callAll("pauseGame", false);
+  }
+
   console.log(`${MODULE_ID} | unpaused the game on world load (Unpause When World Loads is enabled).`);
 }
 

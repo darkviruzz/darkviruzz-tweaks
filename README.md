@@ -48,20 +48,22 @@ value or opening the ability config. Rolls use `actor.rollAbilityCheck({ ability
 
 ### 2. Unpause When World Loads  ·  *any system · world / GM*
 
-Foundry always starts a world **paused**. This feature can make it come up unpaused.
+Foundry always starts a world **paused**. This feature can make it come up unpaused as soon
+as any player connects — no GM login required.
 
-**How it works:** on the `ready` hook, if enabled, the **GM's** client unpauses the game
-(`game.togglePause(false, { broadcast: true })`) when the game is currently paused, and
-broadcasts it to everyone. Because it only acts while paused, normal reloads don't re-toggle
-it once unpaused.
+**How it works:** on the `ready` hook, if enabled and the game is paused, the connecting
+client unpauses it. GMs use the standard `game.togglePause(false, { broadcast: true })` API.
+Non-GM players use a direct socket emit (`game.socket.emit('pause', false)`) to broadcast
+the state change without GM privileges — confirmed working in Foundry v14+, though it is not
+an official API and could break in a future Foundry update.
 
 | Setting | Default | Effect |
 |---|---|---|
-| **Unpause When World Loads (GM)** | off | Automatically unpauses the game as the GM loads the world. Applies on the next world load / server start. |
+| **Unpause When World Loads** | off | Automatically unpauses the game when the first client (GM or player) connects after a server start. |
 
-> Caveat: a GM reloading the page while the game is *intentionally* paused will also trigger
-> an unpause — Foundry exposes no reliable client-side signal that separates a fresh world
-> activation from a GM page reload. Pause again afterwards if needed.
+> Caveat: anyone reloading the page while the game is *intentionally* paused will also
+> trigger an unpause — there is no reliable client-side signal that separates a fresh world
+> activation from a page reconnect. Pause again afterwards if needed.
 
 ---
 
