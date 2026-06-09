@@ -2,7 +2,7 @@
   "DT.Categories.AbilityScoreProminence.Label": "Fähigkeitswert-Prominenz (D&D 5e)",
   "DT.Categories.AbilityScoreProminence.Hint": "Anzeige-Anpassungen für Fähigkeitswerte auf dnd5e-Charakterbögen. Pro Benutzer.",
   "DT.Settings.AbilitySwapScoreAndMod.Name": "Fähigkeitswert groß anzeigen",
-  "DT.Settings.AbilitySwapScoreAndMod.Hint": "Verschiebt den Wert direkt unter den Fähigkeitsnamen und zeigt ihn groß; der Modifikator rutscht darunter und wird klein angezeigt.",
+  "DT.Settings.AbilitySwapScoreAndMod.Hint": "Macht den Wert zur großen, prominenten Zahl und den Modifikator klein. Auf dem Standard-dnd5e-Bogen rutscht der Wert zusätzlich direkt unter den Fähigkeitsnamen. Gilt auch für den Tidy 5e Character Sheet (nicht klassisch).",
   "DT.Settings.AbilityExpandedRollTargets.Name": "Wert / Modifikator zum Würfeln anklicken",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Ermöglicht das Anklicken von Fähigkeitswert oder Modifikator (nicht nur des Namens), um eine Attributsprobe zu würfeln.",
 

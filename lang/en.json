@@ -2,7 +2,7 @@
   "DT.Categories.AbilityScoreProminence.Label": "Ability Score Prominence (D&D 5e)",
   "DT.Categories.AbilityScoreProminence.Hint": "Display tweaks for ability scores on dnd5e actor sheets. Per-user.",
   "DT.Settings.AbilitySwapScoreAndMod.Name": "Show Ability Score Large",
-  "DT.Settings.AbilitySwapScoreAndMod.Hint": "Moves the score directly under the ability name and shows it large; the modifier moves below it and is shown small.",
+  "DT.Settings.AbilitySwapScoreAndMod.Hint": "Makes the score the large, prominent number and the modifier small. On the default dnd5e sheet the score also moves directly under the ability name. Also applies to the Tidy 5e Character Sheet (non-classic).",
   "DT.Settings.AbilityExpandedRollTargets.Name": "Click Score / Modifier to Roll",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Lets you click the ability score or modifier (not just the ability name) to roll an ability check.",
 

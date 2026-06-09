@@ -31,6 +31,29 @@
   opacity: 0.8;
 }
 
-/* Expanded roll targets: clickable score / modifier. */
+/* Expanded roll targets: clickable score / modifier (default dnd5e sheet only). */
 .dt-asp-rollable { cursor: pointer; }
 .dt-asp-rollable:hover { text-shadow: 0 0 6px var(--dnd5e-color-gold, currentColor); }
+
+/*
+ * Tidy 5e Character Sheet (non-classic "Quadrone" sheet from the tidy5e-sheet module).
+ * Verified DOM: ability tile = [data-tidy-sheet-part="ability-container"]; the modifier
+ * number lives in [data-tidy-sheet-part="ability-value"] (its sign in
+ * [data-tidy-sheet-part="ability-mod"]) and is large by default; the score number is the
+ * value span inside the [data-tidy-sheet-part="ability-score"] label and is smaller.
+ * We shrink the modifier and enlarge the score so the score reads as the prominent value.
+ * Pure size emphasis (no reordering) keeps Tidy's badge layout intact. Sizes are
+ * conservative; tweak them if your theme needs different sizing. The Tidy *classic* sheet
+ * uses a different DOM and is intentionally not targeted.
+ */
+.dt-asp-swap [data-tidy-sheet-part="ability-mod"],
+.dt-asp-swap [data-tidy-sheet-part="ability-value"] {
+  font-size: var(--font-size-13, 13px) !important;
+  opacity: 0.85;
+}
+
+.dt-asp-swap [data-tidy-sheet-part="ability-score"] > span:not(.ability-proficiency-indicator) {
+  font-size: var(--font-size-24, 24px) !important;
+  font-weight: 700;
+  line-height: 1;
+}

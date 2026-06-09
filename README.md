@@ -31,20 +31,29 @@ This always points to the latest release, so Foundry also offers updates automat
 Changes how ability scores are shown on dnd5e actor sheets. By default the sheet shows the
 **modifier** large and the **score** as a small pill; this feature can flip that.
 
-**How it works:** on each actor-sheet render it (optionally) adds a CSS class that reorders
-the ability tile to **name → score → modifier** and enlarges the score / shrinks the
-modifier, and/or attaches click-to-roll handlers to the score and modifier. Click-to-roll
-only applies to the static (non-editable) display, so it never interferes with editing a
-value or opening the ability config. Rolls use `actor.rollAbilityCheck({ ability })`.
+**How it works:** the prominence swap is purely presentational — on each actor-sheet render
+it toggles a `.dt-asp-swap` class on the sheet root and CSS does the rest (it cascades
+whenever the abilities mount, so it doesn't depend on render timing). The click-to-roll
+setting attaches handlers to the score and modifier; it only applies to the static
+(non-editable) display, so it never interferes with editing a value or opening the ability
+config. Rolls use `actor.rollAbilityCheck({ ability })`.
+
+**Supported sheets:** the **default dnd5e** actor sheet, and the **Tidy 5e Character Sheet**
+(the non-classic / "Quadrone" sheet from the
+[tidy5e-sheet](https://github.com/kgar/foundry-vtt-tidy-5e-sheets) module). On the default
+sheet the score is reordered directly under the ability name; on the Tidy sheet the score is
+enlarged and the modifier shrunk in place (keeping Tidy's badge layout). The Tidy **classic**
+sheet uses a different DOM and is not affected. Click-to-roll only applies to the default
+sheet (Tidy already makes the modifier a roll button).
 
 | Setting | Default | Effect |
 |---|---|---|
-| **Show Ability Score Large** | off | Moves the score directly under the ability name and shows it large; the modifier moves below it, shown small. |
-| **Click Score / Modifier to Roll** | off | Lets you roll an ability check by clicking the score or modifier (in addition to the ability name). |
+| **Show Ability Score Large** | off | Makes the score the large, prominent number and the modifier small. On the default sheet the score also moves directly under the ability name. Works on the default dnd5e sheet and the Tidy 5e Character Sheet. |
+| **Click Score / Modifier to Roll** | off | Lets you roll an ability check by clicking the score or modifier (in addition to the ability name). Default dnd5e sheet only. |
 
-> Styled against the default dnd5e sheet; alternate sheet modules use a different DOM and
-> may not be affected. Sizes are conservative (fixed-size shield tiles) — adjust
-> `styles/ability-score-prominence.css` if your theme needs different sizing.
+> Sizes are conservative (the tiles use fixed-size shield / badge backgrounds) — adjust
+> `styles/ability-score-prominence.css` if your theme needs different sizing. Other alternate
+> sheet modules use a different DOM and may not be affected.
 
 
 ## Development
