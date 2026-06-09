@@ -2,7 +2,7 @@
   "id": "darkviruzz-tweaks",
   "title": "Darkviruzz Tweaks & QoL",
   "description": "A personal collection of quality-of-life tweaks for our gaming table. Every feature is individually toggleable and off by default (vanilla behaviour unless you opt in). Targets Foundry VTT v14+ and the dnd5e system (D&D 2024 / 5.x); some features are system-agnostic.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "authors": [
     {
       "name": "Markus Walther",
@@ -37,5 +37,5 @@
   "bugs": "https://github.com/darkviruzz/darkviruzz-tweaks/issues",
   "license": "https://github.com/darkviruzz/darkviruzz-tweaks/blob/main/LICENSE",
   "manifest": "https://github.com/darkviruzz/darkviruzz-tweaks/releases/latest/download/module.json",
-  "download": "https://github.com/darkviruzz/darkviruzz-tweaks/releases/download/v1.3.0/module.zip"
+  "download": "https://github.com/darkviruzz/darkviruzz-tweaks/releases/download/v1.4.0/module.zip"
 }
