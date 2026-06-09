@@ -134,10 +134,14 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
 - **Re-render open sheets:** iterate `foundry.applications.instances` (ApplicationV2) AND
   `ui.windows` (legacy V1). `ui.windows` does NOT contain V2 apps.
 - **Tidy 5e Sheets (module `tidy5e-sheet`):** the non-classic **Quadrone** character sheet
-  is ApplicationV2 (so `renderActorSheetV2` fires) but ALSO emits its own
-  `tidy5e-sheet.renderActorSheet` hook, signature `(app, element, data, forced)`, after its
-  Svelte content mounts. Listen to both so anything you add to the sheet root survives the
-  render timing. Verified ability DOM (Quadrone, `AbilityScore.svelte`): tile
+  is ApplicationV2 and fires the STANDARD `renderActorSheetV2` hook. **It does NOT fire
+  `tidy5e-sheet.renderActorSheet`** — that hook is for Tidy's legacy **V1** sheets only
+  (verified: `Tidy5eSheetsApi.ts` says "App V1 ... or the standard sheet render hooks in
+  App V2", and `Tidy5eCharacterSheetQuadrone.svelte.ts` only calls
+  `tidy5eSheetsPrepareSheetContext`, never `tidy5eSheetsRenderActorSheet`). So to touch the
+  Quadrone DOM, hook `renderActorSheetV2`; the Svelte DOM is already mounted by then (a short
+  `requestAnimationFrame` retry covers any late mount). Do not gate Quadrone behaviour behind
+  `tidy5e-sheet.renderActorSheet` — it will silently never run. Verified ability DOM (Quadrone, `AbilityScore.svelte`): tile
   `[data-tidy-sheet-part="ability-container"]` (= `.ability.<key>`); modifier number
   `[data-tidy-sheet-part="ability-value"]` (large by default) with its sign in
   `[data-tidy-sheet-part="ability-mod"]`, both inside the roll button
