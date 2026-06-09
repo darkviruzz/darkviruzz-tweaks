@@ -133,6 +133,22 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   4.x+). Legacy `actor.rollAbilityTest(ability)` (string) only for dnd5e < 4.0.
 - **Re-render open sheets:** iterate `foundry.applications.instances` (ApplicationV2) AND
   `ui.windows` (legacy V1). `ui.windows` does NOT contain V2 apps.
+- **Tidy 5e Sheets (module `tidy5e-sheet`):** the non-classic **Quadrone** character sheet
+  is ApplicationV2 (so `renderActorSheetV2` fires) but ALSO emits its own
+  `tidy5e-sheet.renderActorSheet` hook, signature `(app, element, data, forced)`, after its
+  Svelte content mounts. Listen to both so anything you add to the sheet root survives the
+  render timing. Verified ability DOM (Quadrone, `AbilityScore.svelte`): tile
+  `[data-tidy-sheet-part="ability-container"]` (= `.ability.<key>`); modifier number
+  `[data-tidy-sheet-part="ability-value"]` (large by default) with its sign in
+  `[data-tidy-sheet-part="ability-mod"]`, both inside the roll button
+  `[data-tidy-sheet-part="ability-roller"]`; score number = the value span inside the
+  `<label data-tidy-sheet-part="ability-score">` (use `> span:not(.ability-proficiency-indicator)`);
+  save in `[data-tidy-sheet-part="ability-save-roller"]`. The Tidy **classic** sheet uses a
+  different DOM — don't assume these selectors there.
+- **Presentational sheet tweaks = root class + CSS.** For purely visual changes, toggle one
+  class on the sheet root in the render hook and put all per-sheet selectors in CSS. The CSS
+  cascades whenever the (possibly Svelte-mounted) inner DOM appears, so you avoid render-timing
+  races and can support multiple sheets just by adding selectors (see Ability Score Prominence).
 - **Pause:** worlds always activate paused (`game.paused = true` on activation). Unpause
   via `game.togglePause(false, { broadcast: true })` (returns the new state; only a GM may
   broadcast). The right time is the `ready` hook. There is no reliable client-side signal
@@ -149,4 +165,4 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
 
 | Feature | id | File | System | Scope | Settings (default) |
 |---|---|---|---|---|---|
-| Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off), `abilityExpandedRollTargets` (off) |
+| Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off — default dnd5e sheet + Tidy 5e non-classic sheet), `abilityExpandedRollTargets` (off — default sheet only) |

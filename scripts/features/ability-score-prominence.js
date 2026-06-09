@@ -15,6 +15,23 @@
  * user (a) reorder + resize so the score sits big directly under the ability name and
  * the modifier small below it, and (b) roll the check by clicking the score/modifier.
  *
+ * The prominence swap is purely presentational: we toggle a `.dt-asp-swap` class on the
+ * sheet root and let CSS do the rest, so it does not depend on the inner DOM being mounted
+ * yet (it cascades whenever the abilities render). That lets us support more than one sheet
+ * just by adding CSS selectors. Two sheets are covered today:
+ *   - the default dnd5e actor sheet (selectors above);
+ *   - the Tidy 5e Character Sheet (non-classic "Quadrone" sheet from the tidy5e-sheet
+ *     module), whose ability tile is `[data-tidy-sheet-part="ability-container"]` with the
+ *     modifier number in `[data-tidy-sheet-part="ability-value"]` and the score number in
+ *     the `[data-tidy-sheet-part="ability-score"]` label. The Tidy *classic* sheet uses a
+ *     different DOM and is not covered.
+ * Tidy sheets are ApplicationV2 (so `renderActorSheetV2` fires) but also emit their own
+ * `tidy5e-sheet.renderActorSheet` hook after their Svelte content renders; we listen to
+ * both so the root class is present regardless of timing.
+ *
+ * The expanded roll-targets setting only affects the default sheet (its selectors don't
+ * match Tidy, and Tidy already makes the modifier a roll button), so it no-ops on Tidy.
+ *
  * Both settings are per-user and default to off (vanilla behaviour).
  */
 
@@ -118,5 +135,8 @@ export default {
     // fallback for any legacy V1 actor sheet. Handler is idempotent.
     Hooks.on("renderActorSheetV2", onRenderActorSheet);
     Hooks.on("renderActorSheet", onRenderActorSheet);
+    // Tidy 5e Sheets emit their own hook once their Svelte content has rendered. Harmless
+    // if that module isn't installed (the hook simply never fires). Same idempotent handler.
+    Hooks.on("tidy5e-sheet.renderActorSheet", onRenderActorSheet);
   }
 };
