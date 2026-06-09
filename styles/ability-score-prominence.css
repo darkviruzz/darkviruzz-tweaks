@@ -8,10 +8,7 @@
 /* ==========================================================================
    1. Default dnd5e actor sheet
    --------------------------------------------------------------------------
-   The three sibling children of each ability tile are:
-     .label  — ability name / roll link   (flex order: 0 by default)
-     .mod    — modifier (large by default)
-     .score  — score (small pill)
+   The three sibling children of each ability tile are .label / .mod / .score.
    We reorder with `order` (forced because dnd5e sets its own order values)
    and swap the font sizes so the score is large and the modifier small.
    ========================================================================== */
@@ -45,81 +42,50 @@
 /* ==========================================================================
    2. Tidy 5e Character Sheet — non-classic "Quadrone" sheet
    --------------------------------------------------------------------------
-   Verified font tokens (src/less/variables-quadrone.css):
-     --t5e-font-data-xlarge  = 700 var(--font-size-28)           modifier value (SIZE A)
-     --t5e-font-label-xlarge = 500 var(--font-size-28)           modifier sign
-     --t5e-font-title-small  = 400 var(--font-size-18) title-font score value   (SIZE B)
-   Note: abilities.css overrides sign to font-size: 1.5rem (24px).
-   Color: --t5e-color-text-lightest used for the modifier sign.
+   The JS (applyTidySwap) stamps the current values onto each tile:
+     .ability-label-container[data-dt-asp-score]            → the score value
+     [data-tidy-sheet-part="ability-score"][data-dt-asp-*]  → modifier sign + value
+   These rules only match once those attributes exist, so nothing shows during the
+   brief gap before the JS runs (no flash, no half-applied state).
 
-   Strategy: JS (setTidySwapData) runs after every Svelte render and stores the current
-   values as data attributes on the ability tile elements. CSS pseudo-elements
-   (content: attr(...)) then display the swapped values in-place:
+   Verified Tidy font tokens (src/less/variables-quadrone.css, v13.4.3):
+     --t5e-font-data-xlarge = 700 var(--font-size-28)            (the modifier's SIZE A)
+     --t5e-font-title-small = 400 var(--font-size-18) title-font (the score's SIZE B)
+   Verified colours: modifier sign uses --t5e-color-text-lightest; values use
+   --t5e-color-text-default. We keep SIZE A on top and SIZE B below and simply swap which
+   value occupies each slot, so the score gains the modifier's formatting and vice-versa.
 
-     • Score  → displayed LARGE in the badge via ::after on .ability-label-container,
-                at SIZE A (700 28px) with default colour.
-     • Mod sign  → displayed SMALL below the badge via ::before on [ability-score] label,
-                   at SIZE B (400 18px) with color-text-lightest (preserved from original).
-     • Mod value → displayed SMALL below the badge via ::after on [ability-score] label,
-                   at SIZE B (400 18px) with default colour.
-
-   Rules only activate when the data attribute is present (set by setTidySwapData after
-   Svelte mounts), so there is no flash during the brief gap between renderActorSheetV2
-   (sets root class) and tidy5e-sheet.renderActorSheet (sets data attributes).
-
-   The Tidy CLASSIC sheet uses a different DOM and is intentionally not targeted here.
+   The Tidy CLASSIC sheet uses a different DOM and is intentionally not targeted.
    ========================================================================== */
 
-/* --- Badge area: hide the original modifier, show the score instead --- */
-
-/* Hide modifier sign and value; visibility:hidden preserves badge geometry. */
-.dt-asp-swap .ability-label-container[data-dt-asp-score]
-  [data-tidy-sheet-part="ability-mod"],
-.dt-asp-swap .ability-label-container[data-dt-asp-score]
-  [data-tidy-sheet-part="ability-value"] {
-  visibility: hidden;
+/* --- Badge (top): hide the modifier, show the score in its place (SIZE A) --- */
+.dt-asp-swap .ability-label-container[data-dt-asp-score] [data-tidy-sheet-part="ability-mod"],
+.dt-asp-swap .ability-label-container[data-dt-asp-score] [data-tidy-sheet-part="ability-value"] {
+  display: none;
 }
 
-/* Show score value overlaid on the badge at modifier's SIZE A. */
-.dt-asp-swap .ability-label-container[data-dt-asp-score] {
-  position: relative;
-}
 .dt-asp-swap .ability-label-container[data-dt-asp-score]::after {
   content: attr(data-dt-asp-score);
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: var(--t5e-font-data-xlarge);            /* 700 28px — SIZE A, bold */
+  font: var(--t5e-font-data-xlarge);                       /* SIZE A: bold, large */
   color: var(--t5e-color-text-default, currentColor);
-  pointer-events: none;                         /* keep roll-button clicks unblocked */
 }
 
-/* --- Score area: hide the original score, show the modifier instead --- */
-
-/* Remove score span from flex flow so ::before / ::after sit flush. */
-.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign]
+/* --- Score slot (below): hide the score, show the modifier in its place (SIZE B) --- */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-val]
   > span:not(.ability-proficiency-indicator) {
   display: none !important;
 }
 
-/* Widen score label to fit the modifier content (original width: 1.75rem is too narrow). */
-.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign] {
-  width: auto !important;
-  min-width: 2.5rem;
-}
-
-/* Show modifier sign with its original lighter colour at SIZE B. */
-.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign]::before {
+/* Modifier sign — keep its original lighter colour. */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-val]::before {
   content: attr(data-dt-asp-sign);
-  font: var(--t5e-font-title-small);            /* 400 18px title-font — SIZE B */
-  color: var(--t5e-color-text-lightest);        /* preserved: original sign colour */
+  font: var(--t5e-font-title-small);                       /* SIZE B */
+  color: var(--t5e-color-text-lightest);
 }
 
-/* Show modifier value at SIZE B with default colour. */
+/* Modifier value — default colour. */
 .dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-val]::after {
   content: attr(data-dt-asp-val);
-  font: var(--t5e-font-title-small);            /* 400 18px title-font — SIZE B */
+  font: var(--t5e-font-title-small);                       /* SIZE B */
   color: var(--t5e-color-text-default, currentColor);
 }
