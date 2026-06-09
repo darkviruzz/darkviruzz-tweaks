@@ -28,12 +28,10 @@ import { MODULE_ID } from "./constants.js";
 import { injectCategoryHeaders } from "./lib/settings-categories.js";
 
 import abilityScoreProminence from "./features/ability-score-prominence.js";
-import unpauseOnLoad from "./features/unpause-on-load.js";
 
 /** Registry of all features. Add new features here. */
 const FEATURES = [
-  abilityScoreProminence,
-  unpauseOnLoad
+  abilityScoreProminence
 ];
 
 /** Features whose system requirement (if any) matches the active world. */

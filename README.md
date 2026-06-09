@@ -46,24 +46,6 @@ value or opening the ability config. Rolls use `actor.rollAbilityCheck({ ability
 > may not be affected. Sizes are conservative (fixed-size shield tiles) — adjust
 > `styles/ability-score-prominence.css` if your theme needs different sizing.
 
-### 2. Unpause When World Loads  ·  *any system · world / GM*
-
-Foundry always starts a world **paused**. This feature can make it come up unpaused.
-
-**How it works:** on the `ready` hook, if enabled, the **GM's** client unpauses the game
-(`game.togglePause(false, { broadcast: true })`) when the game is currently paused, and
-broadcasts it to everyone. Because it only acts while paused, normal reloads don't re-toggle
-it once unpaused.
-
-| Setting | Default | Effect |
-|---|---|---|
-| **Unpause When World Loads (GM)** | off | Automatically unpauses the game as the GM loads the world. Applies on the next world load / server start. |
-
-> Caveat: a GM reloading the page while the game is *intentionally* paused will also trigger
-> an unpause — Foundry exposes no reliable client-side signal that separates a fresh world
-> activation from a GM page reload. Pause again afterwards if needed.
-
----
 
 ## Development
 

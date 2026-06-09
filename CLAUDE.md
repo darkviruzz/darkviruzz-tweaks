@@ -137,6 +137,7 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   via `game.togglePause(false, { broadcast: true })` (returns the new state; only a GM may
   broadcast). The right time is the `ready` hook. There is no reliable client-side signal
   to distinguish a fresh server start from a GM page reload.
+- **Non-GM unpause (v14+ confirmed):** `game.data.paused = false; game.socket.emit('pause', false); ui.pause?.render(); Hooks.callAll('pauseGame', false);` bypasses the GM-only check and broadcasts the pause state to all clients. Not an official API — may break in future Foundry updates.
 - **Settings scopes:** `"user"` (per-user, synced across the user's devices; Foundry v13+),
   `"world"` (GM/global), `"client"` (per-browser/device).
 - **Per-feature settings headers:** in `renderSettingsConfig`, find the input via
@@ -149,4 +150,3 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
 | Feature | id | File | System | Scope | Settings (default) |
 |---|---|---|---|---|---|
 | Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off), `abilityExpandedRollTargets` (off) |
-| Unpause When World Loads | `unpauseOnLoad` | `features/unpause-on-load.js` | any | world | `unpauseOnWorldLoad` (off) |
