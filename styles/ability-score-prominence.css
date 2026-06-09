@@ -1,22 +1,27 @@
 /*
  * Feature: Ability Score Prominence
- * Applied when the per-user setting adds `.dt-asp-swap` to the dnd5e actor-sheet root.
  *
- * 1. Reorder each tile: ability name -> score -> modifier.
- *    `order` is forced because the dnd5e sheet sets its own order on `.score` for the
- *    top ("flipped") row and inside its responsive container query.
- * 2. Size emphasis: score large, modifier small.
- *
- * Sizes are conservative because the tiles use a fixed-size shield background; tweak
- * the font-size values if your theme needs different sizing.
+ * Applied when the per-user setting adds `.dt-asp-swap` to the actor-sheet root.
+ * Two sheets are handled; each has its own section below.
  */
 
-/* 1. Reorder */
+/* ==========================================================================
+   1. Default dnd5e actor sheet
+   --------------------------------------------------------------------------
+   The three sibling children of each ability tile are:
+     .label  — ability name / roll link   (flex order: 0 by default)
+     .mod    — modifier (large by default)
+     .score  — score (small pill)
+   We reorder with `order` (forced because dnd5e sets its own order values)
+   and swap the font sizes so the score is large and the modifier small.
+   ========================================================================== */
+
+/* Reorder: name → score → modifier */
 .dt-asp-swap .ability-scores .ability-score .label { order: 0 !important; }
 .dt-asp-swap .ability-scores .ability-score .score { order: 1 !important; }
 .dt-asp-swap .ability-scores .ability-score .mod   { order: 2 !important; }
 
-/* 2. Size emphasis */
+/* Score: large, bold */
 .dt-asp-swap .ability-scores .ability-score .score,
 .dt-asp-swap .ability-scores .ability-score .score > input {
   font-size: var(--font-size-16, 16px);
@@ -24,6 +29,7 @@
   line-height: 1;
 }
 
+/* Modifier: small, muted */
 .dt-asp-swap .ability-scores .ability-score .mod,
 .dt-asp-swap .ability-scores .ability-score .mod > button {
   font-size: var(--font-size-11, 11px);
@@ -31,29 +37,89 @@
   opacity: 0.8;
 }
 
-/* Expanded roll targets: clickable score / modifier (default dnd5e sheet only). */
+/* Expanded roll targets: clickable score / modifier (default sheet only). */
 .dt-asp-rollable { cursor: pointer; }
 .dt-asp-rollable:hover { text-shadow: 0 0 6px var(--dnd5e-color-gold, currentColor); }
 
-/*
- * Tidy 5e Character Sheet (non-classic "Quadrone" sheet from the tidy5e-sheet module).
- * Verified DOM: ability tile = [data-tidy-sheet-part="ability-container"]; the modifier
- * number lives in [data-tidy-sheet-part="ability-value"] (its sign in
- * [data-tidy-sheet-part="ability-mod"]) and is large by default; the score number is the
- * value span inside the [data-tidy-sheet-part="ability-score"] label and is smaller.
- * We shrink the modifier and enlarge the score so the score reads as the prominent value.
- * Pure size emphasis (no reordering) keeps Tidy's badge layout intact. Sizes are
- * conservative; tweak them if your theme needs different sizing. The Tidy *classic* sheet
- * uses a different DOM and is intentionally not targeted.
- */
-.dt-asp-swap [data-tidy-sheet-part="ability-mod"],
-.dt-asp-swap [data-tidy-sheet-part="ability-value"] {
-  font-size: var(--font-size-13, 13px) !important;
-  opacity: 0.85;
+
+/* ==========================================================================
+   2. Tidy 5e Character Sheet — non-classic "Quadrone" sheet
+   --------------------------------------------------------------------------
+   Verified font tokens (src/less/variables-quadrone.css):
+     --t5e-font-data-xlarge  = 700 var(--font-size-28)           modifier value (SIZE A)
+     --t5e-font-label-xlarge = 500 var(--font-size-28)           modifier sign
+     --t5e-font-title-small  = 400 var(--font-size-18) title-font score value   (SIZE B)
+   Note: abilities.css overrides sign to font-size: 1.5rem (24px).
+   Color: --t5e-color-text-lightest used for the modifier sign.
+
+   Strategy: JS (setTidySwapData) runs after every Svelte render and stores the current
+   values as data attributes on the ability tile elements. CSS pseudo-elements
+   (content: attr(...)) then display the swapped values in-place:
+
+     • Score  → displayed LARGE in the badge via ::after on .ability-label-container,
+                at SIZE A (700 28px) with default colour.
+     • Mod sign  → displayed SMALL below the badge via ::before on [ability-score] label,
+                   at SIZE B (400 18px) with color-text-lightest (preserved from original).
+     • Mod value → displayed SMALL below the badge via ::after on [ability-score] label,
+                   at SIZE B (400 18px) with default colour.
+
+   Rules only activate when the data attribute is present (set by setTidySwapData after
+   Svelte mounts), so there is no flash during the brief gap between renderActorSheetV2
+   (sets root class) and tidy5e-sheet.renderActorSheet (sets data attributes).
+
+   The Tidy CLASSIC sheet uses a different DOM and is intentionally not targeted here.
+   ========================================================================== */
+
+/* --- Badge area: hide the original modifier, show the score instead --- */
+
+/* Hide modifier sign and value; visibility:hidden preserves badge geometry. */
+.dt-asp-swap .ability-label-container[data-dt-asp-score]
+  [data-tidy-sheet-part="ability-mod"],
+.dt-asp-swap .ability-label-container[data-dt-asp-score]
+  [data-tidy-sheet-part="ability-value"] {
+  visibility: hidden;
 }
 
-.dt-asp-swap [data-tidy-sheet-part="ability-score"] > span:not(.ability-proficiency-indicator) {
-  font-size: var(--font-size-24, 24px) !important;
-  font-weight: 700;
-  line-height: 1;
+/* Show score value overlaid on the badge at modifier's SIZE A. */
+.dt-asp-swap .ability-label-container[data-dt-asp-score] {
+  position: relative;
+}
+.dt-asp-swap .ability-label-container[data-dt-asp-score]::after {
+  content: attr(data-dt-asp-score);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--t5e-font-data-xlarge);            /* 700 28px — SIZE A, bold */
+  color: var(--t5e-color-text-default, currentColor);
+  pointer-events: none;                         /* keep roll-button clicks unblocked */
+}
+
+/* --- Score area: hide the original score, show the modifier instead --- */
+
+/* Remove score span from flex flow so ::before / ::after sit flush. */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign]
+  > span:not(.ability-proficiency-indicator) {
+  display: none !important;
+}
+
+/* Widen score label to fit the modifier content (original width: 1.75rem is too narrow). */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign] {
+  width: auto !important;
+  min-width: 2.5rem;
+}
+
+/* Show modifier sign with its original lighter colour at SIZE B. */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-sign]::before {
+  content: attr(data-dt-asp-sign);
+  font: var(--t5e-font-title-small);            /* 400 18px title-font — SIZE B */
+  color: var(--t5e-color-text-lightest);        /* preserved: original sign colour */
+}
+
+/* Show modifier value at SIZE B with default colour. */
+.dt-asp-swap [data-tidy-sheet-part="ability-score"][data-dt-asp-val]::after {
+  content: attr(data-dt-asp-val);
+  font: var(--t5e-font-title-small);            /* 400 18px title-font — SIZE B */
+  color: var(--t5e-color-text-default, currentColor);
 }

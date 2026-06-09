@@ -149,6 +149,18 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   class on the sheet root in the render hook and put all per-sheet selectors in CSS. The CSS
   cascades whenever the (possibly Svelte-mounted) inner DOM appears, so you avoid render-timing
   races and can support multiple sheets just by adding selectors (see Ability Score Prominence).
+- **Tidy font / colour tokens (verified, `src/less/variables-quadrone.css` v13.4.3):**
+  `--t5e-font-data-xlarge = 700 var(--font-size-28)` (modifier value);
+  `--t5e-font-label-xlarge = 500 var(--font-size-28)` (modifier sign, but abilities.css
+  overrides sign to `font-size: 1.5rem`);
+  `--t5e-font-title-small = 400 var(--font-size-18) title-font` (score);
+  `--t5e-color-text-lightest = var(--t5e-color-palette-grey-40)` (sign colour, dark theme: grey-60).
+- **Tidy CSS + JS data-attribute pattern** (Ability Score Prominence): when a pure CSS
+  reorder would move unwanted siblings (e.g. abbreviation tied to modifier container), use
+  JS to stamp `data-*` attributes onto the tiles after each `tidy5e-sheet.renderActorSheet`
+  hook, then CSS `content: attr(...)` pseudo-elements display the swapped values. Guard rules
+  with `[data-attribute]` attribute selectors so pseudo-elements only appear once the
+  attributes exist — no flash during the gap between `renderActorSheetV2` and the Tidy hook.
 - **Pause:** worlds always activate paused (`game.paused = true` on activation). Unpause
   via `game.togglePause(false, { broadcast: true })` (returns the new state; only a GM may
   broadcast). The right time is the `ready` hook. There is no reliable client-side signal

@@ -12,25 +12,25 @@
  *   </div>
  *
  * By default the modifier is large and the score a small pill. This feature lets each
- * user (a) reorder + resize so the score sits big directly under the ability name and
- * the modifier small below it, and (b) roll the check by clicking the score/modifier.
+ * user (a) swap score and modifier positions so the score shows large and the modifier
+ * small, and (b) roll the check by clicking the score/modifier.
  *
- * The prominence swap is purely presentational: we toggle a `.dt-asp-swap` class on the
- * sheet root and let CSS do the rest, so it does not depend on the inner DOM being mounted
- * yet (it cascades whenever the abilities render). That lets us support more than one sheet
- * just by adding CSS selectors. Two sheets are covered today:
- *   - the default dnd5e actor sheet (selectors above);
- *   - the Tidy 5e Character Sheet (non-classic "Quadrone" sheet from the tidy5e-sheet
- *     module), whose ability tile is `[data-tidy-sheet-part="ability-container"]` with the
- *     modifier number in `[data-tidy-sheet-part="ability-value"]` and the score number in
- *     the `[data-tidy-sheet-part="ability-score"]` label. The Tidy *classic* sheet uses a
- *     different DOM and is not covered.
- * Tidy sheets are ApplicationV2 (so `renderActorSheetV2` fires) but also emit their own
- * `tidy5e-sheet.renderActorSheet` hook after their Svelte content renders; we listen to
- * both so the root class is present regardless of timing.
+ * Two sheets are supported:
  *
- * The expanded roll-targets setting only affects the default sheet (its selectors don't
- * match Tidy, and Tidy already makes the modifier a roll button), so it no-ops on Tidy.
+ *   1. Default dnd5e sheet — pure CSS: the `.dt-asp-swap` root class reorders and resizes
+ *      the three sibling divs (.label, .mod, .score) via flexbox `order` + font-size rules.
+ *
+ *   2. Tidy 5e Character Sheet (non-classic "Quadrone" sheet) — CSS + JS data attributes:
+ *      The Tidy DOM nests the modifier inside a roll button and the score in a separate
+ *      label, so a pure CSS reorder would also move the abbreviation (STR etc.). Instead,
+ *      after every Svelte render we read the current values and store them as data
+ *      attributes; CSS pseudo-elements (content: attr(...)) then display the swapped
+ *      values in-place at the verified Tidy font sizes, while the originals are hidden.
+ *      The modifier sign preserves its `color-text-lightest` colour in the small slot.
+ *      Verified DOM / font variables → see CLAUDE.md "Verified facts & gotchas".
+ *
+ *   Roll-targets (setting 2) only applies to the default sheet; Tidy already makes the
+ *   modifier a roll button.
  *
  * Both settings are per-user and default to off (vanilla behaviour).
  */
@@ -38,8 +38,8 @@
 import { MODULE_ID } from "../constants.js";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
-const KEY_SWAP = "abilitySwapScoreAndMod";
-const KEY_ROLL = "abilityExpandedRollTargets";
+const KEY_SWAP   = "abilitySwapScoreAndMod";
+const KEY_ROLL   = "abilityExpandedRollTargets";
 
 /** Re-render every open actor sheet (ApplicationV2 instances + legacy V1 windows). */
 function rerenderActorSheets() {
@@ -50,6 +50,7 @@ function rerenderActorSheets() {
   }
 }
 
+/** Default dnd5e sheet (and any non-Tidy actor sheet). */
 function onRenderActorSheet(app, html) {
   if (game.system.id !== "dnd5e") return;
 
@@ -59,6 +60,55 @@ function onRenderActorSheet(app, html) {
   root.classList.toggle("dt-asp-swap", game.settings.get(MODULE_ID, KEY_SWAP));
 
   if (game.settings.get(MODULE_ID, KEY_ROLL)) addAbilityRollTargets(app, root);
+}
+
+/**
+ * Tidy 5e Sheets hook — fires after Svelte content has mounted.
+ * Signature from tidy5e-sheet: (app, element, data, forced).
+ * Sets the root class (also set by renderActorSheetV2, but this is idempotent) and then
+ * stamps data attributes onto each ability tile so CSS can display the swapped values.
+ */
+function onTidyRenderActorSheet(app, element, _data, _forced) {
+  if (game.system.id !== "dnd5e") return;
+
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  if (!root) return;
+
+  const swap = game.settings.get(MODULE_ID, KEY_SWAP);
+  root.classList.toggle("dt-asp-swap", swap);
+
+  if (swap) setTidySwapData(root);
+}
+
+/**
+ * Read the current score and modifier values from each Tidy ability tile and store them
+ * as data attributes for CSS content: attr() pseudo-elements.
+ *
+ * Verified Tidy Quadrone DOM (AbilityScore.svelte):
+ *   - Modifier sign   : [data-tidy-sheet-part="ability-mod"]   (1.5rem, color-text-lightest)
+ *   - Modifier value  : [data-tidy-sheet-part="ability-value"] (font-data-xlarge = 700 28px)
+ *   - Score value     : first span in [data-tidy-sheet-part="ability-score"] label
+ *                       (font-title-small = 400 18px title-font)
+ * Both are inside [data-tidy-sheet-part="ability-container"].
+ */
+function setTidySwapData(root) {
+  for (const tile of root.querySelectorAll('[data-tidy-sheet-part="ability-container"]')) {
+    const labelContainer = tile.querySelector(".ability-label-container");
+    const scoreLabel     = tile.querySelector('[data-tidy-sheet-part="ability-score"]');
+    const modSign        = tile.querySelector('[data-tidy-sheet-part="ability-mod"]');
+    const modValue       = tile.querySelector('[data-tidy-sheet-part="ability-value"]');
+    const scoreSpan      = scoreLabel?.querySelector("span:not(.ability-proficiency-indicator)");
+
+    if (!labelContainer || !modSign || !modValue || !scoreSpan) continue;
+
+    // Stored on labelContainer: score shown large in the badge via ::after.
+    // Stored on scoreLabel: modifier shown small below the badge via ::before / ::after.
+    // CSS only activates these when the attribute is present, so no flash before first
+    // Svelte mount (when renderActorSheetV2 fires before Svelte content exists).
+    labelContainer.dataset.dtAspScore = scoreSpan.textContent.trim();
+    scoreLabel.dataset.dtAspSign      = modSign.textContent.trim();
+    scoreLabel.dataset.dtAspVal       = modValue.textContent.trim();
+  }
 }
 
 /** Make the score and modifier of each ability tile roll an ability check on click. */
@@ -132,11 +182,12 @@ export default {
   ],
   init() {
     // dnd5e sheets are ApplicationV2 -> renderActorSheetV2 fires; renderActorSheet is a
-    // fallback for any legacy V1 actor sheet. Handler is idempotent.
+    // fallback for any legacy V1 actor sheet.
     Hooks.on("renderActorSheetV2", onRenderActorSheet);
-    Hooks.on("renderActorSheet", onRenderActorSheet);
-    // Tidy 5e Sheets emit their own hook once their Svelte content has rendered. Harmless
-    // if that module isn't installed (the hook simply never fires). Same idempotent handler.
-    Hooks.on("tidy5e-sheet.renderActorSheet", onRenderActorSheet);
+    Hooks.on("renderActorSheet",   onRenderActorSheet);
+    // Tidy 5e Sheets emit their own hook once Svelte content has rendered. The data
+    // attributes for the CSS swap need the mounted DOM, so we use this hook specifically.
+    // Harmless when the module isn't installed (the hook simply never fires).
+    Hooks.on("tidy5e-sheet.renderActorSheet", onTidyRenderActorSheet);
   }
 };
