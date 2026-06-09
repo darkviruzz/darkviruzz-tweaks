@@ -4,7 +4,7 @@
   "DT.Settings.AbilitySwapScoreAndMod.Name": "Show Ability Score Large",
   "DT.Settings.AbilitySwapScoreAndMod.Hint": "Makes the score the large, prominent number and the modifier small. On the default dnd5e sheet the score also moves directly under the ability name. Also applies to the Tidy 5e Character Sheet (non-classic).",
   "DT.Settings.AbilityExpandedRollTargets.Name": "Click Score / Modifier to Roll",
-  "DT.Settings.AbilityExpandedRollTargets.Hint": "Lets you click the ability score or modifier (not just the ability name) to roll an ability check.",
+  "DT.Settings.AbilityExpandedRollTargets.Hint": "Lets you click the ability score or modifier (not just the ability name) to roll an ability check. Applies to the D&D 5e Character Sheet only; the Tidy 5e Character Sheet always rolls on the large top button.",
 
 "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }

@@ -161,10 +161,25 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   `--t5e-color-text-lightest = var(--t5e-color-palette-grey-40)` (sign colour, dark theme: grey-60).
 - **Tidy CSS + JS data-attribute pattern** (Ability Score Prominence): when a pure CSS
   reorder would move unwanted siblings (e.g. abbreviation tied to modifier container), use
-  JS to stamp `data-*` attributes onto the tiles after each `tidy5e-sheet.renderActorSheet`
-  hook, then CSS `content: attr(...)` pseudo-elements display the swapped values. Guard rules
-  with `[data-attribute]` attribute selectors so pseudo-elements only appear once the
-  attributes exist — no flash during the gap between `renderActorSheetV2` and the Tidy hook.
+  JS to stamp `data-*` attributes onto the tiles after the `renderActorSheetV2` hook, then
+  CSS `content: attr(...)` pseudo-elements display the swapped values. Guard rules with
+  `[data-attribute]` attribute selectors so pseudo-elements only appear once the attributes
+  exist — no flash during the gap between `renderActorSheetV2` and the Svelte mount.
+  Attributes stamped: `labelContainer.dataset.dtAspScore` (score value for badge),
+  `scoreLabel.dataset.dtAspRowlabel` ("Mod" row label), `scoreLabel.dataset.dtAspMod`
+  (combined modifier "+3"). The "Score" text node inside the label is hidden by setting
+  `font-size: 0` on the label element (pseudo-elements set their own font via `font:`
+  shorthand, so they're unaffected); `.ability-proficiency-indicator` gets `font-size: revert`
+  to restore it.
+- **dnd5e 5.x default sheet CSS: must use `!important` on font-size overrides.** dnd5e
+  uses `!important` on its own size rules, so without `!important` our overrides don't
+  apply. The `order` reorder then swaps visual positions but the text sizes stay native,
+  leaving the mod text dominant in the score position. Fix: add `!important` to font-size
+  on both `.score` and `.mod`. Score should use `--font-size-24` to match the prominence
+  the original mod had.
+- **dnd5e 5.x default sheet layout (verified from user screenshots):** vanilla shows score
+  LARGE in the badge and mod small below. Our CSS needs `!important` on font-sizes to
+  actually override dnd5e's rules and make the swap take effect correctly.
 - **Pause:** worlds always activate paused (`game.paused = true` on activation). Unpause
   via `game.togglePause(false, { broadcast: true })` (returns the new state; only a GM may
   broadcast). The right time is the `ready` hook. There is no reliable client-side signal
