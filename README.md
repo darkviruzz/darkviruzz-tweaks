@@ -56,6 +56,48 @@ sheet (Tidy already makes the modifier a roll button).
 > sheet modules use a different DOM and may not be affected.
 
 
+### 2. Spell Effect Auto-Apply  ·  *dnd5e · world (GM)*
+
+Applies the Active Effect of a self-cast spell automatically, so nobody has to press
+**apply** on the chat card. Typical case: *Mage Armor*, which you almost always cast on
+yourself.
+
+**Why the click exists in the first place:** dnd5e only shows an effect in the chat card's
+apply tray to a user who is a **GM**, or who authored the message *and* the effect is a
+"transfer" effect. The effects a spell applies are not transfer effects, so **players never
+see the apply button at all** — only the GM does. That's why the GM ends up clicking apply
+for someone else's Mage Armor.
+
+**How it works:** the module listens to dnd5e's `dnd5e.postUseActivity` hook, which fires on
+the caster's own client. When all of the conditions below hold, it applies the spell's
+effects to the caster directly — using the same logic as dnd5e's own apply button, so the
+result is identical (same origin, same concentration link, and re-casting **refreshes** the
+existing effect instead of stacking a second copy).
+
+An effect is auto-applied only when **all** of these are true:
+
+1. the feature is enabled,
+2. the item is a **spell** whose name is on the whitelist (case-insensitive),
+3. the spell's **range is Self or Touch**,
+4. **the caster is the target** — implicit for Self; for Touch this means either nothing was
+   targeted, or the caster's own token was the only target,
+5. the casting user **owns** the actor (dnd5e refuses effect application otherwise, and this
+   feature does not try to work around that).
+
+Anything else — a Touch spell aimed at an ally, a ranged spell, a spell not on the list —
+behaves exactly as before and still waits for a manual apply.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Auto-Apply Self-Cast Spell Effects** | off | Master switch for the feature. |
+| **Auto-Apply Spell Whitelist** | `Mage Armor` | Comma-separated spell names allowed to auto-apply, e.g. `Mage Armor, Shield of Faith`. |
+
+> Names are matched against the spell's name **as it appears on the character sheet**, so if
+> your world uses translated compendium items, put the translated name in the list. The range
+> check is deliberately based on *range*, not target type: the 2024 *Mage Armor* is
+> `range: touch` with target type `willing`, so a target-type check would never match it.
+
+
 ## Development
 
 This repo is built to grow feature-by-feature. See **[CLAUDE.md](CLAUDE.md)** for the

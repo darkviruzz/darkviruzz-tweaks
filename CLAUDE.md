@@ -44,7 +44,7 @@ scripts/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
   features/
     ability-score-prominence.js dnd5e display tweak (per-user)
-    unpause-on-load.js          system-agnostic pause tweak (world/GM)
+    spell-effect-autoapply.js   dnd5e auto-apply of self-cast spell effects (world/GM)
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (listed in module.json "styles")
@@ -119,6 +119,15 @@ To cut a release:
 
 Compatibility note: the install/manifest mechanism requires the **repo to stay public**.
 
+### Squash-merge conflict gotcha
+
+PRs here are **squash-merged**, so `main` gets ONE commit whose tree matches the branch but
+whose history doesn't contain the branch's commits. If you then keep working on that same
+branch and open another PR, git's 3-way merge (base = the old merge-base) sees both sides
+editing the same regions and reports **conflicts even when `main`'s tree is identical to an
+ancestor of your branch**. Fix: branch fresh off `main`, put the final content there, and PR
+that — it merges as a clean fast-forward. Don't try to resolve the phantom conflict.
+
 ## Verified facts & gotchas (Foundry v14 / dnd5e 5.x — keep adding here)
 
 - **dnd5e sheets are ApplicationV2.** Use `renderActorSheetV2` (it fires for the whole
@@ -161,10 +170,25 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   `--t5e-color-text-lightest = var(--t5e-color-palette-grey-40)` (sign colour, dark theme: grey-60).
 - **Tidy CSS + JS data-attribute pattern** (Ability Score Prominence): when a pure CSS
   reorder would move unwanted siblings (e.g. abbreviation tied to modifier container), use
-  JS to stamp `data-*` attributes onto the tiles after each `tidy5e-sheet.renderActorSheet`
-  hook, then CSS `content: attr(...)` pseudo-elements display the swapped values. Guard rules
-  with `[data-attribute]` attribute selectors so pseudo-elements only appear once the
-  attributes exist — no flash during the gap between `renderActorSheetV2` and the Tidy hook.
+  JS to stamp `data-*` attributes onto the tiles after the `renderActorSheetV2` hook, then
+  CSS `content: attr(...)` pseudo-elements display the swapped values. Guard rules with
+  `[data-attribute]` attribute selectors so pseudo-elements only appear once the attributes
+  exist — no flash during the gap between `renderActorSheetV2` and the Svelte mount.
+  Attributes stamped: `labelContainer.dataset.dtAspScore` (score value for badge),
+  `scoreLabel.dataset.dtAspRowlabel` ("Mod" row label), `scoreLabel.dataset.dtAspMod`
+  (combined modifier "+3"). The "Score" text node inside the label is hidden by setting
+  `font-size: 0` on the label element (pseudo-elements set their own font via `font:`
+  shorthand, so they're unaffected); `.ability-proficiency-indicator` gets `font-size: revert`
+  to restore it.
+- **dnd5e 5.x default sheet CSS: must use `!important` on font-size overrides.** dnd5e
+  uses `!important` on its own size rules, so without `!important` our overrides don't
+  apply. The `order` reorder then swaps visual positions but the text sizes stay native,
+  leaving the mod text dominant in the score position. Fix: add `!important` to font-size
+  on both `.score` and `.mod`. Score should use `--font-size-24` to match the prominence
+  the original mod had.
+- **dnd5e 5.x default sheet layout (verified from user screenshots):** vanilla shows score
+  LARGE in the badge and mod small below. Our CSS needs `!important` on font-sizes to
+  actually override dnd5e's rules and make the swap take effect correctly.
 - **Pause:** worlds always activate paused (`game.paused = true` on activation). Unpause
   via `game.togglePause(false, { broadcast: true })` (returns the new state; only a GM may
   broadcast). The right time is the `ready` hook. There is no reliable client-side signal
@@ -177,8 +201,70 @@ Compatibility note: the install/manifest mechanism requires the **repo to stay p
   `insertAdjacentElement("beforebegin", header)`. Inputs are named `<module>.<key>`. Make
   it idempotent and degrade gracefully if the DOM isn't found.
 
+### dnd5e Activities / Active Effects (verified against dnd5e **5.3.3** source)
+
+> dnd5e git tags are prefixed `release-` (e.g. `release-5.3.3`), **not** bare `5.3.3` — plain
+> tag URLs on raw.githubusercontent.com 404. Clone the repo to inspect it properly.
+
+- **Activity use hooks** (`module/documents/activity/mixin.mjs`, in `Activity#use()`):
+  `dnd5e.preUseActivity(activity, usageConfig, dialogConfig, messageConfig)` and
+  `dnd5e.postUseActivity(activity, usageConfig, results)`. `dnd5e.useActivity` and
+  `dnd5e.postUseItem` **do not exist**; the 3.x `dnd5e.useItem` was removed in 4.x.
+- **Hooks fire only on the triggering client.** dnd5e has no socket layer at all (zero
+  `socket.emit` / `game.socket.on` in `module/`). The cross-client signal is the chat message.
+  So for "the caster does X to their own actor", just act in `postUseActivity` — the caster's
+  client runs it and owns the actor. No GM relay, no double-apply guard needed.
+- **`postUseActivity` fires AFTER the chat message is created**; `results.message` is the
+  created ChatMessage document, `results.effects` holds any concentration effect.
+- **The activity passed to the hooks belongs to a temporary item CLONE** —
+  `use()` does `item = this.item.clone({}, { keepId: true })`. Ids are preserved but the
+  clone's documents carry the wrong uuids, so **resolve real documents before using `uuid`**:
+  `actor.items.get(activity.item.id)` then `realItem.effects.get(effect.id)`. The clone keeps
+  the real actor as parent, so `activity.actor` is the real Actor5e.
+- **`activity.applicableEffects`** (`module/data/activity/base-activity.mjs`) → the
+  `ActiveEffect5e[]` the apply button would apply, already filtered by spell level. Prefer it
+  over the raw `activity.effects` array (which is `{_id, level:{min,max}}` entries with a
+  non-enumerable `.effect` getter). `activity.isSpell` → `item.type === "spell"`.
+- **Range / target live on BOTH item and activity.** The activity inherits the item's values
+  in `prepareFinalData` unless `range.override` / `target.override` is set, so
+  `activity.range` is the *effective* value; fall back to `item.system.range`.
+  `range.units` ∈ movement units (`ft`,`mi`,`m`,`km`) ∪ rangeTypes (`self`,`touch`,`spec`,`any`).
+  `target.affects.type` ∈ `self, ally, enemy, creature, object, space, creatureOrObject, any, willing`.
+- **GOTCHA — don't detect "self-cast" via `target.affects.type === "self"`.** The 2024
+  *Mage Armor* is `range.units: "touch"` with `target.affects.type: "willing"`. Across the
+  2024 spell packs only 13 spells use target type `self` while 73 use `range: self`. Key off
+  **range** (`self`/`touch`) plus the actual targets.
+- **Targets are snapshotted onto the usage message** as `flags.dnd5e.targets`, an array of
+  `{name, img, uuid, ac}` where **`uuid` is the targeted token's ACTOR uuid**
+  (`getTargetDescriptors()`, `module/utils.mjs`). More reliable than re-reading
+  `game.user.targets` after the fact.
+- **Who sees the chat-card apply button:** the `<effect-application>` tray filters effects with
+  `game.user.isGM || (e.transfer && message.author === game.user)`
+  (`module/data/chat-message/usage-message-data.mjs`). Effects an activity applies are
+  `transfer: false`, so **players never see the apply button — only the GM does.**
+  The target list additionally skips actors where `!actor.isOwner`.
+- **Applying an effect programmatically** — mirror `EffectApplicationElement#_applyEffectToActor`
+  (`module/applications/components/effect-application.mjs`). There is no public helper.
+  `origin` = the concentration effect's uuid when the spell concentrates, else the *source
+  effect's own* uuid (NOT the activity uuid). Duplicate prevention is
+  `actor.effects.find(e => e.origin === origin.uuid)` → if found, `update()` to refresh
+  duration + `disabled: false` instead of creating a second effect. Creation is plain
+  `ActiveEffect.implementation.create({...effect.toObject(), disabled: false, transfer: false,
+  origin: origin.uuid, flags: {dnd5e: {dependentOn, scaling, spellLevel}}}, { parent: actor })`.
+  A non-GM must own the target actor or dnd5e throws (`DND5E.EffectApplyWarningOwnership`).
+- **Concentration id** is on the usage message: `message.system.concentration` (dnd5e 5.1+) or
+  `message.getFlag("dnd5e", "use.concentrationId")` (4.x). Concentration is started during
+  `use()`, never by applying an effect. `activity.requiresConcentration` ← `duration.concentration`.
+  dnd5e ≥ 5.2 links dependents via the `flags.dnd5e.dependentOn` flag; `addDependent()` still
+  exists but is deprecated until 6.0 — needed only for < 5.2.
+- **`ActiveEffect.getInitialDuration()`** is what dnd5e 5.x calls to refresh a duration, but it
+  is **deprecated in Foundry v14 and slated for removal in v16** (replaced by
+  `getEffectStart()`, which returns a differently-shaped `{combat, initiative, round, turn}`).
+  Guard the call with `typeof === "function"` rather than assuming it exists.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings (default) |
 |---|---|---|---|---|---|
 | Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off — default dnd5e sheet + Tidy 5e non-classic sheet), `abilityExpandedRollTargets` (off — default sheet only) |
+| Spell Effect Auto-Apply | `spellEffectAutoApply` | `features/spell-effect-autoapply.js` | dnd5e | world | `spellAutoApplyEnabled` (off), `spellAutoApplyWhitelist` (`"Mage Armor"`) |
