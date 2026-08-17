@@ -96,10 +96,21 @@ function applyTidySwap(root) {
     const scoreSpan      = scoreLabel?.querySelector("span:not(.ability-proficiency-indicator)");
     if (!labelContainer || !scoreLabel || !modSign || !modValue || !scoreSpan) continue;
 
-    // Badge shows the score (large); the small slot below shows the modifier sign + value.
-    labelContainer.dataset.dtAspScore = scoreSpan.textContent.trim();
-    scoreLabel.dataset.dtAspSign      = modSign.textContent.trim();
-    scoreLabel.dataset.dtAspVal       = modValue.textContent.trim();
+    // Badge shows the score (large); the small slot below shows the modifier row label + value.
+    labelContainer.dataset.dtAspScore   = scoreSpan.textContent.trim();
+    scoreLabel.dataset.dtAspRowlabel    = "Mod";
+    scoreLabel.dataset.dtAspMod         = modSign.textContent.trim() + modValue.textContent.trim();
+
+    // Update the row label's tooltip from "{Ability} Score" → "{Ability} Modifier".
+    const ability = tile.dataset?.ability;
+    const abilityCfg = ability ? CONFIG?.DND5E?.abilities?.[ability] : null;
+    if (abilityCfg) {
+      const abilityName = abilityCfg.label ?? ability.toUpperCase();
+      let modLabel = game.i18n.localize("DND5E.ABILITY.SECTIONS.Modifier");
+      if (modLabel === "DND5E.ABILITY.SECTIONS.Modifier") modLabel = game.i18n.localize("DND5E.AbilityMod");
+      if (modLabel === "DND5E.AbilityMod") modLabel = "Modifier";
+      scoreLabel.setAttribute("data-tooltip", `${abilityName} ${modLabel}`);
+    }
   }
   console.debug(`${MODULE_ID} | Tidy ability swap: stamped ${tiles.length} ability tile(s).`);
   return true;
