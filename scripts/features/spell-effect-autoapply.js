@@ -13,7 +13,8 @@
  *   button at all. (Verified: module/data/chat-message/usage-message-data.mjs.)
  *
  * This feature removes that click for a GM-curated whitelist of spells: when a whitelisted
- * spell is cast on the caster themselves, its effects are applied automatically.
+ * spell is cast on the caster themselves, its effects are applied automatically, and the
+ * chat card is made to show the caster as the target and report that it was applied.
  *
  * Conditions — ALL must hold before anything is applied:
  *   1. the feature is enabled,
@@ -28,14 +29,25 @@
  * a target-type check would never match it. (Verified: packs/_source/spells24/1st-level/
  * mage-armor.yml.)
  *
- * Hook: `dnd5e.postUseActivity(activity, usageConfig, results)`, which fires only on the
- * client that used the activity (dnd5e ships no socket layer). That client is the caster's,
- * and the caster owns their own actor — so exactly one client applies the effect and no
- * GM relay is needed.
+ * Three hooks are used:
  *
- * The application itself mirrors dnd5e's own `EffectApplicationElement#_applyEffectToActor`
- * (module/applications/components/effect-application.mjs) so the result is identical to
- * clicking the button: same origin, same flags, same "refresh instead of stack" behaviour.
+ *   dnd5e.preUseActivity  — fills in `flags.dnd5e.targets` with the caster when nothing was
+ *     targeted. Without this the chat card's effect tray has no targets, so it hides the
+ *     Targeted/Selected switch, falls back to "selected" mode, reads the (empty) canvas
+ *     selection and prints "No Tokens Selected". dnd5e builds that flag *before* firing this
+ *     hook, so it is writable here and the card is born showing the caster.
+ *
+ *   dnd5e.postUseActivity — applies the effects. Fires only on the client that used the
+ *     activity (dnd5e ships no socket layer), and that client is the caster's, who owns
+ *     their own actor — so exactly one client applies and no GM relay is needed. The
+ *     application mirrors dnd5e's own `EffectApplicationElement#_applyEffectToActor`, so
+ *     origin, concentration linkage and refresh-instead-of-stack are identical to pressing
+ *     the button.
+ *
+ *   dnd5e.renderChatMessage — draws the "automatically applied" banner above the effect
+ *     tray. dnd5e has no native "already applied" state for a target, so this is ours. The
+ *     banner is re-derived on every render from the actor's live effects, so it disappears
+ *     by itself if the effect is later removed rather than lying about current state.
  *
  * Both settings are world-scoped (a table-wide rule the GM sets) and default to off.
  */
@@ -45,8 +57,15 @@ import { MODULE_ID } from "../constants.js";
 const KEY_ENABLED   = "spellAutoApplyEnabled";
 const KEY_WHITELIST = "spellAutoApplyWhitelist";
 
+/** Message flag recording what this feature auto-applied, for the chat-card banner. */
+const FLAG_APPLIED = "autoApplied";
+
 /** Range units that can mean "cast on yourself". dnd5e CONFIG.DND5E.rangeTypes. */
 const SELF_RANGES = new Set(["self", "touch"]);
+
+/* -------------------------------------------- */
+/*  Eligibility                                 */
+/* -------------------------------------------- */
 
 /** Parse the whitelist setting into a Set of normalised spell names. */
 function whitelistedNames() {
@@ -59,26 +78,88 @@ function whitelistedNames() {
   );
 }
 
+/** Is this activity's item a spell whose name is on the whitelist? */
+function isWhitelistedSpell(activity) {
+  const item = activity?.item;
+  if (item?.type !== "spell") return false;
+  const name = item.name?.trim().toLowerCase();
+  return !!name && whitelistedNames().has(name);
+}
+
+/**
+ * The effective range units for an activity. Activities inherit range from their item
+ * unless `range.override` is set, so the activity's value is authoritative; the item is a
+ * fallback for safety.
+ */
+function rangeUnits(activity) {
+  return (activity?.range ?? activity?.item?.system?.range)?.units;
+}
+
+/** Targets dnd5e snapshotted onto the usage message: {name, img, uuid, ac}, uuid = ACTOR uuid. */
+function messageTargets(message) {
+  const targets = message?.getFlag?.("dnd5e", "targets");
+  return Array.isArray(targets) ? targets : [];
+}
+
 /**
  * Is this activation a self-cast of a self/touch range spell?
- *
- * dnd5e stamps the tokens that were targeted at use time onto the usage message as
- * `flags.dnd5e.targets`, an array of `{ name, img, uuid, ac }` where `uuid` is the
- * targeted token's *actor* uuid (verified: getTargetDescriptors(), module/utils.mjs).
- * Using that snapshot is more reliable than re-reading game.user.targets afterwards.
+ * "self" is self-cast by definition; "touch" only when nothing was targeted or the caster
+ * was the only target.
  */
 function isSelfCast(activity, message, actor) {
-  // Activities inherit range from the item unless they override it, so the activity's
-  // value is the effective one; fall back to the item for safety.
-  const units = (activity.range ?? activity.item?.system?.range)?.units;
+  const units = rangeUnits(activity);
   if (!SELF_RANGES.has(units)) return false;
   if (units === "self") return true;
 
-  // Touch: self-cast when nothing was targeted, or the caster was the only target.
-  const targets = message?.getFlag?.("dnd5e", "targets") ?? [];
+  const targets = messageTargets(message);
   if (!targets.length) return true;
   return (targets.length === 1) && (targets[0]?.uuid === actor.uuid);
 }
+
+/** A target descriptor for the caster, shaped like dnd5e's getTargetDescriptors() entries. */
+function selfTargetDescriptor(actor) {
+  const token = actor.getActiveTokens?.()?.[0] ?? actor.token?.object;
+  return {
+    name: token?.name ?? actor.name,
+    img: actor.img,
+    uuid: actor.uuid,
+    ac: actor.system?.attributes?.ac?.value ?? null
+  };
+}
+
+/* -------------------------------------------- */
+/*  A — show the caster as the target            */
+/* -------------------------------------------- */
+
+/**
+ * Record the caster as the target of an untargeted self/touch cast, so the chat card's
+ * effect tray lists them instead of falling back to "No Tokens Selected".
+ *
+ * An explicit target — even the caster themselves — is left exactly as dnd5e recorded it.
+ */
+function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
+  try {
+    if (!game.settings.get(MODULE_ID, KEY_ENABLED)) return;
+    if (!isWhitelistedSpell(activity)) return;
+    if (!SELF_RANGES.has(rangeUnits(activity))) return;
+
+    const actor = activity.actor;
+    if (!actor?.isOwner) return;
+
+    const targets = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets");
+    if (!Array.isArray(targets) || targets.length) return;
+
+    foundry.utils.setProperty(
+      messageConfig, "data.flags.dnd5e.targets", [selfTargetDescriptor(actor)]
+    );
+  } catch (err) {
+    console.error(`${MODULE_ID} | spell effect auto-apply (target injection) failed`, err);
+  }
+}
+
+/* -------------------------------------------- */
+/*  Applying the effects                        */
+/* -------------------------------------------- */
 
 /**
  * Apply the activity's effects to the caster, mirroring dnd5e's own apply-button logic.
@@ -86,10 +167,12 @@ function isSelfCast(activity, message, actor) {
  * dnd5e uses the concentration effect as the origin when the spell concentrates, otherwise
  * the source effect itself, and looks for an existing effect with that origin to refresh
  * rather than stacking a duplicate.
+ *
+ * @returns {Promise<string[]>}  The origin uuids that were applied or refreshed.
  */
 async function autoApplyEffects(activity, results, actor) {
   const effects = activity.applicableEffects ?? [];
-  if (!effects.length) return;
+  if (!effects.length) return [];
 
   const message = results?.message;
 
@@ -101,6 +184,8 @@ async function autoApplyEffects(activity, results, actor) {
   // `activity` belongs to a temporary item clone made inside Activity#use(), so resolve the
   // real embedded documents — the clone's effects carry the wrong uuids for `origin`.
   const realItem = actor.items.get(activity.item?.id) ?? activity.item;
+
+  const appliedOrigins = [];
 
   for (const clonedEffect of effects) {
     const effect = realItem?.effects?.get(clonedEffect.id) ?? clonedEffect;
@@ -120,6 +205,7 @@ async function autoApplyEffects(activity, results, actor) {
       // slated for removal in v16, so degrade to "just re-enable" if it disappears.
       const start = (typeof AE.getInitialDuration === "function") ? AE.getInitialDuration() : {};
       await existing.update(foundry.utils.mergeObject({ ...start, disabled: false }, effectFlags));
+      appliedOrigins.push(origin.uuid);
       continue;
     }
 
@@ -130,6 +216,7 @@ async function autoApplyEffects(activity, results, actor) {
       origin: origin.uuid
     }, effectFlags);
     const applied = await ActiveEffect.implementation.create(effectData, { parent: actor });
+    if (applied) appliedOrigins.push(origin.uuid);
 
     // dnd5e < 5.2 tracked dependents on the concentration effect rather than via the
     // `dependentOn` flag, so breaking concentration wouldn't clean this up without it.
@@ -139,20 +226,16 @@ async function autoApplyEffects(activity, results, actor) {
   }
 
   console.debug(
-    `${MODULE_ID} | auto-applied ${effects.length} effect(s) of "${activity.item?.name}" to ${actor.name}.`
+    `${MODULE_ID} | auto-applied ${appliedOrigins.length} effect(s) of "${activity.item?.name}" to ${actor.name}.`
   );
+  return appliedOrigins;
 }
 
 /** `dnd5e.postUseActivity` handler — cheap guards first, then fire-and-forget the apply. */
 function onPostUseActivity(activity, usageConfig, results) {
   try {
     if (!game.settings.get(MODULE_ID, KEY_ENABLED)) return;
-
-    const item = activity?.item;
-    if (item?.type !== "spell") return;
-
-    const name = item.name?.trim().toLowerCase();
-    if (!name || !whitelistedNames().has(name)) return;
+    if (!isWhitelistedSpell(activity)) return;
 
     const actor = activity.actor ?? results?.message?.getAssociatedActor?.();
     // dnd5e refuses to apply effects to actors you don't own; don't try to work around it.
@@ -160,12 +243,77 @@ function onPostUseActivity(activity, usageConfig, results) {
 
     if (!isSelfCast(activity, results?.message, actor)) return;
 
-    autoApplyEffects(activity, results, actor).catch(err =>
-      console.error(`${MODULE_ID} | spell effect auto-apply failed`, err));
+    autoApplyEffects(activity, results, actor)
+      .then(origins => markMessageApplied(results?.message, actor, origins))
+      .catch(err => console.error(`${MODULE_ID} | spell effect auto-apply failed`, err));
   } catch (err) {
     console.error(`${MODULE_ID} | spell effect auto-apply failed`, err);
   }
 }
+
+/**
+ * Record on the usage message what was auto-applied, so every client can draw the banner.
+ * The caster authored the message, so they may update it. Best-effort: a failure here only
+ * costs the banner, never the effect itself.
+ */
+async function markMessageApplied(message, actor, origins) {
+  if (!message?.setFlag || !origins?.length) return;
+  try {
+    await message.setFlag(MODULE_ID, FLAG_APPLIED, {
+      actorUuid: actor.uuid,
+      name: actor.name,
+      origins
+    });
+  } catch (err) {
+    console.debug(`${MODULE_ID} | could not flag chat message as auto-applied`, err);
+  }
+}
+
+/* -------------------------------------------- */
+/*  B — "applied" banner on the chat card       */
+/* -------------------------------------------- */
+
+/**
+ * Draw an "automatically applied" banner above the effect tray.
+ *
+ * dnd5e has no native applied-state for a target (buildTargetListEntry renders only image,
+ * name and a checkbox), so this is our own element inserted as a sibling of the
+ * <effect-application> tray. Inserting a sibling avoids depending on the custom element
+ * having upgraded — the tray builds its inner DOM in connectedCallback, and its target list
+ * only when expanded, so decorating the tray's internals would be timing-dependent.
+ *
+ * The banner is re-derived from the actor's live effects on every render, so it vanishes on
+ * its own once the effect is removed instead of asserting stale state.
+ */
+function onRenderChatMessage(message, html) {
+  try {
+    const data = message?.getFlag?.(MODULE_ID, FLAG_APPLIED);
+    if (!data?.actorUuid) return;
+
+    const root = html instanceof HTMLElement ? html : html?.[0];
+    const tray = root?.querySelector("effect-application");
+    if (!tray || root.querySelector(".dt-sea-banner")) return;
+
+    // Only claim "applied" while the effect is genuinely still on the actor.
+    const actor = fromUuidSync(data.actorUuid);
+    if (!actor) return;
+    const origins = Array.isArray(data.origins) ? data.origins : [];
+    const stillApplied = origins.some(origin => !!actor.effects?.find(e => e.origin === origin));
+    if (!stillApplied) return;
+
+    const banner = document.createElement("div");
+    banner.classList.add("dt-sea-banner");
+    banner.innerHTML = '<i class="fa-solid fa-circle-check" inert></i><span></span>';
+    banner.querySelector("span").append(
+      game.i18n.format("DT.SpellAutoApply.Banner", { name: data.name ?? actor.name })
+    );
+    tray.insertAdjacentElement("beforebegin", banner);
+  } catch (err) {
+    console.error(`${MODULE_ID} | spell effect auto-apply (banner) failed`, err);
+  }
+}
+
+/* -------------------------------------------- */
 
 export default {
   id: "spellEffectAutoApply",
@@ -199,6 +347,8 @@ export default {
     }
   ],
   init() {
+    Hooks.on("dnd5e.preUseActivity", onPreUseActivity);
     Hooks.on("dnd5e.postUseActivity", onPostUseActivity);
+    Hooks.on("dnd5e.renderChatMessage", onRenderChatMessage);
   }
 };
