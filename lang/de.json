@@ -12,6 +12,7 @@
   "DT.Settings.SpellAutoApplyEnabled.Hint": "Wird ein Zauber von der Whitelist auf den Zauberwirker selbst gewirkt, werden seine Effekte automatisch angewendet, statt darauf zu warten, dass jemand im Chat auf \"Anwenden\" klickt. Gilt nur für Zauber mit Reichweite Selbst oder Berührung, die den Zauberwirker als Ziel haben.",
   "DT.Settings.SpellAutoApplyWhitelist.Name": "Whitelist für automatische Zaubereffekte",
   "DT.Settings.SpellAutoApplyWhitelist.Hint": "Kommagetrennte Zaubernamen, die automatisch angewendet werden dürfen, z. B. \"Mage Armor, Shield of Faith\". Die Namen müssen exakt übereinstimmen (Groß-/Kleinschreibung egal).",
+  "DT.SpellAutoApply.Banner": "Automatisch auf {name} angewendet",
 
 "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
 }

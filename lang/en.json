@@ -12,6 +12,7 @@
   "DT.Settings.SpellAutoApplyEnabled.Hint": "When a whitelisted spell is cast on the caster themselves, apply its effects automatically instead of waiting for someone to press \"apply\" on the chat card. Only applies to spells with a range of Self or Touch that target the caster.",
   "DT.Settings.SpellAutoApplyWhitelist.Name": "Auto-Apply Spell Whitelist",
   "DT.Settings.SpellAutoApplyWhitelist.Hint": "Comma-separated spell names that may auto-apply, e.g. \"Mage Armor, Shield of Faith\". Names are matched exactly (ignoring upper/lower case).",
+  "DT.SpellAutoApply.Banner": "Automatically applied to {name}",
 
 "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }
