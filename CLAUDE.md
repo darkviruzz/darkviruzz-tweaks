@@ -257,6 +257,29 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   `use()`, never by applying an effect. `activity.requiresConcentration` ← `duration.concentration`.
   dnd5e ≥ 5.2 links dependents via the `flags.dnd5e.dependentOn` flag; `addDependent()` still
   exists but is deprecated until 6.0 — needed only for < 5.2.
+- **Chat-card effect tray targets** (`module/applications/components/targeted-application-mixin.mjs`):
+  the tray has two modes. `buildTargetContainer()` does
+  `if (!chatMessage.getFlag("dnd5e","targets")?.length) targetSourceControl.hidden = true`, and
+  `connectedCallback` then forces `targetingMode = "selected"`. In `"selected"` mode the list is
+  built from `canvas.tokens.controlled`; with nothing selected it prints
+  `DND5E.Tokens.NoneSelected` = **"No Tokens Selected"**. That is why an untargeted self-cast
+  shows that message. Fix: write `flags.dnd5e.targets` — dnd5e builds that flag into
+  `messageConfig.data` *before* firing `dnd5e.preUseActivity`, so the hook can fill it in and
+  the card is born with the right target. Also note `buildTargetListEntry` renders the checkbox
+  `disabled` in `"selected"` mode, which is the padlock-looking control on the target row.
+- **There is NO native "already applied" state** for a target — `buildTargetListEntry` renders
+  only image, name and a checkbox, in both the effect and damage trays. Any applied-indicator
+  has to be your own element. Insert it as a **sibling** of `<effect-application>` (which is in
+  the template HTML) rather than decorating the tray's internals: the tray builds its inner DOM
+  in `connectedCallback`, and its target list only while expanded
+  (`shouldBuildTargetList` requires `open && visible`), so decorating inside is timing-dependent.
+- **`dnd5e.renderChatMessage(message, html)`** (`module/documents/chat-message.mjs`, end of
+  `renderHTML()`) fires after all dnd5e card modifications; `html` is an `HTMLElement` not yet
+  inserted into the document. This is the right hook for decorating dnd5e chat cards — prefer it
+  over guessing core's `renderChatMessage`/`renderChatMessageHTML` naming across versions.
+- **Derive card state from live documents, not just flags.** A flag saying "applied" goes stale
+  if the effect is deleted; re-checking `actor.effects.find(e => e.origin === …)` on each render
+  keeps the UI honest for free.
 - **`ActiveEffect.getInitialDuration()`** is what dnd5e 5.x calls to refresh a duration, but it
   is **deprecated in Foundry v14 and slated for removal in v16** (replaced by
   `getEffectStart()`, which returns a differently-shaped `{combat, initiative, round, turn}`).
