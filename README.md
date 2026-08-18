@@ -74,6 +74,14 @@ effects to the caster directly — using the same logic as dnd5e's own apply but
 result is identical (same origin, same concentration link, and re-casting **refreshes** the
 existing effect instead of stacking a second copy).
 
+**The chat card** is adjusted to match. Casting a Self/Touch spell without targeting anything
+normally leaves dnd5e's target list empty, so the card's effect tray hides its
+Targeted/Selected switch, falls back to reading your canvas selection and shows
+*"No Tokens Selected"*. This feature records the caster as the target, so the card lists them
+properly, and adds an **"Automatically applied to …"** banner above the tray. The banner is
+re-checked against the actor's live effects every time the card renders, so it disappears on
+its own if the effect is later removed — it never claims something is applied when it isn't.
+
 An effect is auto-applied only when **all** of these are true:
 
 1. the feature is enabled,
