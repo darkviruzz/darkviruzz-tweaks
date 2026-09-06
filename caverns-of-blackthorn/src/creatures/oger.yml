@@ -1,0 +1,193 @@
+# Oger von Blackthorn (Bereich 4, Wachen in Bereich 1)
+#
+# Die Oger sind die Herren des Baus — nicht weil sie klug wären, sondern weil sie
+# die Stärksten sind. Der Oger-Krieger übernimmt die SRD-5.2.1-Werte (CR 2,
+# AC 11, 68 TP). Vorlage: Männchen HD 4+1, Weibchen HD 2+3 mit MV 12 (schwächer,
+# aber schneller — im Original ausdrücklich so), Häuptling HD 7+1 mit AC 3 und
+# einer "huge club" für 2W6+6.
+
+- key: oger-krieger
+  name: Oger-Krieger
+  size: lg
+  type: giant
+  alignment: Chaotic Evil
+  cr: 2
+  ac: 11
+  hp: { value: 68, formula: "8d10 + 24" }
+  speed: { walk: 40 }
+  abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 }
+  senses: { darkvision: 60 }
+  languages: [common, giant]
+  img: icons/creatures/magical/humanoid-giant-forest-blue.webp
+  description: >-
+    Vierzig von ihnen hausen im Ogerbau, und seit einem Jahrzehnt hat dort niemand
+    ausgemistet. Sie tragen erbeutete Langschwerter wie Küchenmesser und haben je
+    3W6 Gold- und 2W10 Silbermünzen in ihren Lagern verstreut.
+  traits:
+    - name: Stinkender Bau
+      requirements: In Bereich 4
+      text: >-
+        Der Gestank im Ogerbau ist körperlich. Eine Kreatur, die den Bau zum ersten Mal
+        betritt, muss einen SG-11-Konstitutionsrettungswurf bestehen oder bis zum Ende
+        ihres nächsten Zuges den Zustand <em>Vergiftet</em> erhalten. Oger sind immun —
+        sie riechen nichts mehr.
+      img: icons/magic/death/skull-poison-green.webp
+  actions:
+    - name: Riesenkeule
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greatclub
+      properties: [two]
+      damage: { number: 2, denom: 8, type: bludgeoning }
+      img: icons/weapons/clubs/club-heavy-barbed-grey.webp
+    - name: Wurfspeer
+      kind: ranged
+      ability: str
+      range: 30
+      long: 120
+      properties: [thr]
+      damage: { number: 2, denom: 6, type: piercing }
+      img: icons/weapons/polearms/javelin.webp
+
+- key: oger-matriarchin
+  name: Oger-Matriarchin
+  size: lg
+  type: giant
+  alignment: Lawful Evil
+  cr: 1
+  ac: 12
+  hp: { value: 45, formula: "6d10 + 12" }
+  speed: { walk: 50 }
+  abilities: { str: 17, dex: 12, con: 15, int: 6, wis: 9, cha: 8 }
+  skills: { prc: 1 }
+  senses: { darkvision: 60 }
+  languages: [common, giant]
+  img: icons/creatures/magical/humanoid-giant-forest-green.webp
+  description: >-
+    Einundzwanzig leben im Bau. Kleiner und leichter als die Männchen, aber deutlich
+    schneller — und sie schlagen zweimal, wo ein Ogermann einmal zuschlägt. Sie
+    verwalten die Vorräte und damit faktisch den Bau.
+  traits:
+    - name: Wachsam
+      text: >-
+        Die Matriarchin kann nicht überrascht werden, solange sie bei Bewusstsein ist,
+        und sie hat Vorteil auf Initiativewürfe.
+      img: icons/magic/perception/eye-ringed-glow-angry-red.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Die Matriarchin führt zwei Angriffe mit {{item:Knüppel}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Knüppel
+      kind: melee
+      ability: str
+      reach: 5
+      damage: { number: 1, denom: 8, type: bludgeoning }
+      img: icons/weapons/clubs/club-heavy-spiked-brown.webp
+    - name: Stein
+      kind: ranged
+      ability: str
+      range: 60
+      long: 120
+      damage: { number: 2, denom: 6, type: bludgeoning }
+      img: icons/commodities/stone/boulder-grey.webp
+
+- key: oger-jungtier
+  name: Junger Oger
+  size: med
+  type: giant
+  alignment: Lawful Evil
+  cr: 0.5
+  ac: 11
+  hp: { value: 22, formula: "4d8 + 4" }
+  speed: { walk: 30 }
+  abilities: { str: 15, dex: 10, con: 13, int: 5, wis: 7, cha: 6 }
+  senses: { darkvision: 60 }
+  languages: [giant]
+  img: icons/creatures/magical/humanoid-giant-forest-blue.webp
+  description: >-
+    Fünfzehn Jungtiere wachsen im Bau heran. Sie sind noch nicht größer als ein Mensch,
+    aber sie sind schon Oger — und wie die Gruppe mit ihnen umgeht, gehört zu den
+    Fragen, die dieses Abenteuer stellt und nicht beantwortet.
+  actions:
+    - name: Knüppel
+      kind: melee
+      ability: str
+      reach: 5
+      damage: { number: 1, denom: 8, type: bludgeoning }
+      img: icons/weapons/clubs/club-simple-barbed-brown.webp
+
+# Der Herrscher von Blackthorn. Der Originaltext betont ausdrücklich, dass er
+# "besonders gerissen" ist — er ist nicht der größte Oger, sondern der einzige mit
+# einem Plan. Er hält die Duergar hin, presst die Orks aus und weiß genau, dass
+# die Fontäne in Bereich 2 unantastbar ist.
+- key: oger-haeuptling
+  name: Oger-Häuptling von Blackthorn
+  size: lg
+  type: giant
+  alignment: Chaotic Evil
+  cr: 5
+  ac: 16
+  hp: { value: 115, formula: "11d10 + 55" }
+  speed: { walk: 40 }
+  abilities: { str: 21, dex: 10, con: 20, int: 11, wis: 12, cha: 14 }
+  saves: [str, con, wis]
+  skills: { itm: 2, prc: 1, dec: 1 }
+  senses: { darkvision: 60 }
+  languages: [common, giant, orc]
+  actorLink: true
+  img: icons/creatures/magical/humanoid-giant-forest-blue.webp
+  description: >-
+    Er trägt eine geflickte Plattenrüstung aus drei erbeuteten Rüstungen und einen
+    Streitkolben, den er "Zahlmeister" nennt. Der Häuptling ist der einzige Oger im
+    Bau, der versteht, was ein Bündnis ist — und der einzige, der begriffen hat, dass
+    die Duergar ihn belügen. Er wartet ab, wer ihm das bessere Angebot macht.
+  traits:
+    - name: Gerissen
+      text: >-
+        Der Häuptling hat Vorteil auf Rettungswürfe gegen den Zustand <em>Verzaubert</em>
+        und gegen Effekte, die seine Gedanken lesen oder ihn zur Wahrheit zwingen.
+      img: icons/magic/control/hypnosis-mesmerism-eye.webp
+    - name: Herr des Baus
+      text: >-
+        Verbündete des Häuptlings im Umkreis von 30 ft. haben Vorteil auf Rettungswürfe
+        gegen Furcht. Fällt der Häuptling, verlieren alle Oger im Umkreis von 60 ft.
+        diesen Vorteil und müssen einen SG-13-Weisheitsrettungswurf bestehen oder eine
+        Runde lang den Zustand <em>Verängstigt</em> erhalten.
+      img: icons/skills/social/intimidation-impressing.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Der Häuptling führt zwei Angriffe mit {{item:Zahlmeister}} aus. Er kann einen
+        davon durch {{item:Auslagen}} ersetzen.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Zahlmeister
+      kind: melee
+      ability: str
+      reach: 10
+      properties: [hvy, rch, two]
+      damage: { number: 2, denom: 8, type: bludgeoning }
+      text: >-
+        Ein getroffenes Ziel der Größe Groß oder kleiner muss einen SG-16-Stärkerettungswurf
+        bestehen oder wird 10 ft. zurückgestoßen und erhält den Zustand <em>Liegend</em>.
+      img: icons/weapons/hammers/hammer-double-spiked-embers.webp
+    - name: Auslagen
+      kind: ability
+      save: { ability: dex, dc: 16, onSave: half, damage: [{ number: 3, denom: 6, type: bludgeoning }] }
+      range: 30
+      text: >-
+        Der Häuptling schleudert einen Felsbrocken. Jede Kreatur in einem 10-ft-Würfel
+        im Umkreis von 30 ft. muss einen SG-16-Geschicklichkeitsrettungswurf bestehen.
+      img: icons/commodities/stone/boulder-grey.webp
+    - name: Die Peitsche
+      kind: ability
+      activation: bonus
+      uses: { max: 3, per: day }
+      text: >-
+        Der Häuptling brüllt einen Befehl. Bis zu drei Oger oder Orks im Umkreis von
+        60 ft., die ihn hören können, können als Reaktion je einen Nahkampfangriff
+        ausführen. Orks, die er so zwingt, erleiden dabei 3 Schaden — sie gehorchen aus
+        Angst, nicht aus Treue.
+      img: icons/weapons/misc/whip-red-yellow.webp

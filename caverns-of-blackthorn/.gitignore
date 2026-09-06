@@ -1,0 +1,6 @@
+node_modules/
+dist/
+packs/
+*.zip
+_test-*.mjs
+_readdb.mjs

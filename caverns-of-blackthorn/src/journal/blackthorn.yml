@@ -1,0 +1,641 @@
+key: blackthorn
+name: Die Höhlen von Blackthorn
+party: { level: 7, size: 4 }
+
+pages:
+  - key: uebersicht
+    name: Überblick für die Spielleitung
+    area: null
+    content: |
+      <p><em>Südöstlich von Dyvers, unter dem Gnarley-Forst.</em></p>
+
+      <p>Blackthorn ist kein Dungeon. Es ist ein Zuhause — für mehrere hundert Orks,
+      Gnolle und Oger, die seit Jahren von hier aus die Siedlungen an der Oberfläche
+      überfallen und sich danach in eine Tiefe zurückziehen, die noch niemand gefunden
+      hat, der davon berichten konnte.</p>
+
+      <p>Angefangen hat es mit einem Loch im Boden: ein Schacht mitten in einem
+      Yarpick-Dickicht, der in ein paar Kalksteinhöhlen führte. Die Orks haben zehn
+      Jahre lang daran gearbeitet, aus diesen Kammern einen Bau zu machen. Sie haben
+      einen bequemeren Weg an die Oberfläche geschlagen und dabei Tunnel angeschnitten,
+      die weit nach unten führen — bis in einen Abschnitt der UnderOerth.</p>
+
+      <h2>Wie dieses Abenteuer funktioniert</h2>
+
+      <p><strong>Blackthorn kann nicht leergekämpft werden.</strong> Das ist keine
+      Warnung, das ist der Entwurf. Im Bau leben rund 300 Ork-Krieger, 85 Gnolle und
+      76 Oger. Rechnet man alles zusammen, steht dort ein XP-Wert jenseits von 90.000 —
+      gegen ein Budget von 6.800 XP für einen harten Kampf auf Stufe 7. Wer frontal
+      hineinmarschiert, stirbt, und zwar zu Recht.</p>
+
+      <p>Was stattdessen funktioniert: sich hineinschleichen, beobachten, einen
+      einzelnen Trupp abfangen, verhandeln, Feuer legen, die Rothé-Herde losschneiden,
+      die Orks gegen die Oger aufhetzen. Die Zahlen im Bau sind Kulisse und Bedrohung.
+      Die Begegnungen, die auf den folgenden Seiten stehen, sind das, was tatsächlich
+      am Tisch gewürfelt wird — und die sind für eine Gruppe von vier Charakteren auf
+      Stufe 7 gebaut.</p>
+
+      <h2>Die Machtverhältnisse</h2>
+
+      <table>
+        <thead><tr><th>Gruppe</th><th>Stärke</th><th>Steht wo</th><th>Will</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Oger</strong></td><td>76</td><td>Bereich 4</td>
+              <td>Herrschen, weil sie am stärksten sind. Der Häuptling will mehr.</td></tr>
+          <tr><td><strong>Orks</strong></td><td>420</td><td>Bereich 6, 5, 1</td>
+              <td>Überleben. Sie haben keine Anführer mehr — die Oger haben sie erschlagen.</td></tr>
+          <tr><td><strong>Gnolle</strong></td><td>85</td><td>Bereich 3, 1</td>
+              <td>Fressen. Sie dulden das Licht der Fontäne besser als alle anderen.</td></tr>
+          <tr><td><strong>Duergar</strong></td><td>3–30 Gäste</td><td>Östliche Tunnel</td>
+              <td>Die Humanoiden als Rammbock benutzen und dabei die echte Beute abschöpfen.</td></tr>
+        </tbody>
+      </table>
+
+      <p>Der Bruch, den eine Gruppe ausnutzen kann, liegt offen: <strong>die Orks
+      hassen die Oger.</strong> Sie haben ein Jahrzehnt lang unter der Peitsche Fels
+      gebrochen, ihre Anführer sind tot, und sie sind fünfmal so zahlreich wie ihre
+      Herren. Es fehlt nur jemand, der ihnen sagt, dass sie das gemerkt haben.</p>
+
+      <h2>Aufhänger</h2>
+
+      <p><strong>Der Sklavenweg.</strong> Die Duergar aus den östlichen Tunneln haben
+      Interesse an einer bequemen Quelle für Sklaven — und die UnderOerth bietet einen
+      Weg in den Pomarj, auf dem keine Patrouille je jemanden anhält. Wer in Dyvers
+      nach verschwundenen Holzfällern sucht, landet früher oder später hier.</p>
+
+      <p><strong>Die Emissäre.</strong> Die Sklavenherren schicken Gesandte nach
+      Blackthorn und suchen Verbündete für einen Schlag gegen Greyhawk. Bis zur Stadt
+      ist es zu weit — aber die Gnarley-Waldläufer und die südlichen Patrouillen der
+      Greyhawker Miliz sind in Reichweite, und die sterben bereits.</p>
+
+      <p><strong>Der Erddrachen-Kult.</strong> Priester vom Drachenkopf kommen, um die
+      Humanoiden für ihren Gott zu gewinnen. Gelingt es ihnen, marschiert Blackthorn
+      in den Pomarj — gegen die Sklavenherren. Sie bringen Waffen, magische
+      Gegenstände, Sklaven, Reichtümer und, was bei Ogern am zuverlässigsten wirkt,
+      Alkohol.</p>
+
+      <p class="cob-note"><em>Drei Fraktionen wollen dasselbe Bündnis und wissen nicht
+      voneinander. Eine Gruppe, die das begreift, braucht kein Schwert zu ziehen — es
+      reicht, die richtigen Leute einander vorzustellen.</em></p>
+
+  - key: bereich-1
+    name: 1 — Die obere Höhle
+    area: 1
+    content: |
+      <p><strong>250 Fuß unter der Oberfläche.</strong></p>
+
+      <p>Die erste Kammer des Baus, und die einzige, in die noch Tageslicht fällt: ein
+      schmaler Streifen, der durch das Loch in der Decke hereinkommt und nichts
+      erhellt. Ursprünglich führte nur eine Leiter herunter (<strong>1A</strong>), die
+      an einem Schacht hing, der oben mitten in einem Yarpick-Dickicht endet. Die Orks
+      haben sich inzwischen einen bequemeren Weg gegraben — einen Tunnel mit Stufen,
+      der nach Nordosten an die Oberfläche führt (<strong>1B</strong>).</p>
+
+      <p>Der Boden ist über und über mit Riesenpilzen bewachsen, in allen Größen,
+      allesamt harmlos und allesamt eßbar. Sie wachsen auf Mist und Abfall, und sie
+      sind das Grundnahrungsmittel des Baus. Es riecht nach Schweiß, Fäulnis und
+      Schimmel, und der Geruch bleibt in der Kleidung.</p>
+
+      <h2>Die Wache</h2>
+
+      <p>Hier steht immer eine Wache, Tag und Nacht. Und sie ist <strong>leise</strong> —
+      das ist der wichtigste taktische Umstand dieses Raumes. Die Wachen wissen, dass
+      Lärm nach oben dringt, und sie haben Befehl, den Bau nicht zu verraten. Sie
+      unterhalten sich nicht, sie schlagen keinen Alarm, bevor sie sicher sind, und sie
+      versuchen Eindringlinge nach Möglichkeit lautlos zu erledigen.</p>
+
+      <p><strong>Für die Gruppe heißt das:</strong> Wer den Schacht herunterkommt, wird
+      erwartet, aber nicht angebrüllt. Ein Kampf hier bleibt zunächst lokal. Erst wenn
+      er länger als drei bis vier Runden dauert oder jemand schreit, hört ihn Bereich 2
+      — und dann kommen 2W6 weitere Orks über die Treppe.</p>
+    encounters:
+      - name: Der Wachposten (wie im Original besetzt)
+        note: >-
+          Die volle Wachmannschaft, so wie sie im Original dasteht. Achtzehn Körper
+          gegen vier Charaktere — die XP-Summe unterschätzt das, weil die
+          Aktionsökonomie in der Tabelle nicht auftaucht. Ohne Flächenzauber wird das
+          zäh; mit Flächenzaubern wird es laut.
+        creatures:
+          - { key: oger-krieger, count: 2 }
+          - { key: gnoll-krieger, count: 6 }
+          - { key: ork-krieger, count: 10 }
+      - name: Wenn der Kampf zu lange dauert (Verstärkung)
+        note: >-
+          Kommt nach 3–4 Runden Lärm dazu, über die Treppe aus Bereich 2. Rechne sie
+          zum Wachposten hinzu, wenn die Gruppe nicht schnell oder leise war.
+        creatures:
+          - { key: ork-krieger, count: 7 }
+    scaling:
+      steps:
+        - for: 4× Stufe 5
+          creatures:
+            - { key: oger-krieger, count: 1 }
+            - { key: gnoll-krieger, count: 4 }
+            - { key: ork-krieger, count: 6 }
+        - for: 4× Stufe 7 (Standard)
+          creatures:
+            - { key: oger-krieger, count: 2 }
+            - { key: gnoll-krieger, count: 6 }
+            - { key: ork-krieger, count: 10 }
+        - for: 4× Stufe 9
+          creatures:
+            - { key: oger-krieger, count: 3 }
+            - { key: gnoll-rudelfuehrer, count: 1 }
+            - { key: gnoll-krieger, count: 6 }
+            - { key: ork-veteran, count: 2 }
+            - { key: ork-krieger, count: 10 }
+    after: |
+      <h2>Was hier zu holen ist</h2>
+      <p>Nichts von Wert. Jeder Gnoll trägt 2W4 gp, jeder Ork 1W4+1 sp. Die Pilze sind
+      eßbar und für eine Gruppe, die länger unten bleiben will, tatsächlich relevant.</p>
+
+      <h2>Der Weg nach unten</h2>
+      <p>Vom Nordwesten der Höhle führt ein gewundener Gang mit Stufen abwärts nach
+      Bereich 2. Er ist eng genug, dass ein Oger sich seitlich drehen muss — was er
+      auch tut, wenn er einen fliehenden Eindringling verfolgt.</p>
+
+  - key: bereich-2
+    name: 2 — Die Fontänenhöhle
+    area: 2
+    content: |
+      <p><strong>500 Fuß unter der Oberfläche.</strong></p>
+
+      <p>Eine ungeheuer große Kammer, in zwei Hälften geteilt durch einen sieben Fuß
+      hohen Wall aus aufgeschichtetem Fels. Und — das ist das Erste, was auffällt, und
+      das Letzte, womit jemand rechnet, der 500 Fuß tief unter einem Wald steht — sie
+      ist <strong>taghell</strong>.</p>
+
+      <p>Aus einem fußbreiten Loch im Boden schießt ein Geysir fast zehn Fuß in die
+      Höhe, und das Wasser leuchtet. Nicht schimmernd, nicht glimmend: es leuchtet wie
+      flüssiges Sonnenlicht, hell genug, dass es weh tut, direkt hineinzusehen. Wärme
+      gibt es keine ab. Das Wasser fällt zurück, sammelt sich in einem flachen Becken
+      und verliert dabei binnen Sekunden sein Licht — was liegt, ist gewöhnliches
+      Wasser. Es fließt nach Süden ab.</p>
+
+      <p>Der östliche Teil der Höhle liegt im Schatten des Walls und ist deutlich
+      dunkler. Im Licht gedeihen Speisepilze und eine Art Kürbis, und die Luft ist hier
+      als einzige Stelle im Bau nicht stickig.</p>
+
+      <h2>Das Wasser</h2>
+
+      <p>Die Quelle ist magisch, und die Bewohner wissen es. Sie haben nie versucht,
+      sie zu verschließen, obwohl die meisten von ihnen das Licht verabscheuen.</p>
+
+      <table>
+        <thead><tr><th>Was man tut</th><th>Was passiert</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sich im aufsteigenden Strahl duschen</strong> (1 Aktion)</td>
+              <td>Du erhältst 2W8 + 2 Trefferpunkte zurück. Eine Kreatur kann davon
+              höchstens einmal pro langer Rast profitieren.</td></tr>
+          <tr><td><strong>In das Becken an der Quelle eintauchen</strong> (1 Minute)</td>
+              <td>Du erhältst alle Trefferpunkte zurück. Zusätzlich enden alle
+              Krankheiten, Verbrennungen, offenen Wunden und jede Form von Verfall am
+              Körper — Mumienfäule eingeschlossen. Erschöpfungsgrade werden nicht
+              geheilt.</td></tr>
+          <tr><td><strong>Wasser abfüllen und mitnehmen</strong></td>
+              <td>Nichts. Das Leuchten erlischt in dem Moment, in dem das Wasser den
+              Raum verlässt, und mit ihm die Wirkung. Siehe [[item:leuchtendes-wasser]].</td></tr>
+        </tbody>
+      </table>
+
+      <p class="cob-note"><em>Die Beschränkung auf einmal pro langer Rast ist eine
+      Ergänzung dieser Fassung. Ohne sie ist die Fontäne eine Heilungsmaschine, die
+      jeden Ressourcendruck im Bau auflöst — und Ressourcendruck ist hier das ganze
+      Spiel.</em></p>
+
+      <h2>Das Licht als Waffe</h2>
+
+      <p>Der Raum ist hell erleuchtet, und das ist mechanisch relevant: <strong>Orks,
+      Oger und Duergar haben hier Nachteil auf Angriffswürfe</strong> (Lichtscheu
+      beziehungsweise Sonnenlicht-Empfindlichkeit). Gnolle nicht — deshalb wurden sie
+      überhaupt in die obere Höhle verlegt.</p>
+
+      <p>Eine Gruppe, die das bemerkt, hat den besten Kampfplatz des ganzen Baus
+      gefunden. Eine Gruppe, die die Bewohner ins Licht <em>lockt</em>, hat verstanden,
+      wie man Blackthorn spielt.</p>
+
+      <h2>Die Klippe</h2>
+
+      <p>Ein Teil des südlichen Randes ist keine Wand, sondern eine Kante: 500 Fuß
+      senkrecht hinab nach Bereich 5. Das Wasser des Beckens fließt hier als schmaler
+      Wasserfall über. Der Fels daneben ist gut zu erklettern
+      (<strong>SG 10 Stärke [Athletik]</strong>) — solange man das nasse Rinnsal
+      meidet. Wer darin klettert, würfelt mit <strong>SG 17</strong>, und ein Fehlschlag
+      bedeutet 500 Fuß.</p>
+    encounters:
+      - name: Patrouille am Wall
+        note: >-
+          Zwei bis drei Trupps ziehen ständig durch die Höhle. Sie halten sich im
+          Schatten des Ostteils — im Licht kämpfen sie ungern und wissen auch warum.
+        creatures:
+          - { key: ork-krieger, count: 6 }
+          - { key: oger-krieger, count: 1 }
+    after: |
+      <h2>Ausgänge</h2>
+      <ul>
+        <li><strong>Nordosten:</strong> gewundener Gang hinauf nach Bereich 1.</li>
+        <li><strong>Nordwesten:</strong> nach Bereich 3, der Gnollhöhle.</li>
+        <li><strong>Westen:</strong> eine Wendeltreppe hinauf in den Ogerbau (Bereich 4).
+            Das ist dessen Haupteingang.</li>
+        <li><strong>Süden:</strong> die Klippe nach Bereich 5.</li>
+        <li><strong>Osten:</strong> ein Gang hinab nach Bereich 6.</li>
+      </ul>
+
+  - key: bereich-3
+    name: 3 — Die Gnollhöhle
+    area: 3
+    content: |
+      <p>Eine Kammer mit acht Fuß Deckenhöhe — niedrig genug, dass ein Oger sich
+      ducken müßte, und genau das war der Punkt. Sie wurde ausgebrochen, kurz nachdem
+      die Verbindung zwischen den Bereichen 5 und 6 stand, und hierher wurden die
+      Gnolle verlegt: Sie und die Orks waren die einzigen, die hineinpassten, und von
+      beiden ertragen die Gnolle das Licht aus Bereich 2 besser.</p>
+
+      <p>Es leben hier <strong>62 Krieger, 20 Matriarchinnen und 15 Jungtiere</strong>.
+      Der Dreck steht dem eines Orklagers in nichts nach. Über allem liegt der Geruch
+      von altem Fleisch.</p>
+
+      <p>Bemerkenswert an diesem Rudel: <strong>die Matriarchinnen sind die stärkeren
+      Kämpferinnen</strong>, nicht die Krieger. Wer die Gnolle nach Größe einschätzt,
+      greift die Falschen zuerst an.</p>
+
+      <p>Drei Rudelführer halten das Ganze zusammen. Sie tragen erbeutete Kettenhemden,
+      doppelt so viel Gold wie ihre Krieger — und sie sind die einzigen Gnolle im Bau,
+      mit denen sich reden lässt. Nicht, weil sie friedlicher wären, sondern weil sie
+      rechnen können.</p>
+    encounters:
+      - name: Ein Jagdtrupp (was die Gruppe tatsächlich trifft)
+        note: >-
+          Gnolle bleiben nicht in ihrer Höhle sitzen. Ein Trupp dieser Größe zieht durch
+          die Bereiche 2, 5 und 6 und greift von der Flanke an — Rudeltaktik heißt, dass
+          sie einen einzelnen Charakter umgehen und einkreisen.
+        creatures:
+          - { key: gnoll-rudelfuehrer, count: 1 }
+          - { key: gnoll-matriarchin, count: 2 }
+          - { key: gnoll-krieger, count: 6 }
+      - name: Die Höhle betreten (nicht als Kampf gedacht)
+        note: >-
+          Zur Einordnung, was ein Frontalangriff bedeutet. Wer hier hineingeht und
+          gesehen wird, kämpft gegen das ganze Rudel.
+        creatures:
+          - { key: gnoll-krieger, count: 62 }
+          - { key: gnoll-matriarchin, count: 20 }
+          - { key: gnoll-rudelfuehrer, count: 3 }
+    after: |
+      <h2>Beute</h2>
+      <p>Jeder Krieger trägt 2W4 gp, jeder Rudelführer das Doppelte. Zusammengenommen
+      liegen in dieser Höhle rund 400 gp — verteilt auf 85 Gnolle, was die Sache
+      unpraktisch macht.</p>
+
+  - key: bereich-4
+    name: 4 — Der Ogerbau
+    area: 4
+    content: |
+      <p><strong>Nur 300 Fuß unter der Oberfläche</strong> — höher gelegen als die
+      Fontänenhöhle, von der aus eine Wendeltreppe heraufführt.</p>
+
+      <p>Vierzig Oger, einundzwanzig Matriarchinnen, fünfzehn Jungtiere, und ein
+      Jahrzehnt ohne einen einzigen Tag Ausmisten. Die Höhle wird von ein paar Fackeln
+      und zwei Kochfeuern beleuchtet, was reicht, um zu erkennen, worauf man tritt,
+      aber nicht genug, um es zu bereuen. Es ist düster, feucht und stinkt so
+      durchdringend, dass Fremde beim ersten Betreten einen
+      <strong>SG-11-Konstitutionsrettungswurf</strong> ablegen, um nicht kurzzeitig
+      <em>vergiftet</em> zu sein.</p>
+
+      <p>In den Ecken wachsen Pilzbüschel. In den Winkeln liegt, was vierzig Oger in
+      zehn Jahren von Überfällen mitgebracht und dann vergessen haben.</p>
+
+      <h2>Wer hier herrscht</h2>
+
+      <p>Die Oger sind die Herren von Blackthorn, aus dem denkbar einfachsten Grund:
+      Sie sind die Stärksten. Der Einfluss der Duergar aus Bereich 6 ist gering und
+      wird von den Ogern für Höflichkeit gehalten.</p>
+
+      <p>Der <strong>Oger-Häuptling</strong> ist die Ausnahme im Bau. Der Originaltext
+      nennt ihn "besonders gerissen", und das ist wörtlich zu nehmen: Er ist nicht der
+      größte Oger, sondern der einzige mit einem Plan. Er weiß, dass die Duergar ihn
+      belügen. Er weiß, was die Fontäne wert ist. Und er wartet ab, wer ihm das bessere
+      Angebot macht — was ihn zum interessantesten Verhandlungspartner des Abenteuers
+      macht und zum gefährlichsten Gegner.</p>
+
+      <h2>Zugänge</h2>
+      <ul>
+        <li><strong>Haupteingang:</strong> die Wendeltreppe aus Bereich 2.</li>
+        <li><strong>Südwestecke:</strong> eine wenig benutzte Leiter hinab auf den Pfad
+        entlang der Schluchtkante (Bereich 7). Der Fluchtweg des Häuptlings — und der
+        beste Weg hinein für eine Gruppe, die nicht durch die Fontänenhöhle will.</li>
+      </ul>
+    encounters:
+      - name: Die Wachstube am Treppenkopf
+        note: >-
+          Was am Haupteingang steht. Ein sauberer, harter Kampf für vier Charaktere auf
+          Stufe 7 — und der einzige Weg, im Ogerbau zu kämpfen, ohne alle vierzig zu
+          wecken.
+        creatures:
+          - { key: oger-krieger, count: 4 }
+          - { key: oger-matriarchin, count: 2 }
+      - name: Der Häuptling und seine Leibwache
+        note: >-
+          Der Bosskampf des Abenteuers. Der Häuptling trägt den Ring des Schutzes und
+          den Stein des Glücks — beides ist in seinen Werten bereits eingerechnet, wenn
+          du die Gegenstände auf dem Bogen einstimmst.
+        creatures:
+          - { key: oger-haeuptling, count: 1 }
+          - { key: oger-krieger, count: 4 }
+      - name: Der ganze Bau (nicht als Kampf gedacht)
+        note: Zur Einordnung. Vierzig Oger sind keine Begegnung, sondern eine Todesart.
+        creatures:
+          - { key: oger-krieger, count: 40 }
+          - { key: oger-matriarchin, count: 21 }
+          - { key: oger-haeuptling, count: 1 }
+    scaling:
+      steps:
+        - for: 4× Stufe 5
+          creatures:
+            - { key: oger-haeuptling, count: 1 }
+            - { key: oger-matriarchin, count: 2 }
+        - for: 4× Stufe 7 (Standard)
+          creatures:
+            - { key: oger-haeuptling, count: 1 }
+            - { key: oger-krieger, count: 4 }
+        - for: 4× Stufe 9
+          creatures:
+            - { key: oger-haeuptling, count: 1 }
+            - { key: oger-krieger, count: 6 }
+            - { key: oger-matriarchin, count: 4 }
+    after: |
+      <h2>Der Hort</h2>
+
+      <p>An Münzen tragen die Oger je 3W6 gp und 2W10 sp bei sich — bei 61 erwachsenen
+      Ogern sind das grob <strong>640 gp und 670 sp</strong>, verteilt über die ganze
+      Höhle und nicht an einem Ort.</p>
+
+      <p>Die magischen Gegenstände des Stammes sind unter den Männchen und dem
+      Häuptling aufgeteilt. Der Häuptling hat sich das Beste genommen:</p>
+
+      <ul>
+        <li>[[item:ring-des-schutzes]] — trägt der Häuptling</li>
+        <li>[[item:stein-des-gluecks]] — trägt der Häuptling</li>
+        <li>[[item:stiefel-der-schnelligkeit]] — bei den Habseligkeiten des Häuptlings,
+            weil sie ihm nicht passen</li>
+        <li>[[item:handaxt-plus-2]] — bei einem der Oger-Krieger</li>
+        <li>[[item:heiltrank]] — bei einem der Oger-Krieger</li>
+        <li>[[item:trank-des-suesswassers]] — beim Häuptling, ungeöffnet, weil er ihn
+            für einen zweiten Heiltrank hält</li>
+      </ul>
+
+  - key: bereich-5
+    name: 5 — Die Lärmhöhle
+    area: 5
+    content: |
+      <p><strong>1.000 Fuß unter der Oberfläche.</strong></p>
+
+      <p>Der Name stammt aus einer Zeit, die vorbei ist. Jahrelang war diese Kammer
+      erfüllt vom Schlagen der Spitzhacken und Hämmer — hier wurde der Fels gebrochen,
+      der Blackthorn zu dem gemacht hat, was es ist. Seit die Verbindung nach Bereich 6
+      steht, sind die Orks dorthin umgezogen. Jetzt ist es still.</p>
+
+      <p>Bewohnt ist die Höhle nicht mehr, aber unbewacht auch nicht: <strong>zehn
+      Orks</strong> stehen hier — gegen Eindringlinge von oben und gegen das, was
+      gelegentlich aus der Schlucht heraufkriecht. Es ist ein Strafposten, und die
+      Wachen wissen das.</p>
+
+      <p>Im Abraum der Bergleute wachsen mächtige Büschel von Riesenpilzen, üppiger als
+      irgendwo sonst im Bau — tausend Fuß unter der Erde, aus Jahren von Abfall.</p>
+
+      <h2>Wasser und Wege</h2>
+
+      <p>Der Wasserfall aus Bereich 2 endet hier und wird zu einem Bach, der nach
+      Norden zieht, die Klippenkante am östlichen Ende kreuzt und in die Schlucht
+      stürzt. Die Orks holen ihr Trinkwasser hier — der Bach ist die verlässlichste
+      Stelle im ganzen Bau, um jemandem aufzulauern.</p>
+
+      <p>Eine kleine Steinbrücke führt über den Bach auf einen schmalen Pfad, der an
+      der Nordseite der Flussschlucht entlangläuft. Weiter draußen wird daraus ein
+      halsbrecherischer Steig, der sich die Schluchtwand hinabwindet, bis er unten am
+      Fluss endet (Bereich 7).</p>
+    encounters:
+      - name: Der Strafposten
+        note: >-
+          Zehn Orks, mehr nicht. Für vier Charaktere auf Stufe 7 ist das keine
+          Herausforderung, sondern eine Frage: Schafft ihr es, bevor einer von ihnen
+          die Treppe hochrennt? Wer hier laut wird, hat in Bereich 6 ein Problem.
+        creatures:
+          - { key: ork-krieger, count: 10 }
+
+  - key: bereich-6
+    name: 6 — Die Orkhöhle
+    area: 6
+    content: |
+      <p>Die größte Kammer des Baus und, nach Bereich 1 und 2, die älteste. Sie war
+      schon da, bevor jemand hier gegraben hat.</p>
+
+      <p>Zwischen mannshohen Pilzen lebt hier ein ganzer Stamm: <strong>300 Krieger, 70
+      erwachsene Nichtkämpfer, 50 Kinder</strong>. Dazu eine kleine Herde
+      [[creature:rothe]] — unterirdisches Zottelvieh, das die Pilze und Flechten hier
+      und in Bereich 5 abweidet und den Orks Haar, Milch und Fleisch liefert.</p>
+
+      <h2>Ein Stamm ohne Anführer</h2>
+
+      <p>Das ist der wichtigste Satz über Bereich 6, und er steht schon im Original:
+      <strong>Die Orks haben keine Anführer.</strong> Die Oger haben sie beseitigt,
+      damals, als die Orks noch wenig mehr waren als Sklaven, die Fels schlugen.</p>
+
+      <p>Dreihundert bewaffnete Krieger, kein Häuptling, kein Schamane, keine
+      Hierarchie — und fünf Etagen weiter oben sitzen sechsundsiebzig Oger, die das
+      für einen dauerhaften Zustand halten. Eine Gruppe, die einen glaubwürdigen
+      Ork-Veteranen findet und ihm die richtige Idee in den Kopf setzt, braucht in
+      Blackthorn kein einziges Schwert mehr zu ziehen. Sie muss nur rechtzeitig
+      draußen sein.</p>
+
+      <h2>Die östlichen Tunnel</h2>
+
+      <p>Am Ostende zweigen zwei Tunnel ab, die tiefer führen und irgendwann in die
+      Nähe einer Duergar-Siedlung kommen. Von dort kommen die Gäste.</p>
+
+      <p>Die Duergar haben einen Plan, und er ist besser als der der Oger: Sie wollen
+      die Humanoiden gegen die Städte an der Oberfläche und unter Tage schicken, und
+      während alle hinsehen, mit ihrer eigenen Magie hineinspazieren und das
+      mitnehmen, was tatsächlich Wert hat. Gegenüber den Ogern treten sie betont
+      diplomatisch auf und beobachten sie genau — sie haben kein Interesse daran, deren
+      Zorn zu wecken, bevor der Zeitpunkt gekommen ist.</p>
+
+      <p>Ob dieser Plan mit dem der Sklavenherren kollidiert oder sich mit ihm
+      verbinden lässt, ist die interessanteste offene Frage des Abenteuers.</p>
+    encounters:
+      - name: Ein Arbeitstrupp mit Aufsicht
+        note: >-
+          Was die Gruppe in den Randbereichen der Höhle trifft. Der Veteran ist der
+          Kontakt, über den ein Aufstand laufen könnte — es lohnt sich, ihn gefangen
+          zu nehmen statt zu töten.
+        creatures:
+          - { key: ork-veteran, count: 2 }
+          - { key: ork-krieger, count: 8 }
+      - name: Duergar-Spähtrupp
+        note: >-
+          Grauzwerge aus den östlichen Tunneln, unterwegs zu einer Audienz beim
+          Oger-Häuptling. Sie kämpfen nicht gern und verhandeln lieber — und wenn es
+          schiefgeht, ist der Anführer als Erster unsichtbar.
+        creatures:
+          - { key: duergar-anfuehrer, count: 1 }
+          - { key: duergar, count: 6 }
+      - name: Der Häuptling der Duergar (tief in den Tunneln)
+        note: >-
+          Wenn die Gruppe den östlichen Tunneln folgt. Zwei Steeder klettern an der
+          Decke, bis der Kampf beginnt — dann springen sie.
+        creatures:
+          - { key: duergar-haeuptling, count: 1 }
+          - { key: duergar-anfuehrer, count: 2 }
+          - { key: steeder, count: 2 }
+      - name: Aufgeschreckte Rothé-Herde
+        note: >-
+          Kein Gegner, sondern ein Werkzeug. Wer die Herde losschneidet und in die
+          richtige Richtung treibt, hat in einer Höhle voller Orks für ein paar Minuten
+          alle Aufmerksamkeit umgelenkt.
+        creatures:
+          - { key: rothe, count: 12 }
+    after: |
+      <h2>Beute</h2>
+      <p>Jeder Ork trägt 1W4+1 sp. Bei 300 Kriegern ist das theoretisch eine Menge
+      Silber und praktisch nichts, was jemand einsammeln wird.</p>
+
+  - key: bereich-7
+    name: 7 — Schlucht und Fluss
+    area: 7
+    content: |
+      <p>Über tausend Fuß tief, ausgewaschen von einem starken Fluss, der viele Meilen
+      nordwestlich entspringt — womöglich eine unterirdische Tochter der Velverdyva.</p>
+
+      <p>Die Wände sind steil. Der einzige gangbare Abstieg ist der Pfad auf der
+      Nordseite, der bei Bereich 5 beginnt. Der Wasserfall aus der Fontänenhöhle
+      stürzt in weitem Bogen herab und endet im Fluss.</p>
+
+      <p>Der Fluss selbst ist auf weiten Strecken eine einzige Stromschnelle. Die
+      Strömung ist stark genug, um Felsbrocken zu bewegen — und unvorsichtige Schwimmer
+      mitzunehmen. Wer hineinfällt, macht keinen Rettungswurf gegen Ertrinken, sondern
+      gegen den Fels.</p>
+
+      <p>Nach Südosten läuft der Fluss viele Meilen weiter und immer tiefer, bis er
+      schließlich einen großen unterirdischen See erreicht. Auf dessen anderer Seite,
+      so erzählen es jedenfalls die Duergar, liegt eine Zivilisation der Kuo-Toa.</p>
+
+      <p class="cob-note"><em>Bereich 7 ist der Ausgang nach unten und der Anschluss an
+      alles, was danach kommt. Wer die UnderOerth in seiner Kampagne braucht, hängt sie
+      hier an.</em></p>
+
+  - key: skalierung
+    name: Begegnungen, Budgets und Skalierung
+    content: |
+      <h2>Das Budget dieser Gruppe</h2>
+
+      <p>Alle Begegnungen in diesem Abenteuer sind gegen <strong>vier Charaktere auf
+      Stufe 7</strong> gerechnet. Nach den Tabellen des DMG 2024 ergibt das:</p>
+
+      <table>
+        <thead><tr><th>Gruppe</th><th>Niedrig</th><th>Mittel</th><th>Hoch</th></tr></thead>
+        <tbody>
+          <tr><td>3× Stufe 7</td><td>2.250</td><td>3.900</td><td>5.100</td></tr>
+          <tr><td><strong>4× Stufe 7</strong></td><td><strong>3.000</strong></td>
+              <td><strong>5.200</strong></td><td><strong>6.800</strong></td></tr>
+          <tr><td>5× Stufe 7</td><td>3.750</td><td>6.500</td><td>8.500</td></tr>
+        </tbody>
+      </table>
+
+      <p>Spielt ihr zu dritt, nimm bei jeder Begegnung etwa ein Viertel der Kreaturen
+      heraus — bei den Trupps am einfachsten die Ork-Krieger, die ohnehin als Masse
+      gedacht sind.</p>
+
+      <h2>Warum die XP-Summe hier lügt</h2>
+
+      <p>Die Tabelle bewertet den Wachposten in Bereich 1 (2.500 XP) als
+      <em>unterhalb Niedrig</em>. Am Tisch stehen dort achtzehn Kreaturen gegen vier
+      Charaktere, und achtzehn Angriffe pro Runde sind etwas anderes als eine Zahl in
+      einer Spalte. Die 2024er Budgets bilden Aktionsökonomie nicht ab; bei
+      Hordenbegegnungen liegen sie regelmäßig zu niedrig.</p>
+
+      <p><strong>Faustregel für dieses Abenteuer:</strong> Sobald mehr als das Doppelte
+      der Gruppengröße an Gegnern im Raum steht, behandle die Begegnung eine Stufe
+      härter, als die Tabelle sagt. Umgekehrt gilt: Flächenzauber sind hier
+      außergewöhnlich stark, und das ist beabsichtigt. Eine Gruppe auf Stufe 7 hat
+      <em>Feuerball</em>, und Blackthorn ist der Ort, an dem sich das anfühlen soll wie
+      die Lösung eines Problems.</p>
+
+      <h2>Wenn die Gruppe stärker oder schwächer ist</h2>
+
+      <p>Auf den Bereichsseiten steht bei den wichtigen Begegnungen ein
+      Skalierungsblock mit drei Besetzungen. Statt Trefferpunkte zu drehen, ändert sich
+      dort die <strong>Zusammensetzung</strong> — mehr Körper für stärkere Gruppen,
+      ein Veteran statt drei Kriegern für schwächere. Das hält die Herausforderungsgrade
+      ehrlich und die XP-Vergabe korrekt.</p>
+
+      <h2>Alarmstufen</h2>
+
+      <p>Blackthorn reagiert. Halte fest, wie laut die Gruppe war:</p>
+
+      <table>
+        <thead><tr><th>Stufe</th><th>Auslöser</th><th>Folge</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ruhig</strong></td><td>Ausgangslage</td>
+              <td>Patrouillen wie beschrieben, keine Verstärkung.</td></tr>
+          <tr><td><strong>Aufmerksam</strong></td>
+              <td>Ein Kampf dauerte länger als 3 Runden, oder eine Leiche wurde gefunden</td>
+              <td>Patrouillen laufen zu zweit. Begegnungen bekommen 1W6 zusätzliche
+              Ork-Krieger.</td></tr>
+          <tr><td><strong>Alarm</strong></td>
+              <td>Jemand ist entkommen und hat berichtet</td>
+              <td>Der Oger-Häuptling schickt Trupps. Alle 10 Minuten trifft die Gruppe
+              auf 2W6 Ork-Krieger und 1W3 Oger-Krieger.</td></tr>
+          <tr><td><strong>Jagd</strong></td>
+              <td>Der Häuptling weiß, wer die Gruppe ist</td>
+              <td>Die Ausgänge 1A und 1B werden besetzt. Der Rückweg nach oben ist zu —
+              es bleiben die Klippe und die Schlucht.</td></tr>
+        </tbody>
+      </table>
+
+  - key: konvertierung
+    name: Anmerkungen zur Konvertierung
+    content: |
+      <p>Diese Fassung überträgt eine AD&amp;D-2e-Vorlage nach D&amp;D 2024. Wo die
+      Umsetzung eine Entscheidung erfordert hat, steht sie hier — damit du sie
+      zurückdrehen kannst, wenn du anderer Meinung bist.</p>
+
+      <table>
+        <thead><tr><th>Original</th><th>Diese Fassung</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>Orks „kämpfen bei −1 im Sonnenlicht“</td>
+              <td>Eigenschaft <em>Lichtscheu</em>: Nachteil auf Angriffswürfe in hellem Licht</td>
+              <td>Macht die Fontänenhöhle zum taktisch interessantesten Raum des Baus,
+              statt zu einer Fußnote.</td></tr>
+          <tr><td>Gnolle sind Humanoide</td>
+              <td>Gnolle sind <strong>Unholde</strong></td>
+              <td>Entspricht dem 2024er Monsterhandbuch (Yeenoghu). Relevant für Zauber,
+              die auf Kreaturenarten wirken.</td></tr>
+          <tr><td>Weibliche Gnolle sind stärker als männliche (HD 3+1 gegen HD 2)</td>
+              <td>Beibehalten: Matriarchin HG 2, Krieger HG 1/2</td>
+              <td>Eigenheit der Vorlage, und eine gute Falle für Spieler, die nach
+              Größe priorisieren.</td></tr>
+          <tr><td>Fontäne wirkt wie <em>Leichte Wunden heilen</em>, Eintauchen heilt alles</td>
+              <td>Dusche 2W8+2, einmal pro langer Rast; Eintauchen heilt vollständig
+              und beendet Krankheiten</td>
+              <td>Ohne Begrenzung löst die Quelle jeden Ressourcendruck im Bau auf.</td></tr>
+          <tr><td>Steeder springt 240 Fuß</td><td>Springt 60 Fuß</td>
+              <td>240 Fuß sind 48 Felder — quer durch die größte Höhle. Beeindruckend
+              als Zahl, unspielbar am Tisch.</td></tr>
+          <tr><td>Duergar: „+4 auf Rettungswürfe gegen Zauber“</td>
+              <td>Vorteil auf Rettungswürfe gegen Zauber, Gift und Illusionen</td>
+              <td>2024 kennt keine pauschalen Rettungswurfboni mehr.</td></tr>
+          <tr><td>Ring des Schutzes +2</td><td>Beibehalten (sehr selten)</td>
+              <td>In 2024 ist der Ring ein +1-Gegenstand. Der +2 des Originals bleibt,
+              weil er der Grund ist, warum sich der Ogerbau lohnt. Wer den Hort
+              schwächer will, macht +1 daraus.</td></tr>
+          <tr><td>Trefferwürfel-Rechnung (THAC0, AC absteigend)</td>
+              <td>Neu gebaute Statblocks nach 2024er Bauweise</td>
+              <td>Eine Umrechnung Wert für Wert ergibt in 5.5e keine funktionierenden
+              Monster. Die Statblocks sind an ihrem Herausforderungsgrad ausgerichtet,
+              nicht an ihren Trefferwürfeln.</td></tr>
+        </tbody>
+      </table>
+
+      <p class="cob-note"><em>Die Bevölkerungszahlen, die Raumgeometrie, die Tiefen, die
+      Fraktionen und die Schätze sind unverändert aus der Vorlage übernommen. Der
+      Fließtext ist neu geschrieben.</em></p>

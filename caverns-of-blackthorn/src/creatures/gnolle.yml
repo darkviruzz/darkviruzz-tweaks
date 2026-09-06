@@ -1,0 +1,167 @@
+# Gnolle von Blackthorn (Bereich 3, Wachen in Bereich 1)
+#
+# Vorlage (AD&D 2e): Männchen HD 2, Weibchen HD 3+1 (stärker!), Anführer HD 3 mit
+# AC 4. Der Gnoll-Krieger übernimmt die Werte des SRD-5.2.1-"Gnoll Warrior"
+# (CR 1/2, Unhold, AC 15, 27 TP) — in der 2024er Fassung sind Gnolle keine
+# Humanoiden mehr, sondern Unholde im Dienst Yeenoghus. Das Detail des Originals,
+# dass die Weibchen die gefährlicheren Kämpfer sind, bleibt erhalten.
+
+- key: gnoll-krieger
+  name: Gnoll-Krieger
+  size: med
+  type: fiend
+  alignment: Chaotic Evil
+  cr: 0.5
+  ac: 15
+  hp: { value: 27, formula: "6d8" }
+  speed: { walk: 30 }
+  abilities: { str: 14, dex: 12, con: 11, int: 6, wis: 10, cha: 7 }
+  senses: { darkvision: 60 }
+  languages: [gnoll]
+  img: icons/creatures/abilities/wolf-howl-moon-purple.webp
+  description: >-
+    Sechzig Gnolle wurden in die obere Höhle verlegt, weil sie das Licht der Fontäne
+    besser ertragen als Orks und Oger. Sie kämpfen im Rudel und greifen von der Flanke an.
+    Jeder trägt 2W4 Goldmünzen bei sich.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Der Gnoll hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens
+        ein handlungsfähiger Verbündeter des Gnolls im Umkreis von 5 ft. der Kreatur
+        befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+    - name: Blutrausch
+      text: >-
+        Reduziert der Gnoll mit einem Nahkampfangriff eine Kreatur auf 0 Trefferpunkte,
+        kann er sich als Bonusaktion bis zu seiner halben Bewegungsrate bewegen und einen
+        weiteren Angriff mit {{item:Reißen}} ausführen.
+      img: icons/magic/death/hand-dirt-undead-zombie.webp
+  actions:
+    - name: Reißen
+      kind: melee
+      ability: str
+      reach: 5
+      damage: { number: 1, denom: 6, type: piercing }
+      img: icons/creatures/claws/claw-scratch-gray.webp
+    - name: Knochenbogen
+      kind: ranged
+      ability: dex
+      range: 150
+      long: 600
+      properties: [amm, two]
+      damage: { number: 1, denom: 10, type: piercing }
+      img: icons/weapons/bows/shortbow-recurve-bone.webp
+
+- key: gnoll-matriarchin
+  name: Gnoll-Matriarchin
+  size: med
+  type: fiend
+  alignment: Chaotic Evil
+  cr: 2
+  ac: 15
+  hp: { value: 52, formula: "8d8 + 16" }
+  speed: { walk: 30 }
+  abilities: { str: 16, dex: 13, con: 14, int: 8, wis: 12, cha: 9 }
+  saves: [con]
+  skills: { prc: 1 }
+  senses: { darkvision: 60 }
+  languages: [gnoll, common]
+  img: icons/creatures/abilities/wolf-heads-swirl-purple.webp
+  description: >-
+    Zwanzig von ihnen leben in der Gnollhöhle, und sie sind den männlichen Kriegern
+    körperlich überlegen — eine Eigenheit dieses Rudels, die Fremde regelmäßig
+    unterschätzen. Sie entscheiden, wer frisst und wer jagt.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Die Matriarchin hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich
+        mindestens ein handlungsfähiger Verbündeter im Umkreis von 5 ft. der Kreatur
+        befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+    - name: Blutrausch
+      text: >-
+        Reduziert die Matriarchin mit einem Nahkampfangriff eine Kreatur auf 0
+        Trefferpunkte, kann sie sich als Bonusaktion bis zu ihrer halben Bewegungsrate
+        bewegen und einen weiteren Angriff mit {{item:Glefe}} ausführen.
+      img: icons/magic/death/hand-dirt-undead-zombie.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Die Matriarchin führt zwei Angriffe mit {{item:Glefe}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Glefe
+      kind: melee
+      ability: str
+      reach: 10
+      baseItem: glaive
+      properties: [hvy, rch, two]
+      damage: { number: 1, denom: 10, type: slashing }
+      img: icons/weapons/polearms/glaive-simple.webp
+    - name: Niederwerfen
+      kind: ability
+      activation: bonus
+      save: { ability: str, dc: 13, onSave: none }
+      range: 10
+      text: >-
+        Ein Ziel im Umkreis von 10 ft. muss einen SG-13-Stärkerettungswurf bestehen oder
+        erhält den Zustand <em>Liegend</em>. Die Matriarchin nutzt das, um ein Ziel für
+        das Rudel aufzureißen.
+      img: icons/skills/melee/strike-slam-fist-yellow.webp
+
+- key: gnoll-rudelfuehrer
+  name: Gnoll-Rudelführer
+  size: med
+  type: fiend
+  alignment: Chaotic Evil
+  cr: 2
+  ac: 16
+  hp: { value: 45, formula: "7d8 + 14" }
+  speed: { walk: 30 }
+  abilities: { str: 15, dex: 14, con: 14, int: 10, wis: 11, cha: 12 }
+  saves: [dex]
+  skills: { prc: 1, ste: 1 }
+  senses: { darkvision: 60 }
+  languages: [gnoll, common, orc]
+  img: icons/creatures/abilities/wolf-howl-white.webp
+  description: >-
+    Drei von ihnen führen die Gnolle der Höhle. Sie tragen erbeutete Kettenhemden und
+    doppelt so viel Gold wie ihre Krieger — und sie sind die Einzigen im Rudel, mit
+    denen man verhandeln kann.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Der Rudelführer hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich
+        mindestens ein handlungsfähiger Verbündeter im Umkreis von 5 ft. der Kreatur
+        befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Der Rudelführer führt zwei Angriffe aus, in beliebiger Kombination aus
+        {{item:Langschwert}} und {{item:Langbogen}}.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties: [ver]
+      damage: { number: 1, denom: 8, type: slashing }
+      img: icons/weapons/swords/sword-guard-blue.webp
+    - name: Langbogen
+      kind: ranged
+      ability: dex
+      range: 150
+      long: 600
+      properties: [amm, hvy, two]
+      damage: { number: 1, denom: 8, type: piercing }
+      img: icons/weapons/bows/longbow-recurve-leather-red.webp
+    - name: Rudel hetzen
+      kind: ability
+      activation: bonus
+      text: >-
+        Bis zu drei Gnolle im Umkreis von 30 ft., die den Rudelführer hören können,
+        können als Reaktion jeweils einen Nahkampfangriff mit ihrer eigenen Waffe
+        ausführen.
+      img: icons/skills/social/intimidation-impressing.webp

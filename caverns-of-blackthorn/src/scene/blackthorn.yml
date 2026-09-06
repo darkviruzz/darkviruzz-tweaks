@@ -1,0 +1,141 @@
+# Die Szene.
+#
+# ALLE Koordinaten sind Kartenzellen zu 10 Fuß — dieselbe Einheit wie auf der
+# Karte ("One Square Equals 10 Feet"). Umgerechnet wird erst im Generator.
+#
+# WENN DU DIE KARTE AUSTAUSCHST (Dungeondraft / Dungeon Alchemist):
+#   1. Bild nach assets/maps/ legen und `background` anpassen.
+#   2. `cellPixels` auf die Pixel pro 10-Fuß-Zelle deiner Karte setzen. Exportiert
+#      Dungeondraft z. B. mit 128 px pro 5-Fuß-Feld, sind das 256.
+#   3. `widthCells` / `heightCells` = Bildbreite bzw. -höhe geteilt durch cellPixels.
+#   4. Die Ankerpunkte unten (`around`, `at`) auf die Bereiche deiner Karte ziehen.
+#      Das sind rund 20 Zahlen — alles andere rechnet sich daraus.
+
+key: blackthorn
+name: Die Höhlen von Blackthorn
+navName: Blackthorn
+
+background: modules/caverns-of-blackthorn/assets/maps/blackthorn.webp
+cellPixels: 100          # 100 px pro 10-ft-Zelle -> Foundry-Raster 50 px pro 5 ft
+widthCells: 73
+heightCells: 45
+
+backgroundColor: "#141210"
+gridColor: "#000000"
+gridAlpha: 0.0           # Die Karte bringt ihr eigenes Raster mit
+darkness: 1.0            # Untertage: stockfinster, außer wo Licht steht
+tokenVision: true
+
+initial:
+  at: [33, 21]           # Startansicht auf die Fontänenhöhle
+  scale: 0.28
+
+# --- Beleuchtung ----------------------------------------------------------
+# Ohne Wände (bewusste Entscheidung) leuchten diese Quellen durch den Fels.
+# Das ist für die Stimmung gedacht, nicht für Sichtlinien-Simulation. Wer später
+# Wände zieht, muss hier nichts ändern — die Lichter respektieren sie dann.
+lights:
+  # Bereich 2: der Geysir. Der Text sagt "hell genug, dass es weh tut" — das ist
+  # die hellste Lichtquelle des Baus und der Grund, warum Orks, Oger und Duergar
+  # diesen Raum meiden.
+  - at: [33, 21]
+    bright: 90
+    dim: 220
+    color: "#fff6d8"
+    alpha: 0.55
+    luminosity: 0.7
+    animation: { type: "pulse", speed: 1, intensity: 2, reverse: false }
+    note: Fontäne aus leuchtendem Wasser
+
+  # Der Wasserfall über die Klippe trägt etwas Restlicht nach unten mit.
+  - at: [40, 26]
+    bright: 15
+    dim: 45
+    color: "#e8f0ff"
+    alpha: 0.25
+    luminosity: 0.4
+    note: Wasserfall über die Klippe nach Bereich 5
+
+  # Bereich 1: Tageslicht durch den Deckenschacht. Fällt 250 Fuß und erhellt
+  # praktisch nichts — genau wie im Text beschrieben.
+  - at: [47.5, 6]
+    bright: 0
+    dim: 30
+    color: "#cfd8e8"
+    alpha: 0.3
+    luminosity: 0.2
+    note: Lichtschacht (1A) zur Oberfläche
+
+  # Bereich 4: ein paar Fackeln und zwei Kochfeuer.
+  - at: [10, 21]
+    bright: 20
+    dim: 40
+    color: "#ff9d4d"
+    alpha: 0.5
+    animation: { type: "torch", speed: 2, intensity: 3, reverse: false }
+    note: Fackel im Ogerbau
+  - at: [13.5, 23.5]
+    bright: 25
+    dim: 50
+    color: "#ff8a3d"
+    alpha: 0.6
+    animation: { type: "flame", speed: 2, intensity: 4, reverse: false }
+    note: Kochfeuer
+  - at: [9.5, 25]
+    bright: 25
+    dim: 50
+    color: "#ff8a3d"
+    alpha: 0.6
+    animation: { type: "flame", speed: 2, intensity: 4, reverse: false }
+    note: Kochfeuer
+
+  # Bereich 6: Feuerstellen der Orks, verstreut in der größten Höhle.
+  - at: [58, 22]
+    bright: 15
+    dim: 35
+    color: "#ff9d4d"
+    alpha: 0.45
+    animation: { type: "torch", speed: 2, intensity: 3, reverse: false }
+    note: Feuerstelle der Orks
+  - at: [63, 28]
+    bright: 15
+    dim: 35
+    color: "#ff9d4d"
+    alpha: 0.45
+    animation: { type: "torch", speed: 2, intensity: 3, reverse: false }
+    note: Feuerstelle der Orks
+
+# --- Journal-Pins ---------------------------------------------------------
+notes:
+  - { area: 1, at: [46, 7],    label: "1 — Obere Höhle",     icon: "icons/environment/wilderness/cave-entrance.webp" }
+  - { area: 2, at: [33, 21],   label: "2 — Fontänenhöhle",   icon: "icons/magic/water/fountain-water-blue.webp", tint: "#ffe9a8" }
+  - { area: 3, at: [19.5, 8],  label: "3 — Gnollhöhle",      icon: "icons/environment/wilderness/cave-entrance-rocky.webp" }
+  - { area: 4, at: [11.5, 22], label: "4 — Ogerbau",         icon: "icons/environment/settlement/house-farmland-small.webp" }
+  - { area: 5, at: [37, 33],   label: "5 — Lärmhöhle",       icon: "icons/tools/hand/pickaxe-steel-grey.webp" }
+  - { area: 6, at: [60, 24],   label: "6 — Orkhöhle",        icon: "icons/environment/wilderness/cave-entrance-dark.webp" }
+  - { area: 7, at: [22, 36],   label: "7 — Schlucht & Fluss", icon: "icons/environment/wilderness/river.webp", tint: "#9ec8dd" }
+
+# --- Begegnungen ----------------------------------------------------------
+# Alle Tokens starten verborgen. Aufdecken, wenn die Gruppe den Bereich erreicht.
+# Besetzt sind die Begegnungen, die im Journal als spielbar ausgewiesen sind —
+# nicht die Gesamtbevölkerung, die wäre weder platzierbar noch überlebbar.
+tokens:
+  # Bereich 1: der Wachposten. 2 Oger, 6 Gnolle, 10 Orks — leise, wie im Text.
+  - { key: oger-krieger,   area: 1, around: [45, 6.5], count: 2,  spacing: 2.2, seed: 11 }
+  - { key: gnoll-krieger,  area: 1, around: [47.5, 8], count: 6,  spacing: 1.5, seed: 12 }
+  - { key: ork-krieger,    area: 1, around: [44, 9],   count: 10, spacing: 1.4, seed: 13 }
+
+  # Bereich 4: der Häuptling und seine Leibwache.
+  - { key: oger-haeuptling, area: 4, around: [11, 21.5], count: 1, spacing: 1.0, seed: 21 }
+  - { key: oger-krieger,    area: 4, around: [12.5, 23], count: 4, spacing: 2.4, seed: 22 }
+  - { key: oger-matriarchin, area: 4, around: [9.5, 24.5], count: 2, spacing: 2.4, seed: 23 }
+
+  # Bereich 5: der Strafposten.
+  - { key: ork-krieger, area: 5, around: [37, 33], count: 10, spacing: 1.5, seed: 31 }
+
+  # Bereich 6: ein Arbeitstrupp, der Duergar-Spähtrupp und die Rothé-Herde.
+  - { key: ork-veteran,      area: 6, around: [58.5, 22.5], count: 2, spacing: 1.8, seed: 41 }
+  - { key: ork-krieger,      area: 6, around: [60, 24],     count: 8, spacing: 1.5, seed: 42 }
+  - { key: duergar-anfuehrer, area: 6, around: [66, 20],    count: 1, spacing: 1.0, seed: 43 }
+  - { key: duergar,          area: 6, around: [67, 21],     count: 6, spacing: 1.4, seed: 44 }
+  - { key: rothe,            area: 6, around: [62, 29],     count: 8, spacing: 1.6, seed: 45 }

@@ -1,0 +1,19 @@
+{
+  "name": "caverns-of-blackthorn",
+  "version": "0.1.0",
+  "description": "Foundry VTT module: Die Höhlen von Blackthorn (dnd5e / D&D 2024)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build/build.mjs",
+    "pack": "node build/build.mjs --pack",
+    "clean": "rm -rf packs dist"
+  },
+  "devDependencies": {
+    "@foundryvtt/foundryvtt-cli": "^3.0.4"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.3.2"
+  }
+}

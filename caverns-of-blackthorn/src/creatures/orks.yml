@@ -1,0 +1,157 @@
+# Orks von Blackthorn
+#
+# Vorlage (AD&D 2e): HD 1, AC 6, 1d8 Schaden, Infravision 60', "kämpfen bei -1 im
+# Sonnenlicht", LE. Die Konvertierung folgt dem 2024er Ork-Design: hohe Mobilität
+# durch eine Bonusaktion, Dunkelsicht 120 ft statt Infrarotsicht, und der
+# Sonnenlicht-Malus wird zu "Lichtscheu" — was in Bereich 2 (die taghell
+# leuchtende Fontäne) mechanisch tatsächlich relevant wird.
+
+- key: ork-krieger
+  name: Ork-Krieger
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Chaotic Evil
+  cr: 0.5
+  ac: 15
+  hp: { value: 15, formula: "2d8 + 6" }
+  speed: { walk: 30 }
+  abilities: { str: 16, dex: 12, con: 16, int: 9, wis: 11, cha: 10 }
+  skills: { ste: 1 }
+  senses: { darkvision: 120 }
+  languages: [common, orc]
+  img: icons/creatures/abilities/mouth-teeth-tusks-green.webp
+  description: >-
+    Die Orks von Blackthorn haben zehn Jahre lang Fels gebrochen, um diesen Bau zu
+    schaffen — unter der Peitsche der Oger, die ihre Anführer erschlugen. Sie sind
+    zäh, zahlreich und führungslos.
+  traits:
+    - name: Adrenalinschub
+      text: >-
+        Der Ork kann als Bonusaktion die Aktion Sprinten oder Rückzug ausführen. Tut
+        er dies, erhält er temporäre Trefferpunkte in Höhe seines Konstitutionsmodifikators
+        (3).
+      img: icons/magic/control/buff-strength-muscle-damage-red.webp
+    - name: Lichtscheu
+      requirements: In hellem Licht
+      text: >-
+        Befindet sich der Ork in hellem Licht, hat er Nachteil auf Angriffswürfe und auf
+        Weisheitswürfe (Wahrnehmung), die auf Sehen beruhen. Das gilt im Bau nur in der
+        Fontänenhöhle (Bereich 2) — und ist der Grund, warum die Orks dort ungern kämpfen.
+      img: icons/magic/light/explosion-star-glow-silhouette.webp
+  actions:
+    - name: Hiebaxt
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties: [hvy, two]
+      damage: { number: 1, denom: 12, type: slashing }
+      img: icons/weapons/axes/axe-double-brown.webp
+    - name: Speer
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: spear
+      properties: [thr]
+      damage: { number: 1, denom: 6, type: piercing }
+      text: Reichweite 5 ft. oder Wurf 20/60 ft.
+      img: icons/weapons/polearms/spear-flared-worn-grey.webp
+
+# Skalierungsoption für stärkere Gruppen und für einzelne Veteranen unter den
+# 300 Kriegern in Bereich 6. Der Originaltext ist ausdrücklich: die Orks haben
+# KEINE Anführer, die Oger haben sie längst beseitigt. Ein Veteran ist deshalb
+# kein Häuptling, sondern der beste Kämpfer eines Trupps — und ein möglicher
+# Ansprechpartner für eine Party, die einen Aufstand anzetteln will.
+- key: ork-veteran
+  name: Ork-Veteran
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Chaotic Evil
+  cr: 2
+  ac: 16
+  hp: { value: 45, formula: "6d8 + 18" }
+  speed: { walk: 30 }
+  abilities: { str: 18, dex: 12, con: 16, int: 10, wis: 12, cha: 12 }
+  saves: [str, con]
+  skills: { ste: 1, itm: 1 }
+  senses: { darkvision: 120 }
+  languages: [common, orc]
+  img: icons/creatures/abilities/mouth-teeth-tusks-red.webp
+  description: >-
+    Ein Ork, der lange genug überlebt hat, um gefährlich zu werden. Trägt Beutestücke
+    von Oberflächenüberfällen und die Narben der Ogerpeitsche.
+  traits:
+    - name: Adrenalinschub
+      text: >-
+        Der Ork kann als Bonusaktion die Aktion Sprinten oder Rückzug ausführen. Tut
+        er dies, erhält er 3 temporäre Trefferpunkte.
+      img: icons/magic/control/buff-strength-muscle-damage-red.webp
+    - name: Lichtscheu
+      requirements: In hellem Licht
+      text: >-
+        Befindet sich der Ork in hellem Licht, hat er Nachteil auf Angriffswürfe und auf
+        Weisheitswürfe (Wahrnehmung), die auf Sehen beruhen.
+      img: icons/magic/light/explosion-star-glow-silhouette.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Ork-Veteran führt zwei Angriffe mit {{item:Hiebaxt}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Hiebaxt
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties: [hvy, two]
+      damage: { number: 1, denom: 12, type: slashing }
+      img: icons/weapons/axes/axe-double-brown.webp
+    - name: Schlachtruf
+      kind: ability
+      activation: bonus
+      uses: { max: 1, per: day }
+      text: >-
+        Jeder Verbündete im Umkreis von 30 ft., der den Ork sehen oder hören kann, erhält
+        bis zum Ende des nächsten Zuges des Orks Vorteil auf seinen nächsten Angriffswurf.
+        In Bereich 6 hört das <em>jeder</em> — was den Trupp binnen weniger Runden
+        um 2W6 weitere Krieger verstärkt.
+      img: icons/skills/social/intimidation-impressing.webp
+
+# Nichtkombattanten. Der Originaltext führt "females" und "young" als reine
+# Bevölkerungszahlen; hier stehen sie als ein Statblock für alle, die nicht
+# kämpfen wollen. Sie sind absichtlich schwach: sie sind kein Encounter,
+# sondern eine Entscheidung, die die Gruppe treffen muss.
+- key: ork-sippe
+  name: Ork der Sippe
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Lawful Evil
+  cr: 0.125
+  ac: 12
+  hp: { value: 9, formula: "2d8" }
+  speed: { walk: 30 }
+  abilities: { str: 13, dex: 11, con: 11, int: 10, wis: 11, cha: 10 }
+  senses: { darkvision: 120 }
+  languages: [common, orc]
+  img: icons/environment/people/group.webp
+  description: >-
+    Pilzzüchter, Rothéhirten, Kinder. Sie kämpfen nur, wenn sie in die Enge getrieben
+    werden — und dann verzweifelt. Wie die Gruppe mit ihnen umgeht, ist keine
+    Regelfrage.
+  traits:
+    - name: Flucht statt Kampf
+      text: >-
+        Wird ein Ork der Sippe verwundet oder sieht er einen Verbündeten fallen, nutzt er
+        seine Aktion, um sich zurückzuziehen und Alarm zu schlagen, statt anzugreifen —
+        es sei denn, ihm ist der Fluchtweg abgeschnitten oder er verteidigt ein Kind.
+      img: icons/skills/movement/feet-winged-boots-brown.webp
+  actions:
+    - name: Steinhammer
+      kind: melee
+      ability: str
+      reach: 5
+      properties: []
+      damage: { number: 1, denom: 6, type: bludgeoning }
+      img: icons/weapons/hammers/hammer-double-steel.webp

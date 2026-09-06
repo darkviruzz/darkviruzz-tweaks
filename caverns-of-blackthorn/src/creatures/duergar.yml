@@ -1,0 +1,309 @@
+# Duergar und ihre Reittiere (Bereich 6, östliche Tunnel)
+#
+# Vorlage (AD&D 2e): HD 1+2, AC 4 (Kettenhemd + Schild), Fußknechtspicke 1d6+1,
+# "+4 auf Rettungswürfe gegen Zauber, immun gegen Lähmung, Illusionen und Gifte",
+# Infravision 120', angeborene Fähigkeiten Vergrößern und Unsichtbarkeit,
+# "-2 auf Angriffe in hellem Licht". Alles davon überlebt die Konvertierung —
+# der pauschale +4-Bonus wird zum 2024-üblichen Vorteil auf Rettungswürfe.
+#
+# Die Duergar sind keine Bewohner von Blackthorn. Sie sind Gäste, die den Bau
+# vermessen, den Ogern schmeicheln und darauf warten, dass jemand anders die
+# Arbeit macht.
+
+- key: duergar
+  name: Duergar
+  size: sm
+  type: humanoid
+  subtype: dwarf
+  alignment: Lawful Evil
+  cr: 1
+  ac: 16
+  hp: { value: 26, formula: "4d8 + 8" }
+  speed: { walk: 25 }
+  abilities: { str: 14, dex: 11, con: 14, int: 11, wis: 10, cha: 9 }
+  saves: [con]
+  skills: { prc: 1 }
+  senses: { darkvision: 120 }
+  languages: [dwarvish, undercommon]
+  img: icons/creatures/magical/humanoid-horned-black.webp
+  description: >-
+    Grauzwerge aus einer Siedlung tief hinter den östlichen Tunneln. Sie spionieren
+    die Oger aus, treten betont höflich auf und planen, die Humanoiden von Blackthorn
+    als Rammbock gegen die Städte der Oberfläche zu benutzen.
+  traits:
+    - name: Zwergenzähigkeit
+      text: >-
+        Der Duergar hat Vorteil auf Rettungswürfe gegen Zauber und andere magische
+        Effekte, gegen Gift und gegen Illusionen, und er kann nicht gelähmt oder
+        versteinert werden.
+      img: icons/magic/defensive/shield-barrier-glowing-blue.webp
+    - name: Sonnenlicht-Empfindlichkeit
+      requirements: In hellem Licht
+      text: >-
+        Befindet sich der Duergar in hellem Licht, hat er Nachteil auf Angriffswürfe und
+        auf Weisheitswürfe (Wahrnehmung), die auf Sehen beruhen. In der Fontänenhöhle
+        (Bereich 2) betreten Duergar niemals das offene Licht.
+      img: icons/magic/light/explosion-star-glow-silhouette.webp
+    - name: Aufmerksam
+      text: >-
+        Der Duergar kann nur mit Nachteil überrascht werden und hat Vorteil auf
+        Weisheitswürfe (Wahrnehmung), um Verborgenes zu bemerken.
+      img: icons/magic/perception/eye-ringed-glow-angry-small-red.webp
+  actions:
+    - name: Kriegspicke
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: warpick
+      damage: { number: 1, denom: 8, type: piercing }
+      text: >-
+        Ist der Duergar vergrößert, verursacht der Angriff zusätzlich 1W6 Wuchtschaden.
+      img: icons/weapons/polearms/pike-flared-brown.webp
+    - name: Armbrust, leicht
+      kind: ranged
+      ability: dex
+      range: 80
+      long: 320
+      properties: [amm, lod, two]
+      damage: { number: 1, denom: 8, type: piercing }
+      img: icons/weapons/crossbows/crossbow-simple-brown.webp
+    - name: Vergrößern
+      kind: ability
+      activation: bonus
+      uses: { max: 1, per: day }
+      text: >-
+        Der Duergar wächst für 1 Minute samt Ausrüstung auf die doppelte Größe (Größe
+        Mittel). Solange er vergrößert ist, hat er Vorteil auf Stärkewürfe und
+        Stärkerettungswürfe, und seine Waffenangriffe verursachen 1W6 zusätzlichen
+        Wuchtschaden.
+      img: icons/magic/control/energy-stream-link-large-blue.webp
+    - name: Unsichtbarkeit
+      kind: ability
+      uses: { max: 1, per: day }
+      text: >-
+        Der Duergar wird für 1 Stunde unsichtbar, samt allem, was er trägt. Die
+        Unsichtbarkeit endet, wenn er angreift, zaubert oder eine Kreatur zu einem
+        Rettungswurf zwingt.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+
+- key: duergar-anfuehrer
+  name: Duergar-Anführer
+  size: sm
+  type: humanoid
+  subtype: dwarf
+  alignment: Lawful Evil
+  cr: 2
+  ac: 16
+  hp: { value: 45, formula: "7d8 + 14" }
+  speed: { walk: 25 }
+  abilities: { str: 16, dex: 11, con: 15, int: 12, wis: 12, cha: 11 }
+  saves: [con, wis]
+  skills: { prc: 1, ath: 1 }
+  senses: { darkvision: 120 }
+  languages: [dwarvish, undercommon, common]
+  img: icons/creatures/magical/humanoid-horned-crown-black.webp
+  description: >-
+    Auf je sechs Duergar kommt einer von ihnen. Sie führen die Spähtrupps und
+    berichten dem Häuptling, was die Oger tun — und was sie besitzen.
+  traits:
+    - name: Zwergenzähigkeit
+      text: >-
+        Vorteil auf Rettungswürfe gegen Zauber, magische Effekte, Gift und Illusionen;
+        kann nicht gelähmt oder versteinert werden.
+      img: icons/magic/defensive/shield-barrier-glowing-blue.webp
+    - name: Sonnenlicht-Empfindlichkeit
+      requirements: In hellem Licht
+      text: >-
+        Nachteil auf Angriffswürfe und auf sehbasierte Weisheitswürfe (Wahrnehmung) in
+        hellem Licht.
+      img: icons/magic/light/explosion-star-glow-silhouette.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Anführer führt zwei Angriffe mit {{item:Kriegspicke}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Kriegspicke
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: warpick
+      damage: { number: 1, denom: 8, type: piercing }
+      text: Ist der Anführer vergrößert, verursacht der Angriff zusätzlich 1W6 Wuchtschaden.
+      img: icons/weapons/polearms/pike-flared-steel.webp
+    - name: Vergrößern
+      kind: ability
+      activation: bonus
+      uses: { max: 1, per: day }
+      text: >-
+        Wie Duergar; zusätzlich 1W6 Wuchtschaden auf Waffenangriffe für 1 Minute.
+      img: icons/magic/control/energy-stream-link-large-blue.webp
+    - name: Unsichtbarkeit
+      kind: ability
+      uses: { max: 1, per: day }
+      text: >-
+        Der Anführer wird für 1 Stunde unsichtbar. Endet bei Angriff oder Zauber.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+
+- key: duergar-haeuptling
+  name: Duergar-Häuptling
+  size: sm
+  type: humanoid
+  subtype: dwarf
+  alignment: Lawful Evil
+  cr: 5
+  ac: 18
+  hp: { value: 97, formula: "13d8 + 39" }
+  speed: { walk: 25 }
+  abilities: { str: 18, dex: 12, con: 16, int: 14, wis: 13, cha: 13 }
+  saves: [str, con, wis]
+  skills: { prc: 2, itm: 2, ins: 1 }
+  senses: { darkvision: 120 }
+  languages: [dwarvish, undercommon, common, giant]
+  actorLink: true
+  img: icons/creatures/magical/humanoid-horned-crown-blue.webp
+  description: >-
+    In geflickter Plattenrüstung, mit einem Kurzschwert, das er nur selten braucht.
+    Er verhandelt mit dem Oger-Häuptling wie mit einem Geschäftspartner und hat
+    bereits ausgerechnet, wie viele Orks er für eine Belagerung braucht — und wie
+    wenige davon zurückkommen müssen.
+  traits:
+    - name: Zwergenzähigkeit
+      text: >-
+        Vorteil auf Rettungswürfe gegen Zauber, magische Effekte, Gift und Illusionen;
+        kann nicht gelähmt oder versteinert werden.
+      img: icons/magic/defensive/shield-barrier-glowing-blue.webp
+    - name: Sonnenlicht-Empfindlichkeit
+      requirements: In hellem Licht
+      text: >-
+        Nachteil auf Angriffswürfe und auf sehbasierte Weisheitswürfe (Wahrnehmung) in
+        hellem Licht.
+      img: icons/magic/light/explosion-star-glow-silhouette.webp
+    - name: Kalter Rechner
+      text: >-
+        Einmal pro Zug, wenn der Häuptling eine Kreatur trifft, die er im laufenden
+        Kampf bereits getroffen hat, verursacht der Angriff 2W6 zusätzlichen Schaden.
+      img: icons/magic/control/hypnosis-mesmerism-eye.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Der Häuptling führt drei Angriffe mit {{item:Kurzschwert}} aus. Ist er
+        vergrößert, führt er stattdessen zwei Angriffe aus, die je 2W6 zusätzlichen
+        Wuchtschaden verursachen.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Kurzschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: shortsword
+      properties: [fin, lgt]
+      damage: { number: 1, denom: 6, type: piercing }
+      img: icons/weapons/swords/shortsword-guard-gold.webp
+    - name: Vergrößern
+      kind: ability
+      activation: bonus
+      uses: { max: 1, per: day }
+      text: >-
+        Der Häuptling wächst für 1 Minute auf Größe Mittel. Vorteil auf Stärkewürfe und
+        Stärkerettungswürfe; seine Waffenangriffe verursachen 2W6 zusätzlichen
+        Wuchtschaden, und er führt statt drei nur zwei Angriffe aus.
+      img: icons/magic/control/energy-stream-link-large-blue.webp
+    - name: Unsichtbarkeit
+      kind: ability
+      uses: { max: 2, per: day }
+      text: >-
+        Der Häuptling wird für 1 Stunde unsichtbar. Er benutzt sie zum Verschwinden,
+        nicht zum Angreifen — wenn der Kampf verloren ist, ist er als Erster weg.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+
+# Der Originaltext gibt dem Steeder einen Sprung von 240 Fuß — 48 Felder auf der
+# Karte, quer durch die größte Höhle des Baus. Das ist als Zahl beeindruckend und
+# am Tisch unspielbar, deshalb hier auf 60 Fuß gekürzt; der Sturzangriff mit
+# doppeltem Schaden bleibt als das, was den Steeder gefährlich macht.
+- key: steeder
+  name: Steeder
+  size: lg
+  type: monstrosity
+  alignment: Unaligned
+  cr: 3
+  ac: 14
+  hp: { value: 52, formula: "7d10 + 14" }
+  speed: { walk: 30, climb: 30 }
+  abilities: { str: 15, dex: 16, con: 14, int: 2, wis: 10, cha: 3 }
+  skills: { ste: 2, prc: 1 }
+  senses: { darkvision: 120 }
+  languages: []
+  img: icons/creatures/invertebrates/spider-web-black.webp
+  description: >-
+    Eine haarlose Riesenspinne aus den Tiefen, die die Duergar als Reittier zähmen.
+    Sie klettert lautlos an Decken entlang und stürzt sich von oben auf ihre Beute.
+  traits:
+    - name: Spinnenklettern
+      text: >-
+        Der Steeder kann schwierige Oberflächen und Decken erklimmen, ohne einen
+        Attributswurf abzulegen.
+      img: icons/creatures/invertebrates/spider-legs-gray.webp
+    - name: Standfest
+      text: >-
+        Der Steeder hat Vorteil auf Rettungswürfe gegen den Zustand <em>Liegend</em>
+        und gegen Effekte, die ihn zu Fall bringen oder wegschieben würden.
+      img: icons/magic/earth/strike-body-stone-crumble.webp
+  actions:
+    - name: Biss
+      kind: melee
+      ability: dex
+      reach: 5
+      damage: { number: 1, denom: 10, type: piercing }
+      text: >-
+        Zusätzlich 2W6 Giftschaden bei einem bestandenen SG-13-Konstitutionsrettungswurf
+        halbiert.
+      img: icons/creatures/invertebrates/spider-mandibles-brown.webp
+    - name: Sprungangriff
+      kind: ability
+      activation: bonus
+      text: >-
+        Der Steeder springt bis zu 60 ft. weit, ohne Gelegenheitsangriffe auszulösen.
+        Landet er im Umkreis von 5 ft. einer Kreatur, muss diese einen
+        SG-13-Geschicklichkeitsrettungswurf bestehen oder erhält den Zustand
+        <em>Liegend</em>. Der erste {{item:Biss}}-Angriff nach einem Sprung von
+        mindestens 20 ft. verursacht doppelten Würfelschaden.
+      img: icons/skills/movement/arrow-upward-yellow.webp
+
+- key: rothe
+  name: Rothé
+  size: med
+  type: beast
+  alignment: Unaligned
+  cr: 0.25
+  ac: 12
+  hp: { value: 15, formula: "2d8 + 6" }
+  speed: { walk: 30 }
+  abilities: { str: 15, dex: 10, con: 16, int: 2, wis: 10, cha: 4 }
+  senses: { darkvision: 60 }
+  languages: []
+  img: icons/commodities/biological/hide-worn-brown.webp
+  description: >-
+    Unterirdisches Zottelvieh, zottelig und stumpfsinnig. Die Orks halten eine kleine
+    Herde für Haar, Milch und Fleisch; die Tiere weiden die Pilze und Flechten in den
+    Bereichen 5 und 6 ab. Eine aufgeschreckte Herde ist gefährlicher als die Hirten.
+  traits:
+    - name: Sturmangriff
+      text: >-
+        Bewegt sich das Rothé mindestens 20 ft. geradlinig auf ein Ziel zu und trifft es
+        im selben Zug mit {{item:Stoßen}}, verursacht der Angriff 1W6 zusätzlichen
+        Wuchtschaden, und das Ziel muss einen SG-12-Stärkerettungswurf bestehen oder
+        erhält den Zustand <em>Liegend</em>.
+      img: icons/creatures/abilities/bull-horns-brown.webp
+    - name: Herdenpanik
+      text: >-
+        Wird ein Rothé auf 0 Trefferpunkte reduziert, muss jedes Rothé im Umkreis von
+        30 ft. einen SG-10-Weisheitsrettungswurf bestehen oder eine Minute lang blind
+        in eine zufällige Richtung fliehen und dabei alles niedertrampeln.
+      img: icons/creatures/abilities/paw-print-pair-brown.webp
+  actions:
+    - name: Stoßen
+      kind: melee
+      ability: str
+      reach: 5
+      damage: { number: 1, denom: 8, type: bludgeoning }
+      img: icons/creatures/abilities/bull-horns-tan.webp

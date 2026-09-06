@@ -1,0 +1,149 @@
+# Der Hort des Oger-Häuptlings (Bereich 4)
+#
+# Der Originaltext listet: boots of speed, handax +2, potion of healing, potion of
+# sweet water, ring of protection +2, stone of good luck — "aufgeteilt unter den
+# Männchen und dem Häuptling". Der Häuptling trägt selbstverständlich das Beste.
+#
+# Anmerkung zum Ring: Der Ring des Schutzes ist in der 2024er Fassung ein
+# +1-Gegenstand. Der +2-Ring des Originals ist hier als "sehr selten" beibehalten
+# statt heruntergestuft — er ist der Grund, warum sich der Zug in den Ogerbau
+# lohnt. Wer den Hort schwächer haben will, macht +1 daraus.
+
+- key: ring-des-schutzes
+  name: Ring des Schutzes +2
+  type: equipment
+  equipmentType: ring
+  rarity: veryRare
+  attunement: true
+  weight: 0
+  img: icons/equipment/finger/ring-band-engraved-silver.webp
+  description: >-
+    <p>Ein schmuckloser Silberreif, innen mit einer abgegriffenen Gravur in einer
+    Sprache, die niemand im Bau lesen kann. Der Oger-Häuptling trägt ihn am kleinen
+    Finger, wo er gerade eben passt.</p>
+    <p>Du erhältst einen Bonus von +2 auf deine Rüstungsklasse und auf alle
+    Rettungswürfe, solange du diesen Ring trägst.</p>
+    <p><em>Erfordert Einstimmung.</em></p>
+  effects:
+    - name: Ring des Schutzes +2
+      img: icons/equipment/finger/ring-band-engraved-silver.webp
+      description: +2 auf Rüstungsklasse und alle Rettungswürfe.
+      changes:
+        - { key: system.attributes.ac.bonus, mode: ADD, value: 2 }
+        - { key: system.bonuses.abilities.save, mode: ADD, value: 2 }
+
+- key: stein-des-gluecks
+  name: Stein des Glücks
+  type: equipment
+  equipmentType: trinket
+  rarity: uncommon
+  attunement: true
+  weight: 1
+  img: icons/commodities/gems/pearl-brown.webp
+  description: >-
+    <p>Ein handtellergroßer, vom Wasser rundgeschliffener Achat. Die Oger halten ihn
+    für einen hübschen Stein und würfeln darum.</p>
+    <p>Solange du diesen Stein bei dir trägst, erhältst du einen Bonus von +1 auf
+    Attributswürfe und Rettungswürfe.</p>
+    <p><em>Erfordert Einstimmung.</em></p>
+  effects:
+    - name: Stein des Glücks
+      img: icons/commodities/gems/pearl-brown.webp
+      description: +1 auf Attributswürfe und Rettungswürfe.
+      changes:
+        - { key: system.bonuses.abilities.check, mode: ADD, value: 1 }
+        - { key: system.bonuses.abilities.save, mode: ADD, value: 1 }
+        - { key: system.bonuses.abilities.skill, mode: ADD, value: 1 }
+
+- key: stiefel-der-schnelligkeit
+  name: Stiefel der Schnelligkeit
+  type: equipment
+  equipmentType: trinket
+  rarity: rare
+  attunement: true
+  weight: 1
+  img: icons/equipment/feet/boots-leather-engraved-brown.webp
+  description: >-
+    <p>Weiches, dunkles Leder, viel zu klein für einen Oger — der Häuptling hat sie
+    einem Boten abgenommen und bewahrt sie auf, weil sie glänzen.</p>
+    <p>Solange du diese Stiefel trägst, kannst du sie als Bonusaktion mit den Hacken
+    zusammenschlagen. Für die nächsten 10 Minuten ist deine Bewegungsrate verdoppelt,
+    Gelegenheitsangriffe gegen dich haben Nachteil, und du kannst die Stiefel als
+    Bonusaktion wieder deaktivieren. Danach musst du eine lange Rast einlegen, bevor
+    du sie erneut benutzen kannst.</p>
+    <p><em>Erfordert Einstimmung.</em></p>
+
+- key: handaxt-plus-2
+  name: Handaxt +2
+  type: weapon
+  weaponType: simpleM
+  baseItem: handaxe
+  rarity: rare
+  weight: 2
+  reach: 5
+  magicalBonus: 2
+  properties: [lgt, thr, mgc]
+  damage: { number: 1, denom: 6, type: slashing }
+  img: icons/weapons/axes/axe-broad-black.webp
+  description: >-
+    <p>Zwergenarbeit, an der Schneide nachgeschliffen, im Griff eine eingelegte
+    Kupferrune. Sie stammt vermutlich aus einem Überfall auf einen Handelszug bei
+    Dyvers — und die Duergar haben sie schon bemerkt.</p>
+    <p>Du erhältst einen Bonus von +2 auf Angriffs- und Schadenswürfe mit dieser
+    magischen Waffe.</p>
+
+- key: heiltrank
+  name: Heiltrank
+  type: consumable
+  consumableType: potion
+  rarity: common
+  weight: 0.5
+  price: 50
+  img: icons/consumables/potions/bottle-round-corked-red.webp
+  description: >-
+    <p>Du erhältst 2W4 + 2 Trefferpunkte zurück, wenn du diesen Trank trinkst.</p>
+  use:
+    activation: action
+    consumesSelf: true
+    heal: { number: 2, denom: 4, bonus: 2, type: healing }
+
+- key: trank-des-suesswassers
+  name: Trank des Süßwassers
+  type: consumable
+  consumableType: potion
+  rarity: common
+  weight: 0.5
+  price: 50
+  img: icons/consumables/potions/bottle-conical-corked-blue.webp
+  description: >-
+    <p>Dieser Trank reinigt bis zu 40 Liter verdorbenes, salziges oder vergiftetes
+    Wasser, sobald er hineingegossen wird. Gegen magische Verunreinigung hilft er
+    nicht.</p>
+    <p>Der Oger-Häuptling hält ihn für einen zweiten Heiltrank und hat ihn deshalb
+    nie angerührt.</p>
+  use:
+    activation: action
+    consumesSelf: true
+
+# Die Fontäne selbst ist keine Beute, sondern ein Ort. Das Fläschchen existiert
+# als Gegenstand, weil Spielergruppen zuverlässig auf die Idee kommen, das Wasser
+# abzufüllen — und dann etwas in der Hand halten sollen, das die Enttäuschung
+# konkret macht. Die Regeln zur Fontäne stehen im Journal, Bereich 2.
+- key: leuchtendes-wasser
+  name: Fläschchen mit leuchtendem Wasser
+  type: consumable
+  consumableType: potion
+  rarity: common
+  weight: 0.5
+  price: 0
+  img: icons/consumables/potions/bottle-bulb-corked-glowing-blue.webp
+  description: >-
+    <p>Du hast Wasser aus der Fontäne in Bereich 2 abgefüllt. In dem Moment, in dem
+    es das Fläschchen berührt, erlischt das Leuchten — was bleibt, ist klares, kaltes,
+    vollkommen gewöhnliches Wasser.</p>
+    <p><strong>Wirkung:</strong> keine. Das Wasser heilt nur dort, wo es aus dem Fels
+    steigt. Alles, was den Raum verlässt, ist einfach Wasser.</p>
+    <p><em>Die Bewohner von Blackthorn wissen das seit Jahren. Sie haben nie versucht,
+    die Quelle zu verschließen — nicht aus Ehrfurcht, sondern weil es sinnlos wäre,
+    und weil selbst ein Oger begreift, was eine Quelle wert ist, die jede Wunde
+    schließt.</em></p>

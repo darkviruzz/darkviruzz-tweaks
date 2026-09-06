@@ -11,6 +11,15 @@
 quality-of-life tweaks for a home game. It is intentionally a multi-feature "grab bag":
 each tweak is a self-contained feature that the user can toggle on/off.
 
+> **This repository also hosts a second, independent Foundry module.**
+> `caverns-of-blackthorn/` is a *content* module (an adventure with compendium packs),
+> not a tweak. It has its own `module.json`, its own build and its own
+> **[caverns-of-blackthorn/CLAUDE.md](caverns-of-blackthorn/CLAUDE.md)** — read that one
+> when working in it, not this file. The rules below (one feature per file, settings
+> grouped by feature, defaults off) do not apply there. The folder is self-contained and
+> can be moved to its own repository unchanged. Its releases use the tag prefix
+> `cob-v*`, so they never collide with this module's `v*` tags.
+
 ## Non-negotiable conventions
 
 1. **Target platform.** Always build for **Foundry VTT v14+**. System-specific features
