@@ -79,7 +79,7 @@ const main = async () => {
     }
 
     // --- notes must resolve to a real journal page -----------------------
-    const journal = adv.journal?.[0];
+    const journal = adv.journal?.find(j => j.pages.some(p => p.flags?.[MODULE]?.area != null)) ?? adv.journal?.[0];
     const pageIds = new Set((journal?.pages ?? []).map(p => p._id));
     for (const n of scene.notes) {
       if (n.entryId !== journal?._id) fail(`scene note "${n.text}" -> entryId does not match the bundled journal`);
@@ -97,16 +97,18 @@ const main = async () => {
     }
   }
 
-  // --- @UUID links in the journal must resolve ----------------------------
-  const journal = adv.journal?.[0];
+  // --- @UUID links in every journal must resolve --------------------------
+  const journalIds = new Set((adv.journal ?? []).map(j => j._id));
   const uuidRe = /@UUID\[Compendium\.([^.]+)\.([^.]+)\.(Actor|Item|JournalEntry)\.([A-Za-z0-9]+)\]/g;
   let linkCount = 0;
-  for (const page of journal?.pages ?? []) {
+  let pageCount = 0;
+  for (const page of (adv.journal ?? []).flatMap(j => j.pages ?? [])) {
+    pageCount++;
     const html = page.text?.content ?? "";
     for (const [full, mod, pack, type, id] of html.matchAll(uuidRe)) {
       linkCount++;
       if (mod !== MODULE) fail(`${page.name}: link points at foreign module "${mod}"`);
-      const target = type === "Actor" ? actorIds : type === "Item" ? itemIds : new Set([journal._id]);
+      const target = type === "Actor" ? actorIds : type === "Item" ? itemIds : journalIds;
       if (!target.has(id)) fail(`${page.name}: ${full} does not resolve to a bundled ${type}`);
     }
     // An unresolved shorthand means resolveLinks missed a key.
@@ -115,7 +117,7 @@ const main = async () => {
     }
     if (/\{\{item:[^}]+\}\}/.test(html)) fail(`${page.name}: unresolved {{item:...}} placeholder`);
   }
-  notes.push(`journal: ${journal?.pages?.length ?? 0} pages, ${linkCount} compendium links`);
+  notes.push(`journals: ${adv.journal?.length ?? 0} entr(ies), ${pageCount} pages, ${linkCount} compendium links`);
 
   // --- actor sanity -------------------------------------------------------
   for (const actor of topLevel(actorPack, "actors")) {
@@ -135,15 +137,22 @@ const main = async () => {
   }
   notes.push(`items pack: ${topLevel(itemPack, "items").length} items`);
 
-  // --- assets referenced by the scene must exist on disk ------------------
-  for (const src of [scene?.background?.src, adv?.img].filter(Boolean)) {
-    if (!src.startsWith(`modules/${MODULE}/`)) continue;
+  // --- every module asset referenced anywhere must exist on disk ----------
+  // Covers the scene background, the adventure banner, actor portraits and token
+  // textures, and images embedded in journal HTML. A missing file renders as a
+  // broken image in Foundry without any error being logged.
+  const assetRe = new RegExp(`modules/${MODULE}/[A-Za-z0-9_./-]+`, "g");
+  const referenced = new Set(JSON.stringify(adv).match(assetRe) ?? []);
+  for (const src of referenced) {
     const rel = src.slice(`modules/${MODULE}/`.length);
     if (!existsSync(join(ROOT, rel))) fail(`referenced asset is missing from the module: ${rel}`);
   }
+  notes.push(`module assets referenced: ${referenced.size}`);
 
   const journalTop = topLevel(journalPack, "journal");
-  if (journalTop.length !== 1) fail(`journal pack: expected 1 entry, found ${journalTop.length}`);
+  if (journalTop.length !== (adv.journal?.length ?? 0)) {
+    fail(`journal pack holds ${journalTop.length} entr(ies) but the adventure bundles ${adv.journal?.length ?? 0}`);
+  }
 
   console.log("\n".concat(notes.map(n => `  · ${n}`).join("\n")));
   if (problems.length) {

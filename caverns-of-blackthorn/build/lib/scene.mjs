@@ -68,7 +68,10 @@ export function buildScene(def, { bestiary, journals }) {
   const gridSize = cellPx / 2;
   const toPx = ([cx, cy]) => [Math.round(cx * cellPx), Math.round(cy * cellPx)];
 
-  const journal = journals[0];
+  // Pins bind to whichever journal actually carries area-tagged pages, not to
+  // journals[0] — otherwise adding a second journal entry silently repoints every
+  // pin at the wrong document depending on filename sort order.
+  const journal = journals.find(j => j.pages.some(p => p.flags?.[MODULE]?.area != null)) ?? journals[0];
   const pageIdFor = area => journal?.pages.find(p => p.flags?.[MODULE]?.area === area)?._id ?? null;
 
   const tokens = [];

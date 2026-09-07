@@ -1,0 +1,628 @@
+key: blackthorn-lore
+name: Blackthorn — Lore, Fraktionen & Aufhänger
+party: { level: 7, size: 4 }
+sort: 200000
+
+pages:
+  - key: haine
+    name: Die Blackthorn-Haine
+    content: |
+      <p><em>Oberfläche. Gnarley-Forst, südöstlich von Dyvers, Die Freien Lande.</em></p>
+
+      <p>Es gibt eine Stelle im Gnarley, an der der Wald aufhört, Wald zu sein.</p>
+
+      <p>Kein Kahlschlag, keine Lichtung — im Gegenteil. Auf etwa einer halben Meile
+      steht das Unterholz so dicht, dass ein Mensch nicht hindurchkommt, ohne sich
+      freizuschneiden. Schlehdorn, Yarpick und Brombeere, ineinander verwachsen zu
+      etwas, das eher Mauer ist als Gestrüpp. Die Dornen sind lang wie ein Fingerglied
+      und brechen in der Wunde ab.</p>
+
+      <p>Die Waldläufer nennen die Stelle <strong>den schwarzen Fleck</strong> und
+      führen keine Fremden hin. Nicht aus Geheimniskrämerei — es gibt dort schlicht
+      nichts zu holen. Kein Wild, keine Beeren, die man essen möchte, kein Holz, das
+      sich schlagen ließe.</p>
+
+      <h2>Was daran falsch ist</h2>
+
+      <p>Drei Dinge, in aufsteigender Reihenfolge der Beunruhigung:</p>
+
+      <p><strong>Erstens: Es blüht zu lang.</strong> Schlehdorn blüht im Coldeven, bevor
+      das Laub kommt. Die Haine von Blackthorn blühen bis in den Patchwall hinein, und
+      im Sunsebb tragen einzelne Zweige noch Früchte. Ein Kräuterkundiger findet das
+      erwähnenswert. Ein Druide findet es beunruhigend.</p>
+
+      <p><strong>Zweitens: Die Tiere meiden es.</strong> Nicht panisch — sie gehen nur
+      nicht hinein. Vögel überfliegen den Fleck, statt darin zu nisten. Rehwechsel
+      biegen hundert Schritt davor ab. Nach dem Muster, das Tiere sonst um alte
+      Schlachtfelder ziehen.</p>
+
+      <p><strong>Drittens: Es ist im Winter warm.</strong> Wer im Sunsebb im Hain
+      steht, sieht keinen Reif am Boden, während zwanzig Schritt weiter alles weiß ist.
+      Es ist nicht wärmer im eigentlichen Sinn — Hände werden trotzdem kalt. Aber der
+      Frost setzt sich nicht.</p>
+
+      <p class="cob-note"><em>Die Erklärung liegt 500 Fuß tiefer: die Fontäne des
+      Reinen Lichts. Was sie speist, kommt oben als etwas an, das den Wald nicht
+      wärmt, aber ihn wachhält. Für eine Gruppe, die an Ley-Linien arbeitet, ist der
+      schwarze Fleck kein botanisches Kuriosum — es ist ein Messwert.</em></p>
+
+      <h2>Der Schacht und das, was ihn ersetzt hat</h2>
+
+      <p>Mitten im dichtesten Dornengeflecht liegt der ursprüngliche Zugang: ein
+      Schacht, keine drei Fuß im Durchmesser, in den vor Jahren jemand eine Leiter
+      gehängt hat. Er fällt 250 Fuß. Wer nicht weiß, dass er da ist, findet ihn nicht —
+      und wer es weiß, kommt trotzdem nur mit Axt und Zeit heran.</p>
+
+      <p>Diesen Weg benutzt heute niemand mehr. Die Orks haben einen bequemeren
+      geschlagen: einen Tunnel mit Stufen, dessen Mündung nordöstlich unter einem
+      Felsüberhang liegt, getarnt und bewacht.</p>
+
+      <p><strong>Und hier liegt das eigentliche Kunststück von Blackthorn:</strong>
+      Von außen sieht man nichts. Kein Abraum, keine Halden, kein Strom von Arbeitern.
+      Es gibt keinen Weg, der hinführt, weil es keinen Weg gibt, der weggeht. Wer nach
+      Blackthorn kommt, kommt von unten.</p>
+
+      <p>Der Aushub — und in einem Jahrzehnt Grabung ist das eine Menge Stein — wird
+      nicht nach oben geschafft. Er geht nach unten, die Treppen hinab, in die Schlucht
+      und in den Fluss. Der Fluss trägt ihn fort, und was in einer unterirdischen
+      Schlucht in tausend Fuß Tiefe landet, sieht kein Waldläufer je.</p>
+
+      <h2>Was oben trotzdem zu finden ist</h2>
+
+      <table>
+        <thead><tr><th>Spur</th><th>SG</th><th>Was sie verrät</th></tr></thead>
+        <tbody>
+          <tr><td>Hornposten</td><td>SG 15 Wahrnehmung</td>
+              <td>In Bäumen am Rand des Hains hängen Hörner aus Rothé-Horn, mit Fett
+              gegen Nässe eingerieben. Drei Stück, in Sichtweite zueinander. Ein
+              Frühwarnsystem — und wer eines abnimmt, macht ein Loch in die Kette.</td></tr>
+          <tr><td>Fußangeln</td><td>SG 14 Wahrnehmung</td>
+              <td>Krähenfüße und angespitzte Pflöcke in den Zugängen, gegen Reiter und
+              Hunde. Nicht gegen Menschen — gegen die reicht der Dorn.</td></tr>
+          <tr><td>Kein Abfall</td><td>SG 13 Überlebenskunst</td>
+              <td>Ein Lager von mehreren hundert Wesen produziert Müll. Hier gibt es
+              keinen. <em>Das</em> ist der Hinweis: nicht was da ist, sondern was fehlt.</td></tr>
+          <tr><td>Der Reifrand</td><td>SG 12 Naturkunde</td>
+              <td>Im Winter zeichnet die Frostgrenze den Umriss des Hains nach — eine
+              scharfe Linie im Gras, wie mit dem Lineal gezogen.</td></tr>
+          <tr><td>Aufgebrochene Dornen</td><td>SG 17 Nachforschung</td>
+              <td>Eine Bresche, sorgfältig wieder zugeflochten. Wer sie findet, hat den
+              Tunnelausgang (1B) auf hundert Schritt genau.</td></tr>
+        </tbody>
+      </table>
+
+      <p class="cob-note"><em>Die Vorlage rät ausdrücklich, die Gruppe den genauen
+      Zugang <strong>nicht</strong> finden zu lassen — sonst kommt sie mit einer Armee
+      wieder und das Abenteuer ist vorbei. Die Tabelle oben ist entsprechend gebaut:
+      Sie liefert Gewissheit, dass hier etwas ist, aber der letzte Eintrag ist teuer.
+      Wenn die Gruppe ihn schafft, hat sie ihn verdient.</em></p>
+
+  - key: clan
+    name: Der Blackthorn-Clan
+    content: |
+      <p style="text-align:center">
+        <img src="modules/caverns-of-blackthorn/assets/maps/blackthorn-banner.webp"
+             alt="Das Banner des Blackthorn-Clans" style="max-height:420px;border:none">
+      </p>
+
+      <p><strong>„Ein Stamm, eine Peitsche, eine Beute."</strong><br>
+      <em>Wahlspruch des Blackthorn-Clans</em></p>
+
+      <p>Wer vor zwei Jahren nach Blackthorn kam, fand einen Ogerhort: sechsundsiebzig
+      Oger, die herrschten, weil sie die Stärksten waren, und dreihundert Orks, die
+      Fels brachen, weil man sie schlug. Die Orks hatten keine Anführer. Die Oger
+      hatten sie längst erschlagen.</p>
+
+      <p>Wer heute kommt, findet den <strong>Blackthorn-Clan</strong>: eine
+      Konföderation von vier- bis sechshundertfünfzig Seelen unter einem
+      Ork-Kriegshäuptling, mit Hobgoblin-Drillmeistern, Bugbear-Nachtjägern, einem
+      Klerus und einem Banner. Die Oger sind auf zwanzig bis achtundzwanzig
+      zusammengeschmolzen. Sie stehen jetzt an Engstellen, wo man sie hinstellt.</p>
+
+      <h2>Der Aufstand — Coldeven 575 CY</h2>
+
+      <p>Es gibt zwei Geschichten darüber, und der Unterschied zwischen ihnen ist der
+      Schlüssel zu diesem Ort.</p>
+
+      <p><strong>Die Geschichte, die erzählt wird:</strong> Gruumsh gab
+      [[creature:garghuk]] ein Zeichen. Er sammelte die Krieger in der Lärmhöhle, wo
+      die Aufseher sie nicht zählen konnten, und in einer Nacht erschlugen sie die
+      Oger in ihrem eigenen Dreck. [[creature:targ]] hat die Zeichen gelesen und den
+      Aufstand gesegnet. So steht es im Horn, so wird es gesungen.</p>
+
+      <p><strong>Was tatsächlich geschah:</strong> Die Waffen kamen von den Duergar.
+      Dreihundert Orks mit Steinhämmern gegen sechsundsiebzig Oger — das ist ein
+      Massaker, und zwar an den Orks. Dreihundert Orks mit Kriegspicken aus
+      Grauzwergenstahl sind etwas anderes. Die Duergar hatten die Oger satt: unberechenbar,
+      unverhandelbar, und mit nichts zu locken außer Alkohol. Ein Ork-Häuptling, der
+      ihnen seinen Thron verdankt, war die bessere Investition.</p>
+
+      <p><strong>Garghuk weiß das. Targ nicht</strong> — oder er tut so, was aufs
+      Gleiche hinausläuft, solange niemand es ausspricht.</p>
+
+      <p class="cob-note"><em>Das ist der Riss, an dem dieser Ort auseinanderbricht.
+      Wer im Bau öffentlich beweist, dass Garghuk den Sieg gekauft hat, nimmt ihm vor
+      dem Clan das, worauf seine Herrschaft steht. Es ist keine Anschuldigung — es ist
+      die Wahrheit, und Targ wird sie prüfen.</em></p>
+
+      <h2>Garghuk</h2>
+
+      <p>Mitte dreißig, was bei Orks alt ist. Zehn Jahre unter der Peitsche, ein Jahr
+      an ihrem Griff. Er trägt sie am Gürtel, wo jeder sie sieht, und das ist keine
+      Trophäe, sondern eine Ankündigung.</p>
+
+      <p>Er spricht leise. Unter Orks ist das eine Drohung — man muss näher kommen, um
+      zu hören. Er hat rechnen gelernt, weil er musste: wie viele Krieger ein Überfall
+      kostet, wie viele Münder ein Winter frisst, wie lange Pilze und Rothé
+      sechshundert Wesen tragen. Die Antwort auf die letzte Frage ist: nicht mehr lang.
+      <strong>Deshalb raubt er.</strong> Nicht aus Bosheit — aus Arithmetik.</p>
+
+      <p>Und er hat eine Schwäche, die im Kampf niemandem nützt und am
+      Verhandlungstisch alles entscheidet: <strong>Er weiß, was ein Sklave ist.</strong>
+      Wenn die Sklavenherren Ware bei ihm bestellen, ist das für ihn kein Geschäft
+      unter anderen. Er wird es trotzdem erwägen. Aber er wird darüber nicht laut
+      reden, und wer ihn beim Zögern erwischt, hat einen Hebel.</p>
+
+      <h2>Targ, Auge des Gruumsh</h2>
+
+      <p>Er hat sich das rechte Auge genommen, wie es die Strengsten tun, und behauptet
+      seither, mit dem leeren zu sehen. Er hütet die Tabus, die Hörner, die Zeichen.
+      Er hat den Aufstand gesegnet und erinnert Garghuk seither täglich daran, wem der
+      Sieg gehörte.</p>
+
+      <p>Für Targ ist ein Bündnis mit dem Pomarj kein Handel, sondern Erfüllung:
+      Gruumsh sammelt seine Kinder für den Krieg, den er seit dem Anbeginn führt.
+      Sklaven sind dabei kein moralisches Problem, sondern Beute. <strong>Wer in
+      Blackthorn Frieden verhandeln will, muss an Targ vorbei</strong> — durch
+      Überzeugung, durch Diskreditierung oder über seine Leiche. Der dritte Weg ist der
+      einfachste und der teuerste.</p>
+
+      <h2>Wer sonst noch mitredet</h2>
+
+      <table>
+        <thead><tr><th>Fraktion</th><th>Stärke</th><th>Will</th><th>Preis</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Garghuk &amp; die Kriegerkaste</strong></td><td>220–300</td>
+              <td>Beute, volle Mägen, keinen neuen Herrn</td>
+              <td>Eine Nahrungsquelle, die keinen Krieg kostet</td></tr>
+          <tr><td><strong>Targ &amp; der Klerus</strong></td><td>8–12</td>
+              <td>Den Krieg als Gottesdienst, das Bündnis mit dem Pomarj</td>
+              <td>Nicht käuflich. Nur schlagbar oder zu diskreditieren</td></tr>
+          <tr><td><strong>Hobgoblin-Drillmeister</strong></td><td>30–45</td>
+              <td>Sold und Ordnung</td>
+              <td>Besserer Sold. Sie sind Söldner und tun nicht so, als wären sie mehr</td></tr>
+          <tr><td><strong>Bugbear-Nachtjäger</strong></td><td>25–40</td>
+              <td>Beuteanteil, freie Hand</td>
+              <td>Beute. Loyalität war nie Teil der Abmachung</td></tr>
+          <tr><td><strong>Oger-Reste</strong></td><td>20–28</td>
+              <td>Rache, oder wenigstens einen Grund, jemanden zu erschlagen</td>
+              <td>Ein Aufstand gegen Garghuk — den sie allein nicht schaffen</td></tr>
+          <tr><td><strong>Gnolle</strong></td><td>15–30</td>
+              <td>Fressen und weiterziehen</td>
+              <td>Sie bleiben, weil ein Gnollrudel sonst nirgends geduldet wird</td></tr>
+          <tr><td><strong>Duergar</strong></td><td>3–30 Gäste</td>
+              <td>Rückzahlung: die Humanoiden als Rammbock, während sie das Eigentliche holen</td>
+              <td>Nichts, was eine Gruppe bieten kann. Aber sie sind bestechlich in der Frage <em>wann</em></td></tr>
+          <tr><td><strong>Svirfneblin</strong></td><td>unbekannt</td>
+              <td>Die Duergar weg. Die Orks sind ihnen gleichgültig</td>
+              <td>Verbündete gegen die Grauzwerge — und sie kennen jeden Tunnel</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Was die Gruppe hören wird</h2>
+
+      <p>Der Schlachtruf des Clans, gebrüllt beim Angriff und gesungen bei der
+      Verteilung der Beute. Wer ihn einmal gehört hat, erkennt Blackthorn beim nächsten
+      Mal an drei Silben:</p>
+
+      <blockquote>
+      <p><em>Horn zuerst! Blut danach!<br>
+      Dorn beißt! Schädel ruft!<br>
+      Von unten kommen wir — stampf, stampf —<br>
+      an der Enge zermalmen wir — schlag, schlag —<br>
+      Blutet! Blutet und sterbt!<br>
+      Ihr seid schwach; wir sind staaaark!<br>
+      Brecht ihre Götzen, nehmt ihr Eisen — HA!<br>
+      Blackthorn! Blackthorn! RAUB!</em></p>
+      </blockquote>
+
+      <p><strong>Das Banner:</strong> ein schwarzer Dorn auf ungebleichtem Leinen,
+      darüber ein roter Schrägstrich wie ein Klauenhieb, darunter ein roter Schädel.
+      Der Dorn stand schon vor dem Aufstand für den Ort. Der Schrägstrich kam mit
+      Garghuk dazu — es ist der Hieb, mit dem eine Kette durchtrennt wird.</p>
+    encounters:
+      - name: Garghuk und der innere Zirkel
+        note: >-
+          Der Bosskampf des aktuellen Standes, in Bereich 4. Targ eröffnet aus der
+          zweiten Reihe, die Drillmeister halten die Linie, Garghuk zieht sich Ziele
+          mit der Kette heran. Fällt ein Drillmeister, verliert die Linie ihren
+          Rüstungsbonus — das ist der Hebel für die Gruppe.
+        creatures:
+          - { key: garghuk, count: 1 }
+          - { key: targ, count: 1 }
+          - { key: hobgoblin-drillmeister, count: 2 }
+      - name: Ein Nachtjagd-Paar
+        note: >-
+          Was die Gruppe im Wald trifft, bevor sie den Bau überhaupt findet. Bugbears
+          arbeiten paarweise und weit vor der Linie; sie greifen nachts an, nehmen
+          einen Charakter und ziehen sich zurück. Ein Paar hat die vierköpfige
+          Dyvers-Patrouille aufgerieben — nicht in einem Kampf, sondern in drei Nächten.
+        creatures:
+          - { key: bugbear-schleicher, count: 2 }
+      - name: Targ hält Hof
+        note: >-
+          Wenn die Gruppe als Gast oder Gefangener vor den Klerus kommt. Als Kampf
+          gedacht ist das nicht — aber wenn die Verhandlung kippt, steht sie sofort.
+        creatures:
+          - { key: targ, count: 1 }
+          - { key: ork-veteran, count: 4 }
+    scaling:
+      steps:
+        - for: 4× Stufe 5
+          creatures:
+            - { key: garghuk, count: 1 }
+            - { key: hobgoblin-drillmeister, count: 1 }
+        - for: 4× Stufe 7 (Standard)
+          creatures:
+            - { key: garghuk, count: 1 }
+            - { key: targ, count: 1 }
+            - { key: hobgoblin-drillmeister, count: 2 }
+        - for: 4× Stufe 9
+          creatures:
+            - { key: garghuk, count: 1 }
+            - { key: targ, count: 1 }
+            - { key: hobgoblin-drillmeister, count: 2 }
+            - { key: bugbear-schleicher, count: 2 }
+            - { key: ork-veteran, count: 4 }
+
+  - key: hooks
+    name: Aufhänger — sechs Wege nach Blackthorn
+    content: |
+      <p>Jeder Aufhänger nennt den Einstieg, was tatsächlich dahintersteckt und drei
+      Wege, ihn aufzulösen. Die Gruppe wird einen vierten finden — deshalb steht bei
+      jedem, <strong>was auf dem Spiel steht</strong>, statt was passieren soll.</p>
+
+      <hr>
+
+      <h2>1 · Der Weg unter dem Fluss</h2>
+      <p><em>Anschluss: das Piratenlager, Herrulf und die Fruztii, Harvester 576</em></p>
+
+      <p><strong>Einstieg:</strong> Herrulf schickt Nachricht. Beim Aufteilen der Beute
+      nach dem Aufstand im Piratenlager ist etwas übrig geblieben, das keiner haben
+      wollte: ein Buch. Frachtlisten, in einer Handschrift, die kein Fruztii lesen
+      kann. Was drinsteht, sind keine Waren, sondern Zahlen mit Namen daneben — und
+      die Übergabeorte liegen nicht an der Küste. Sie liegen im Wald.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Die Piraten haben ihre Gefangenen nie
+      selbst in den Pomarj gebracht. Der Landweg ist zu lang und zu gut bewacht. Sie
+      haben sie <em>übergeben</em> — an eine Station im Gnarley, von der aus es unter
+      Tage weitergeht. Durch die UnderOerth in den Pomarj kommt eine Kolonne, ohne dass
+      je eine Patrouille sie sieht. Blackthorn ist die Station. Die Duergar stellen die
+      Führer.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Die Gruppe hat selbst in diesem
+      Lager gesessen. Sie hat Huskarls und Gefangene befreit — aber nicht alle sind
+      mitgekommen. Von einigen wusste niemand, wo sie waren. Jetzt weiß es jemand.</p>
+
+      <table>
+        <thead><tr><th>Weg</th><th>Wie</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Die Übergabe abfangen. Ein Konvoi im
+          Wald ist ein Kampf, den die Gruppe gewinnen kann — und er verrät den Ort
+          nicht, weil die Orks vor der Gefangennahme sterben.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Herrulf als Vermittler. Er ist
+          Nordmann, kein Ork, aber er war beides: Räuber und Gefangener. Er kann
+          Garghuk erklären, was ein Sklavenpakt aus einem Clan macht — und Garghuk wird
+          zuhören, weil er es weiß.</td></tr>
+          <tr><td><strong>List</strong></td><td>Das Frachtbuch fälschen. Eine Lieferung
+          eintragen, die nicht existiert, und beobachten, wer sich beschwert. Wer
+          reklamiert, ist der Empfänger.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>2 · Der Priester aus dem Pomarj</h2>
+      <p><em>Der Aufhänger mit Uhr. Wenn er ankommt, ändert sich alles.</em></p>
+
+      <p><strong>Einstieg:</strong> Spione aus Narwell und Safeton melden einen
+      Reisenden: ein Ork in Priestertracht, mit vier Leibwachen und zwei Lasttieren,
+      auf dem Weg nach Norden. Die Lasttiere tragen keine Vorräte. Sie tragen
+      Geschenke.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Ein Priester Gruumshs, gesandt von
+      <strong>Turrosh Mak</strong>, um Blackthorn für das Orkreich zu gewinnen. Er
+      bringt magische Waffen als Handgeld. Wenn er ankommt und Targ ihn empfängt, wird
+      aus einem Räuberhort ein Brückenkopf — sechshundert Kämpfer unter dem Banner des
+      Pomarj, dreißig Meilen von Dyvers und im Rücken jeder Patrouille, die Greyhawk
+      nach Süden schickt.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Zeit. Der Priester ist unterwegs,
+      und er hat einen Vorsprung. Die Gruppe kann ihn abfangen — oder zuerst da sein
+      und dafür sorgen, dass er ins Leere redet.</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Ihn auf der Straße stellen. Sauber,
+          schnell, und es löst nichts: Turrosh Mak schickt einen zweiten, und beim
+          zweiten Mal reist er mit einer Kompanie.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Garghuk vorher erreichen. Das
+          Argument, das zieht, ist nicht Moral, sondern Rang: Ein Bündnis mit Turrosh
+          Mak macht Garghuk nicht zum Verbündeten, sondern zum Vasallen. Er hat gerade
+          erst einen Herrn erschlagen.</td></tr>
+          <tr><td><strong>List</strong></td><td>Die Geschenke abfangen und den Priester
+          durchlassen. Ein Gesandter, der mit leeren Händen und großen Worten ankommt,
+          blamiert sich vor sechshundert Orks — und Targ, der ihn empfohlen hat, gleich
+          mit.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>3 · Die Karawanen</h2>
+      <p><em>Der wirtschaftliche Aufhänger. Anschluss: Händlergilde, Hubert Hander,
+      der Hilfskonvoi.</em></p>
+
+      <p><strong>Einstieg:</strong> Die Händlergilde in Greyhawk hat den Konvoi in den
+      Süden mitfinanziert und erwartet Gegenleistung. Jetzt bricht die Nordroute weg:
+      drei Karawanen auf der Straße Greyhawk–Dyvers in sechs Wochen, keine Überlebenden
+      bei zweien, und die Ladung nicht geplündert, sondern <em>ausgewählt</em>. Eisen
+      und Werkzeug sind weg. Tuch, Wein und Gewürze liegen im Dreck.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Das ist kein Raubzug, das ist Beschaffung.
+      Blackthorn braucht Eisen — für sechshundert Kämpfer, von denen viele noch mit
+      Steinhämmern und Grubenwerkzeug bewaffnet sind. Und Blackthorn braucht Nahrung:
+      Pilze und eine Rothé-Herde tragen keine Konföderation durch den Winter. Wer
+      Greyhawk schwächen will, greift die Nordroute an, während im Süden Piraten
+      brennen. Wer nur seine Leute satt bekommen will, tut zufällig dasselbe.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Der Ruf der Gruppe bei der
+      Händlergilde — und die Frage, ob sie den Unterschied zwischen einem Feldzug und
+      einer Hungersnot erkennt, bevor sie handelt.</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Eine Lockkarawane. Die Gruppe hat das
+          schon einmal versucht, südlich von One Ford, und es ging katastrophal aus.
+          Diesmal wissen sie, wie es schiefgeht.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Der absurde Vorschlag: ein
+          Abkommen. Getreide gegen Ruhe auf der Straße. Die Händlergilde wird toben,
+          Dyvers wird es abstreiten, und es wäre billiger als drei verlorene
+          Karawanen. Garghuk würde zuhören. <em>Targ nicht.</em></td></tr>
+          <tr><td><strong>List</strong></td><td>Eine Lieferung vergiften oder
+          markieren. Wo die Ladung auftaucht, ist der Hort — und ein Clan, der seinen
+          Kriegern verseuchtes Korn vorsetzt, hat ein Führungsproblem.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>4 · Die Fontäne</h2>
+      <p><em>Der Aufhänger für Faylith. Anschluss: Steinkreis, Ley-Linien, die
+      westliche Störquelle.</em></p>
+
+      <p><strong>Einstieg:</strong> Bei der Arbeit am Steinkreis fällt ein zweiter
+      Strang auf. Die Hauptstörung zieht nach Westen, zur Tempelregion — das ist
+      bekannt. Aber daneben liegt eine schwächere, stetige Ader, die nach
+      <strong>Nordwesten</strong> läuft und nicht stört, sondern <em>speist</em>. Sie
+      endet unter dem Gnarley-Forst.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Die Fontäne des Reinen Lichts. Fünfhundert
+      Fuß unter der Erde, taghell, ohne Wärme, heilt jede Wunde und jede Krankheit —
+      und sie wirkt nur an ihrem Ort. Wasser, das den Raum verlässt, ist gewöhnliches
+      Wasser. Das ist kein Zauber, das ist ein <strong>Knoten</strong>: eine Stelle, an
+      der eine Ley-Linie an die Oberfläche des Weltgefüges stößt. Deshalb blühen die
+      Haine im Winter, und deshalb liegt kein Reif im schwarzen Fleck.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Lareth ist über einen
+      Ley-Linien-Knoten entkommen. Wer verstehen will, wie das geht, braucht einen
+      Knoten, den er untersuchen kann, ohne dass ein Tempel darauf steht. Blackthorn
+      hat einen. Bewacht von sechshundert Orks, die ihn hassen und trotzdem nie
+      angerührt haben.</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Sich zur Fontäne durchschlagen. In
+          der Fontänenhöhle kämpfen Orks, Oger und Duergar mit Nachteil — es ist der
+          beste Kampfplatz des Baus, und die Bewohner wissen es.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Zugang aushandeln. Die Orks
+          hassen das Licht, aber sie haben die Quelle nie verschlossen — auch ein Ork
+          begreift, was ein Brunnen wert ist, der jede Wunde schließt. Wer Blackthorn
+          etwas anbietet, das es mehr braucht als einen ungenutzten hellen Raum,
+          bekommt vielleicht ein Ja.</td></tr>
+          <tr><td><strong>List</strong></td><td>Über die Svirfneblin von unten. Sie
+          kennen jeden Tunnel und haben eigene Gründe, den Bau zu betreten.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>5 · Der Aufruf der Gnarley-Waldläufer</h2>
+      <p><em>Der offizielle Weg. Anschluss: Nachtwache 2.0, Dravis' autonome Rolle.</em></p>
+
+      <p><strong>Einstieg:</strong> Die Waldläufer des Gnarley haben Humanoide aus dem
+      Boden kommen sehen. Sie stellen eine gemeinsame Operation auf die Beine — Ranger,
+      Miliz aus Dyvers, Waldleute — und werben in Greyhawk Söldner an. Für die
+      Nachtwache in ihrer neuen, autonomeren Form ist das genau der Auftrag, für den
+      Dravis sie freigestellt hat.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Die Operation ist zum Scheitern
+      verurteilt. Die Waldläufer rechnen mit einem Ork-Nest von vielleicht achtzig
+      Kriegern. Es sind sechshundert, in einem Bau mit einem einzigen engen Zugang, den
+      sie seit einem Jahrzehnt für genau diesen Fall herrichten. Wer da hineinmarschiert,
+      marschiert in einen Trichter.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Zweihundert Freiwillige, die
+      loslaufen, wenn niemand ihnen sagt, was da unten wirklich steht. Das ist keine
+      Kampfaufgabe, das ist eine Aufklärungsaufgabe — und die unangenehme Wahrheit
+      danach zu überbringen ist der schwierigere Teil.</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Mitmarschieren und retten, was zu
+          retten ist. Der Wachposten in der oberen Höhle fällt. Alles darunter nicht.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Die Operation abblasen. Erfordert,
+          dass Waldläufer und Miliz einer Gruppe glauben, die sagt: <em>Wir waren
+          unten, es sind sechshundert, geht nicht hin.</em> Ohne Beweis glaubt das
+          niemand.</td></tr>
+          <tr><td><strong>List</strong></td><td>Den Trichter umdrehen. Wenn die
+          Operation ohnehin läuft, kann sie als Ablenkung dienen, während eine kleine
+          Gruppe von der Schlucht aus einsteigt.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>6 · Die Halb-Ork-Anwerbung</h2>
+      <p><em>Der verdeckte Aufhänger. Anschluss: die Bastionen an der Wild Coast.</em></p>
+
+      <p><strong>Einstieg:</strong> An der Wild Coast werden Halb-Orks Arbeit
+      angeboten. Gut bezahlt, keine Fragen. Das ist die Auffälligkeit: In Teilen dieser
+      Region erschlägt man jeden mit Ork- oder Goblinblut auf offener Straße. Wer dort
+      gezielt Halb-Orks sucht, sucht etwas Bestimmtes.</p>
+
+      <p><strong>Was dahintersteckt:</strong> Agenten der Sklavenherren brauchen
+      Mittelsleute — jemanden, der in einem Ork-Lager verhandeln kann, ohne sofort
+      erschlagen zu werden, und der in einer menschlichen Stadt einen Vertrag
+      unterschreiben kann. Verbindungsleute zwischen den Sklavenherren und den
+      Humanoiden-Heeren in Turrosh Maks Diensten. Blackthorn steht auf ihrer Liste.</p>
+
+      <p><strong>Was auf dem Spiel steht:</strong> Die Gruppe kann sich hier
+      <em>einschleusen</em> statt einbrechen — und die Kette von oben aufrollen, statt
+      unten anzufangen. Es ist der einzige Aufhänger, bei dem sie Blackthorn betreten
+      können, ohne sich hineinzukämpfen.</p>
+
+      <table>
+        <tbody>
+          <tr><td><strong>Gewalt</strong></td><td>Die Anwerber hochnehmen. Liefert
+          Namen und beendet die Spur an derselben Stelle.</td></tr>
+          <tr><td><strong>Diplomatie</strong></td><td>Einen echten Halb-Ork überreden,
+          das Treffen anzunehmen und zu berichten. Er geht ein Risiko ein, das die
+          Gruppe nicht für ihn tragen kann — und er wird das ansprechen.</td></tr>
+          <tr><td><strong>List</strong></td><td>Eines der eigenen Gruppenmitglieder als
+          Halb-Ork verkleiden und sich anwerben lassen. Führt bei Erfolg als
+          <em>Gast</em> nach Blackthorn — mit Zugang zu Garghuk, Targ und dem
+          Verhandlungstisch, an dem gerade über Menschen als Ware gesprochen wird.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>Und wenn die Gruppe etwas ganz anderes tut</h2>
+
+      <p>Wird sie. Diese sechs Aufhänger laufen alle auf dieselben vier Fragen zu, und
+      solange die beantwortet werden, funktioniert jeder Weg dorthin:</p>
+
+      <ol>
+        <li><strong>Bekommt Turrosh Mak Blackthorn?</strong> Wenn ja, steht ein Heer
+        im Rücken von Dyvers.</li>
+        <li><strong>Läuft der Sklavenweg unter Tage weiter?</strong> Wenn ja, ist jede
+        Patrouille an der Oberfläche Theater.</li>
+        <li><strong>Hält Garghuk?</strong> Fällt er, zerfällt die Konföderation in
+        sechs Fraktionen — und sechs kleine Warlords im Gnarley sind für die Region
+        schlimmer als einer, mit dem man reden kann.</li>
+        <li><strong>Was ist die Fontäne?</strong> Die Frage, die keiner der Bewohner
+        stellt.</li>
+      </ol>
+
+  - key: ziele
+    name: Was man in Blackthorn erreichen kann
+    content: |
+      <p>Der Bau lässt sich nicht leerräumen. Die folgende Liste ist deshalb keine
+      Aufgabenliste, sondern eine Sammlung von <strong>Zuständen, die sich ändern
+      lassen</strong> — jeder für sich ein Sitzungsziel, und keiner erfordert, dass
+      sechshundert Kreaturen sterben.</p>
+
+      <table>
+        <thead><tr><th>Ziel</th><th>Wo</th><th>Womit</th><th>Folge</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Den Pakt verhindern</strong></td>
+            <td>Bereich 4 oder auf der Straße</td>
+            <td>Den Priester abfangen, Garghuk überzeugen oder Targ blamieren</td>
+            <td>Blackthorn bleibt ein regionales Problem statt eines strategischen.</td>
+          </tr>
+          <tr>
+            <td><strong>Gefangene befreien</strong></td>
+            <td>Bereich 5, die Grabung</td>
+            <td>Zehn bis dreißig, „rotierender Bestand“ — Handwerker und Träger werden
+            behalten, der Rest geht weiter nach unten</td>
+            <td>Namen und Zeugen. Der Beweis, den die Waldläufer und die Gilde
+            brauchen.</td>
+          </tr>
+          <tr>
+            <td><strong>Die Duergar-Schuld offenlegen</strong></td>
+            <td>Bereich 6, östliche Tunnel</td>
+            <td>Lieferlisten, Grauzwergenstahl mit Punze, ein Duergar, der redet</td>
+            <td>Garghuk verliert vor Targ das Gesicht. Der Clan bekommt einen Riss,
+            den die Gruppe nutzen oder verkaufen kann.</td>
+          </tr>
+          <tr>
+            <td><strong>Die Oger aufwiegeln</strong></td>
+            <td>Bereich 4</td>
+            <td>Zwanzig bis achtundzwanzig gebrochene Oger, die auf einen Grund warten</td>
+            <td>Ein zweiter Aufstand. Chaotisch, blutig, und er räumt den Bau
+            gründlicher als jede Söldnerkompanie.</td>
+          </tr>
+          <tr>
+            <td><strong>Die Hornkette brechen</strong></td>
+            <td>Oberfläche und Bereich 1</td>
+            <td>Drei Hörner am Waldrand, die Posten an den Treppen</td>
+            <td>Die Alarmstufe steigt eine Stufe langsamer. Klingt klein, entscheidet
+            aber, ob ein Rückzug gelingt.</td>
+          </tr>
+          <tr>
+            <td><strong>Die Fontäne untersuchen</strong></td>
+            <td>Bereich 2</td>
+            <td>Zeit, Ruhe und jemand, der Ley-Linien lesen kann</td>
+            <td>Ein zweiter Datenpunkt neben dem Steinkreis — und womöglich der
+            Hinweis, wie Lareth einen Knoten als Tür benutzt hat.</td>
+          </tr>
+          <tr>
+            <td><strong>Den Sklavenweg kartieren</strong></td>
+            <td>Bereich 6 und tiefer</td>
+            <td>Den Duergar-Führern folgen statt sie zu erschlagen</td>
+            <td>Die Route in den Pomarj. Wertvoller als jeder Hort, und der einzige
+            Fund, der auch anderen nützt.</td>
+          </tr>
+          <tr>
+            <td><strong>Aufklärung liefern</strong></td>
+            <td>überall</td>
+            <td>Zählen, mitschreiben, lebend rauskommen</td>
+            <td>Die Ranger-Operation wird abgeblasen. Zweihundert Freiwillige gehen
+            nach Hause und wissen nie, wofür sie der Gruppe danken müssten.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Der Verhandlungstisch</h2>
+
+      <p>Falls die Gruppe tatsächlich reden will — und dieser Ort ist dafür gebaut —
+      hier die Werte, an denen eine Verhandlung mit Garghuk hängt:</p>
+
+      <table>
+        <thead><tr><th>Ansatz</th><th>SG</th><th>Anmerkung</th></tr></thead>
+        <tbody>
+          <tr><td>Überzeugen, ohne Hebel</td><td>SG 22</td>
+              <td>Er ist Kriegshäuptling eines Volkes, das gerade seine Ketten
+              abgeworfen hat. Warum sollte er Menschen zuhören?</td></tr>
+          <tr><td>… mit Nahrung im Angebot</td><td>SG 17</td>
+              <td>Sein echtes Problem. Sechshundert Mäuler, Pilze und eine Rothé-Herde.</td></tr>
+          <tr><td>… mit dem Vasallen-Argument</td><td>SG 15</td>
+              <td>Ein Bündnis mit Turrosh Mak macht ihn zum Untergebenen. Er hat gerade
+              erst einen Herrn erschlagen.</td></tr>
+          <tr><td>… wenn die Duergar-Schuld offenliegt</td><td>SG 13</td>
+              <td>Er braucht dann dringend einen Erfolg, der ihm allein gehört.</td></tr>
+          <tr><td>… in Targs Anwesenheit</td><td>+5 auf alles</td>
+              <td>Targ redet dazwischen. Ihn zu beschäftigen ist eine eigene Aufgabe.</td></tr>
+          <tr><td>Targ überzeugen</td><td>—</td>
+              <td>Nicht möglich. Nur diskreditieren oder erschlagen.</td></tr>
+        </tbody>
+      </table>
+
+      <p class="cob-note"><em>Ein Ergebnis, das die Gruppe erreichen kann und das
+      keiner der Aufhänger vorsieht: Garghuk als <strong>Puffer</strong>. Ein Clan im
+      Gnarley, der nicht dem Pomarj gehört, keine Sklaven weiterreicht und Karawanen in
+      Ruhe lässt, weil er anders satt wird — und der zwischen Dyvers und allem, was aus
+      dem Süden kommt, im Weg steht. Das ist kein Sieg, das ist ein Handel mit einem
+      Massenmörder. Genau deshalb ist es interessant.</em></p>

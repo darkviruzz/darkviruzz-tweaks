@@ -191,10 +191,12 @@ def main():
     print(f"{out}  {W}x{H}px  ({WIDTH_CELLS}x{HEIGHT_CELLS} cells of 10 ft = "
           f"{WIDTH_CELLS*10}x{HEIGHT_CELLS*10} ft)")
 
-    # A small banner for the adventure card in the compendium.
-    banner = img.resize((1200, int(1200 * H / W)), Image.LANCZOS)
-    banner.save("assets/maps/blackthorn-banner.webp", "WEBP", quality=85, method=6)
-    print(f"assets/maps/blackthorn-banner.webp  {banner.size[0]}x{banner.size[1]}px")
+    # A downscaled preview of the map, for embedding in the journal. The
+    # compendium's banner is the clan standard from make-banner.py — keep the
+    # filenames distinct so the two scripts cannot overwrite each other.
+    preview = img.resize((1200, int(1200 * H / W)), Image.LANCZOS)
+    preview.save("assets/maps/blackthorn-map-preview.webp", "WEBP", quality=85, method=6)
+    print(f"assets/maps/blackthorn-map-preview.webp  {preview.size[0]}x{preview.size[1]}px")
 
 
 if __name__ == "__main__":

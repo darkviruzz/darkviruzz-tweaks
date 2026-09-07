@@ -18,11 +18,16 @@ Ein **Adventure-Dokument** für den Ein-Klick-Import. Es legt an:
   grelle Lichtquelle, Fackeln und Kochfeuer im Ogerbau, Tageslicht durch den
   Deckenschacht), 60 vorplatzierten, verborgenen Tokens und Journal-Pins für alle
   sieben Bereiche.
-- **Ein Journal** mit zehn Seiten — Überblick, Bereiche 1–7, Begegnungsbudgets und
-  Skalierung, sowie eine Seite zu den Konvertierungsentscheidungen.
-- **15 Statblocks** nach 2024er Bauweise: Orks (Krieger, Veteran, Sippe), Gnolle
+- **Zwei Journals mit vierzehn Seiten:**
+  - *Die Höhlen von Blackthorn* — Überblick, Bereiche 1–7, Begegnungsbudgets und
+    Skalierung, offengelegte Konvertierungsentscheidungen.
+  - *Lore, Fraktionen & Aufhänger* — die Blackthorn-Haine an der Oberfläche, der
+    Clan samt Machtwechsel, sechs ausgearbeitete Aufhänger mit je drei
+    Auflösungswegen, und eine Liste dessen, was sich im Bau erreichen lässt.
+- **19 Statblocks** nach 2024er Bauweise: Orks (Krieger, Veteran, Sippe), Gnolle
   (Krieger, Matriarchin, Rudelführer), Oger (Krieger, Matriarchin, Jungtier,
-  Häuptling), Duergar (einfach, Anführer, Häuptling), Steeder und Rothé.
+  Häuptling), Duergar (einfach, Anführer, Häuptling), Steeder, Rothé — sowie
+  **Garghuk**, **Targ**, Bugbear-Schleicher und Hobgoblin-Drillmeister.
 - **Den Hort des Oger-Häuptlings** — sechs magische Gegenstände samt Active
   Effects, plus das Fläschchen mit leuchtendem Wasser.
 
@@ -46,6 +51,17 @@ steht als Kulisse daneben, mit ausgewiesener Einordnung "nicht als Kampf gedacht
 Der Bruch, den eine Gruppe ausnutzen kann, steht schon in der Vorlage: die Orks
 haben keine Anführer mehr — die Oger haben sie erschlagen — und sie sind fünfmal
 so zahlreich wie ihre Herren.
+
+### Zwei Zeitstände
+
+Die Quellen zu diesem Ort widersprechen sich: die ältere beschreibt einen Ogerhort
+mit 76 Ogern und führungslosen Orks, die jüngere einen **Blackthorn-Orc-Clan**
+unter Garghuk, mit nur noch 20–28 Ogern, dafür Hobgoblins und Bugbears.
+
+Das Modul löst das als Zeitachse auf — dazwischen liegt ein **Aufstand
+(Coldeven 575 CY)**. Beide Stände sind bespielbar; die Bereichsbeschreibungen
+gelten für beide, weil sich die Geografie nicht ändert. Der Standard ist der
+neuere Stand.
 
 ## Die Karte austauschen
 

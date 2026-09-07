@@ -41,6 +41,7 @@ build/
   build.mjs           Orchestrierung: YAML -> Dokumente -> dist/ -> packs/
   verify.mjs          Liest die Packs zurück, prüft jede Referenz
   make-map.py         Rendert die Platzhalterkarte
+  make-banner.py      Rendert das Clan-Banner
   lib/
     ids.mjs           Deterministische 16-Zeichen-IDs aus einem Seed
     keys.mjs          _key-Vergabe entlang der CLI-Hierarchie  <- KRITISCH
@@ -50,7 +51,7 @@ build/
     scene.mjs         Szenenquelle -> Scene (Tokens, Lichter, Pins)
     adventure.mjs     Bündelt alles in ein Adventure-Dokument
 src/
-  creatures/*.yml     15 Statblocks
+  creatures/*.yml     19 Statblocks
   items/*.yml         Der Hort des Oger-Häuptlings
   journal/*.yml       Der Abenteuertext samt Begegnungsdaten
   scene/*.yml         Szenengeometrie, Beleuchtung, Tokenformationen
@@ -143,6 +144,20 @@ packs/                LevelDB, gitignored — entsteht beim Build
   `system.bonuses.abilities.check`, `system.bonuses.abilities.skill`.
   Änderungsmodus 2 = ADD, 5 = OVERRIDE, 4 = UPGRADE.
 
+### Journals und Assets
+
+- **Pins binden an das Journal mit `area`-getaggten Seiten**, nicht an `journals[0]`.
+  Sonst zeigt das Hinzufügen eines zweiten Journal-Eintrags je nach
+  Dateinamen-Sortierung stillschweigend auf das falsche Dokument.
+- **`verify.mjs` prüft jeden `modules/caverns-of-blackthorn/...`-Pfad** im gesamten
+  Adventure-JSON gegen die Platte — Szenenhintergrund, Banner, Portraits,
+  Token-Texturen und in Journal-HTML eingebettete Bilder. Eine fehlende Datei
+  rendert in Foundry als kaputtes Bild, ohne dass irgendetwas geloggt wird.
+- **Zwei Skripte dürfen nicht denselben Dateinamen schreiben.** `make-map.py` und
+  `make-banner.py` haben sich einmal gegenseitig die `blackthorn-banner.webp`
+  überschrieben — je nachdem, welches zuletzt lief. Die Karte heißt jetzt
+  `blackthorn-map-preview.webp`.
+
 ### Szenen
 
 - **Raster:** Die Vorlage rechnet in 10-Fuß-Feldern, dnd5e in 5-Fuß-Feldern. Die
@@ -160,6 +175,16 @@ packs/                LevelDB, gitignored — entsteht beim Build
 Sie stehen im Journal auf der Seite **"Anmerkungen zur Konvertierung"** — bewusst
 im Produkt und nicht nur hier, damit die Spielleitung sie am Tisch sieht und
 zurückdrehen kann. Wenn du eine änderst, ändere beide Stellen.
+
+## Die Zeitachse
+
+Die Quellen widersprechen sich — ältere Fassung: Ogerhort mit 76 Ogern und
+führungslosen Orks; jüngere Fassung: Blackthorn-**Orc**-Clan unter Garghuk mit
+20–28 Ogern, dafür Hobgoblins und Bugbears. Aufgelöst als **Aufstand im Coldeven
+575 CY**, mit den Duergar als heimlichen Waffenlieferanten. Wer daran etwas
+ändert, ändert es an drei Stellen: den Statblocks in
+`src/creatures/blackthorn-clan.yml`, der Übersichtsseite in
+`src/journal/blackthorn.yml` und der Clan-Seite in `src/journal/lore.yml`.
 
 ## Was noch offen ist
 

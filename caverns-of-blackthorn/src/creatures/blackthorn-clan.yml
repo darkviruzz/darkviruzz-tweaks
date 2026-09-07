@@ -1,0 +1,312 @@
+# Der Blackthorn-Clan, Stand 576 CY
+#
+# Die WorldAnvil-Fassung des Ortes nennt einen Ork-Herrscher (Garghuk), eine
+# Konföderation von 450–650 Seelen mit Bugbears und Hobgoblins, einen Klerus um
+# Targ — und nur noch 20–28 Oger statt der 76 der älteren Quelle, bei 15–30
+# Gnollen statt 85.
+#
+# Das ist kein Widerspruch, sondern eine Zeitachse: dazwischen liegt der
+# Aufstand. Die Statblocks hier sind der Stand von 576 CY.
+
+- key: garghuk
+  name: Garghuk, Herr von Blackthorn
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Lawful Evil
+  cr: 7
+  ac: 18
+  hp: { value: 149, formula: "18d8 + 68" }
+  speed: { walk: 30 }
+  abilities: { str: 20, dex: 14, con: 18, int: 13, wis: 15, cha: 17 }
+  saves: [str, con, wis]
+  skills: { itm: 2, ath: 2, prc: 1, ins: 1 }
+  senses: { darkvision: 120 }
+  languages: [common, orc, goblin, giant]
+  actorLink: true
+  img: modules/caverns-of-blackthorn/assets/maps/blackthorn-sigil.webp
+  description: >-
+    Ein alter Ork nach den Maßstäben seines Volkes — Mitte dreißig, und jede Narbe
+    an ihm ist bezahlt. Zehn Jahre lang hat er unter der Ogerpeitsche Fels gebrochen.
+    Dann hat er sie den Ogern abgenommen und trägt sie seitdem am Gürtel, wo sie jeder
+    sieht. Er spricht leise, was unter Orks eine Drohung ist, und er hat gelernt zu
+    rechnen: Wie viele Krieger ein Überfall kostet, wie viele Münder ein Winter
+    frisst, und was ein Bündnis wert ist, das man nicht kündigen kann.
+  traits:
+    - name: Die Peitsche
+      text: >-
+        Verbündete im Umkreis von 60 ft., die Garghuk sehen oder hören können, haben
+        Vorteil auf Rettungswürfe gegen den Zustand <em>Verängstigt</em> und gegen
+        Effekte, die sie zum Fliehen zwingen. Orks in diesem Umkreis, die einen
+        Angriffswurf verfehlen, können ihn einmal wiederholen — sie fürchten Garghuk
+        mehr als den Gegner.
+      img: icons/weapons/misc/whip-red-yellow.webp
+    - name: Adrenalinschub
+      text: >-
+        Garghuk kann als Bonusaktion die Aktion Sprinten oder Rückzug ausführen und
+        erhält dabei 9 temporäre Trefferpunkte.
+      img: icons/magic/control/buff-strength-muscle-damage-red.webp
+    - name: War gestern noch Sklave
+      text: >-
+        Garghuk hat Vorteil auf Rettungswürfe gegen den Zustand <em>Verzaubert</em>
+        und gegen Effekte, die ihn festsetzen oder binden würden. Wird er gefesselt,
+        gelähmt oder in einen Käfig gesperrt, kämpft er bis zum Tod, statt sich zu
+        ergeben — das ist kein Mut, das ist eine Wunde.
+      img: icons/skills/social/wave-halt-stop.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Garghuk führt drei Angriffe mit {{item:Kettenzahn}} aus. Er kann einen davon
+        durch {{item:Die Kette werfen}} ersetzen.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Kettenzahn
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties: [hvy, two, mgc]
+      damage: { number: 1, denom: 12, bonus: 3, type: slashing }
+      text: >-
+        Eine Ogerklinge, kurzgeschlagen und mit Kettengliedern umwickelt — den Gliedern
+        seiner eigenen Fessel. Die Waffe ist magisch (+3 ist bereits eingerechnet).
+      img: icons/weapons/axes/axe-double-engraved-red.webp
+    - name: Die Kette werfen
+      kind: ability
+      save: { ability: dex, dc: 16, onSave: none }
+      range: 20
+      text: >-
+        Garghuk schleudert die Peitschenkette. Ein Ziel im Umkreis von 20 ft. muss
+        einen SG-16-Geschicklichkeitsrettungswurf bestehen oder wird 15 ft. zu Garghuk
+        gezogen und erhält den Zustand <em>Festgesetzt</em> (Ende der Bewegung).
+        Ein festgesetztes Ziel kann sich mit einer Aktion und einem
+        SG-16-Stärkewurf (Athletik) befreien.
+      img: icons/weapons/misc/whip-red-yellow.webp
+    - name: Horn zuerst
+      kind: ability
+      activation: bonus
+      uses: { max: 2, per: day }
+      text: >-
+        Garghuk stößt ins Kriegshorn. Bis zu sechs Verbündete im Umkreis von 60 ft.,
+        die es hören, können als Reaktion je einen Waffenangriff ausführen. Im Bau
+        ruft das außerdem binnen 1W4 Runden 2W6 weitere Krieger herbei — der Ruf wird
+        von Hornposten weitergegeben, und jeder in Blackthorn kennt ihn.
+      img: icons/tools/instruments/horn-brown.webp
+    - name: Ende der Verhandlung
+      kind: ability
+      activation: reaction
+      text: >-
+        Wird Garghuk auf 0 Trefferpunkte reduziert, fällt er stattdessen auf 1 und
+        erhält bis zum Ende seines nächsten Zuges Vorteil auf alle Angriffswürfe.
+        Einmal pro langer Rast. Er ist nicht bereit zu sterben, solange die Sache
+        ungeklärt ist.
+      img: icons/magic/life/heart-cross-strong-flame-red.webp
+
+- key: targ
+  name: Targ, Auge des Gruumsh
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Chaotic Evil
+  cr: 5
+  ac: 16
+  hp: { value: 97, formula: "13d8 + 39" }
+  speed: { walk: 30 }
+  abilities: { str: 16, dex: 12, con: 16, int: 11, wis: 18, cha: 14 }
+  saves: [con, wis, cha]
+  skills: { rel: 2, itm: 1, ins: 2 }
+  senses: { darkvision: 120 }
+  languages: [common, orc, abyssal]
+  actorLink: true
+  img: icons/creatures/eyes/humanoid-single-red.webp
+  description: >-
+    Targ hat sich vor Jahren ein Auge genommen, wie es die Strengsten tun, und
+    behauptet seither, mit dem leeren zu sehen. Er hütet die Tabus, die Hörner und
+    die Zeichen. Er hat Garghuks Aufstand gesegnet — und er erinnert Garghuk seither
+    täglich daran, wem der Sieg gehörte. Für Targ ist ein Bündnis mit dem Pomarj kein
+    Handel, sondern Erfüllung: Gruumsh sammelt seine Kinder. Wer in Blackthorn Frieden
+    verhandeln will, muss an Targ vorbei oder ihn brechen.
+  traits:
+    - name: Das leere Auge
+      text: >-
+        Targ kann nicht überrascht werden und hat Vorteil auf Rettungswürfe gegen
+        Illusionen sowie gegen Effekte, die seine Gedanken lesen oder ihn blenden
+        würden.
+      img: icons/magic/perception/eye-ringed-glow-angry-red.webp
+    - name: Zauberwirken
+      text: >-
+        Targ wirkt die folgenden Zauber, Zauberattribut Weisheit
+        (Rettungswurf-SG 15, +7 auf Angriffswürfe mit Zaubern):<br>
+        <strong>Jederzeit:</strong> <em>Gedankenschinden</em>, <em>Führung</em>,
+        <em>Flammen erschaffen</em><br>
+        <strong>3×/Tag:</strong> <em>Blindheit/Taubheit</em>, <em>Person festhalten</em>,
+        <em>Wunden verursachen</em><br>
+        <strong>1×/Tag:</strong> <em>Bannmagie</em>, <em>Geistige Verbindung</em>,
+        <em>Gruumshs Speer</em> (siehe unten)
+      img: icons/magic/symbols/rune-sigil-red-orange.webp
+    - name: Blutzoll
+      text: >-
+        Fällt ein Verbündeter im Umkreis von 30 ft. auf 0 Trefferpunkte, erhält Targ
+        10 temporäre Trefferpunkte und bis zum Ende seines nächsten Zuges Vorteil auf
+        seinen nächsten Angriffswurf. Seine Leute wissen das. Sie sterben trotzdem für
+        ihn — oder gerade deshalb.
+      img: icons/magic/death/hand-dirt-undead-zombie.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Targ führt zwei Angriffe mit {{item:Ritualspeer}} aus oder wirkt einen Zauber
+        und führt einen Angriff aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Ritualspeer
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: spear
+      properties: [thr, mgc]
+      damage: { number: 1, denom: 8, bonus: 1, type: piercing }
+      text: >-
+        Zusätzlich 2W6 nekrotischer Schaden. Der Speerkopf ist aus dem Zahn von etwas
+        geschnitten, das niemand im Bau benennen kann.
+      img: icons/weapons/polearms/spear-flared-black.webp
+    - name: Gruumshs Speer
+      kind: ability
+      uses: { max: 1, per: day }
+      save: { ability: dex, dc: 15, onSave: half, damage: [{ number: 6, denom: 8, type: piercing }] }
+      range: 60
+      text: >-
+        Ein Speer aus rotem Licht fährt durch eine 60 ft. lange, 5 ft. breite Linie.
+        Jede Kreatur darin legt einen SG-15-Geschicklichkeitsrettungswurf ab;
+        misslingt er, erhält sie zusätzlich den Zustand <em>Blind</em> bis zum Ende
+        ihres nächsten Zuges.
+      img: icons/magic/fire/beam-jet-stream-embers.webp
+    - name: Das Zeichen setzen
+      kind: ability
+      activation: bonus
+      uses: { max: 3, per: day }
+      text: >-
+        Targ zeichnet einen Verbündeten im Umkreis von 30 ft. Bis zum Ende von Targs
+        nächstem Zug hat dieser Vorteil auf Angriffswürfe und verursacht bei jedem
+        Treffer zusätzlich 1W8 nekrotischen Schaden.
+      img: icons/magic/symbols/runes-star-blue.webp
+
+# Neu unter Garghuk: Bugbears als Nachtjäger und Hobgoblins als Drillmeister.
+# Beide kamen nach dem Aufstand — angeworben, nicht erobert, und beide wissen, dass
+# ihr Sold von Garghuks Erfolg abhängt.
+- key: bugbear-schleicher
+  name: Bugbear-Schleicher
+  size: med
+  type: humanoid
+  subtype: goblinoid
+  alignment: Chaotic Evil
+  cr: 3
+  ac: 15
+  hp: { value: 65, formula: "10d8 + 20" }
+  speed: { walk: 30 }
+  abilities: { str: 17, dex: 14, con: 14, int: 11, wis: 12, cha: 9 }
+  saves: [dex]
+  skills: { ste: 2, sur: 1, prc: 1 }
+  senses: { darkvision: 60 }
+  languages: [common, goblin]
+  img: icons/creatures/abilities/bear-paw-swipe-brown.webp
+  description: >-
+    Sie arbeiten paarweise und weit vor der Linie. Ein Bugbear-Paar hat die vierköpfige
+    Dyvers-Patrouille aufgerieben, von der im Gnarley niemand zurückkam — nicht in
+    offener Feldschlacht, sondern in drei Nächten.
+  traits:
+    - name: Überfall aus dem Dunkeln
+      text: >-
+        Trifft der Schleicher eine Kreatur, die ihn nicht sehen konnte, verursacht der
+        Angriff zusätzlich 2W6 Schaden.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+    - name: Lange Glieder
+      text: >-
+        Die Nahkampfangriffe des Schleichers haben 5 ft. mehr Reichweite als üblich
+        (bereits eingerechnet).
+      img: icons/creatures/claws/claw-scratch-gray.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Schleicher führt zwei Angriffe mit {{item:Morgenstern}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Morgenstern
+      kind: melee
+      ability: str
+      reach: 10
+      baseItem: morningstar
+      damage: { number: 2, denom: 8, type: piercing }
+      img: icons/weapons/maces/mace-spiked-steel.webp
+    - name: Wurfspeer
+      kind: ranged
+      ability: str
+      range: 30
+      long: 120
+      properties: [thr]
+      damage: { number: 2, denom: 6, type: piercing }
+      img: icons/weapons/polearms/javelin.webp
+
+- key: hobgoblin-drillmeister
+  name: Hobgoblin-Drillmeister
+  size: med
+  type: humanoid
+  subtype: goblinoid
+  alignment: Lawful Evil
+  cr: 3
+  ac: 17
+  hp: { value: 58, formula: "9d8 + 18" }
+  speed: { walk: 30 }
+  abilities: { str: 15, dex: 14, con: 14, int: 13, wis: 12, cha: 12 }
+  saves: [con, wis]
+  skills: { itm: 1, prc: 1 }
+  senses: { darkvision: 60 }
+  languages: [common, goblin, orc]
+  img: icons/creatures/abilities/mouth-teeth-sharp-red.webp
+  description: >-
+    Sie halten die gemischten Verbände zusammen — Orks, Gnolle und Oger in einer Linie
+    kämpfen zu lassen, ist eine Leistung, und die Hobgoblins sind der Grund, warum es
+    funktioniert. Sie führen Buch, teilen Wachen ein und prügeln Formationen zusammen.
+    Wer wissen will, wann welcher Trupp wo steht, fragt einen Drillmeister — oder
+    stiehlt sein Buch.
+  traits:
+    - name: Schlachtreihe
+      text: >-
+        Der Drillmeister hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich
+        mindestens zwei handlungsfähige Verbündete im Umkreis von 5 ft. dieser Kreatur
+        befinden.
+      img: icons/skills/melee/shield-block-gray-yellow.webp
+    - name: Formation halten
+      text: >-
+        Verbündete im Umkreis von 15 ft. des Drillmeisters erhalten +1 auf die
+        Rüstungsklasse, solange der Drillmeister bei Bewusstsein ist. Fällt er, geht
+        der Bonus verloren — und die gemischte Linie beginnt binnen einer Runde
+        auseinanderzufallen.
+      img: icons/equipment/shield/heater-steel-worn.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Drillmeister führt zwei Angriffe mit {{item:Langschwert}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties: [ver]
+      damage: { number: 2, denom: 8, type: slashing }
+      img: icons/weapons/swords/sword-guard-steel.webp
+    - name: Schwere Armbrust
+      kind: ranged
+      ability: dex
+      range: 100
+      long: 400
+      properties: [amm, hvy, lod, two]
+      damage: { number: 2, denom: 10, type: piercing }
+      img: icons/weapons/crossbows/crossbow-heavy-brown.webp
+    - name: Zurück in die Reihe
+      kind: ability
+      activation: reaction
+      text: >-
+        Wenn ein Verbündeter im Umkreis von 30 ft. getroffen wird, kann der
+        Drillmeister ihm befehlen, sich 10 ft. zu bewegen, ohne Gelegenheitsangriffe
+        auszulösen. Der Verbündete erleidet dabei 3 Schaden, wenn er zögert.
+      img: icons/skills/social/intimidation-impressing.webp

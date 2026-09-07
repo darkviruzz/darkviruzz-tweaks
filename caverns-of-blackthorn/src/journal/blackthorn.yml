@@ -35,26 +35,41 @@ pages:
       am Tisch gewürfelt wird — und die sind für eine Gruppe von vier Charakteren auf
       Stufe 7 gebaut.</p>
 
-      <h2>Die Machtverhältnisse</h2>
+      <h2>Zwei Zeitstände — welchen bespielst du?</h2>
+
+      <p>Dieser Ort existiert in zwei Fassungen, und der Unterschied ist ein Aufstand.</p>
 
       <table>
-        <thead><tr><th>Gruppe</th><th>Stärke</th><th>Steht wo</th><th>Will</th></tr></thead>
+        <thead><tr><th></th><th>Vor Coldeven 575</th><th>Ab Coldeven 575 (Standard)</th></tr></thead>
         <tbody>
-          <tr><td><strong>Oger</strong></td><td>76</td><td>Bereich 4</td>
-              <td>Herrschen, weil sie am stärksten sind. Der Häuptling will mehr.</td></tr>
-          <tr><td><strong>Orks</strong></td><td>420</td><td>Bereich 6, 5, 1</td>
-              <td>Überleben. Sie haben keine Anführer mehr — die Oger haben sie erschlagen.</td></tr>
-          <tr><td><strong>Gnolle</strong></td><td>85</td><td>Bereich 3, 1</td>
-              <td>Fressen. Sie dulden das Licht der Fontäne besser als alle anderen.</td></tr>
-          <tr><td><strong>Duergar</strong></td><td>3–30 Gäste</td><td>Östliche Tunnel</td>
-              <td>Die Humanoiden als Rammbock benutzen und dabei die echte Beute abschöpfen.</td></tr>
+          <tr><td><strong>Wer herrscht</strong></td>
+              <td>Die Oger, weil sie die Stärksten sind</td>
+              <td><strong>Garghuk</strong>, Ork-Kriegshäuptling, mit Targ als Priester</td></tr>
+          <tr><td><strong>Oger</strong></td><td>76</td><td>20–28, gebrochen, als Anker an Engstellen</td></tr>
+          <tr><td><strong>Orks</strong></td><td>420, führungslos, faktisch Sklaven</td><td>220–300 Krieger, plus Sippe</td></tr>
+          <tr><td><strong>Gnolle</strong></td><td>85</td><td>15–30 Hilfstruppen</td></tr>
+          <tr><td><strong>Neu dabei</strong></td><td>—</td><td>30–45 Hobgoblin-Drillmeister, 25–40 Bugbear-Nachtjäger</td></tr>
+          <tr><td><strong>Duergar</strong></td><td>3–30, Beobachter</td><td>3–30, <em>Gläubiger</em></td></tr>
+          <tr><td><strong>Gesamt</strong></td><td>~580</td><td>450–650 in einer Konföderation</td></tr>
         </tbody>
       </table>
 
-      <p>Der Bruch, den eine Gruppe ausnutzen kann, liegt offen: <strong>die Orks
-      hassen die Oger.</strong> Sie haben ein Jahrzehnt lang unter der Peitsche Fels
-      gebrochen, ihre Anführer sind tot, und sie sind fünfmal so zahlreich wie ihre
+      <p><strong>Die Bereichsbeschreibungen 1–7 gelten für beide Stände</strong> — die
+      Geografie ändert sich nicht, die Begegnungen sind auf den älteren Stand
+      gerechnet und bleiben als Trupps gültig. Wer den aktuellen Stand bespielt,
+      liest die Seite <em>Der Blackthorn-Clan</em> dazu und ersetzt den
+      Oger-Häuptling in Bereich 4 durch Garghuk.</p>
+
+      <h2>Der Bruch, den eine Gruppe ausnutzen kann</h2>
+
+      <p><strong>Vor dem Aufstand:</strong> Die Orks hassen die Oger. Ein Jahrzehnt
+      unter der Peitsche, ihre Anführer tot, und sie sind fünfmal so zahlreich wie ihre
       Herren. Es fehlt nur jemand, der ihnen sagt, dass sie das gemerkt haben.</p>
+
+      <p><strong>Danach:</strong> Genau das ist passiert — und Garghuk hat den Sieg
+      nicht allein errungen. Die Waffen kamen von den Duergar, und die wollen bezahlt
+      werden. Wer das im Bau öffentlich beweist, nimmt Garghuk vor dem Clan die
+      Grundlage seiner Herrschaft. Details auf der Seite <em>Der Blackthorn-Clan</em>.</p>
 
       <h2>Aufhänger</h2>
 
@@ -77,6 +92,11 @@ pages:
       <p class="cob-note"><em>Drei Fraktionen wollen dasselbe Bündnis und wissen nicht
       voneinander. Eine Gruppe, die das begreift, braucht kein Schwert zu ziehen — es
       reicht, die richtigen Leute einander vorzustellen.</em></p>
+
+      <p>Diese drei stammen aus der Vorlage. Ausgearbeitete Aufhänger mit Einstieg,
+      Hintergrund und je drei Auflösungswegen — samt Anschluss an eine laufende
+      Kampagne — stehen im zweiten Journal <em>Blackthorn — Lore, Fraktionen &amp;
+      Aufhänger</em>.</p>
 
   - key: bereich-1
     name: 1 — Die obere Höhle
@@ -317,6 +337,13 @@ pages:
       belügen. Er weiß, was die Fontäne wert ist. Und er wartet ab, wer ihm das bessere
       Angebot macht — was ihn zum interessantesten Verhandlungspartner des Abenteuers
       macht und zum gefährlichsten Gegner.</p>
+
+      <p class="cob-note"><em><strong>Stand 576 CY:</strong> Der Oger-Häuptling ist
+      tot. Diese Kammer gehört [[creature:garghuk]], und die zwanzig bis achtundzwanzig
+      überlebenden Oger schlafen dort, wo man sie hinstellt. Wer den aktuellen Stand
+      bespielt, ersetzt in den Begegnungen unten den Oger-Häuptling durch Garghuk und
+      stellt ihm [[creature:targ]] sowie zwei
+      [[creature:hobgoblin-drillmeister]] zur Seite statt der Ogerleibwache.</em></p>
 
       <h2>Zugänge</h2>
       <ul>

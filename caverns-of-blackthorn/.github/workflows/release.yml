@@ -53,8 +53,10 @@ jobs:
           npm ci
           pip install Pillow
 
-      - name: Render map
-        run: python build/make-map.py
+      - name: Render map and banner
+        run: |
+          python build/make-map.py
+          python build/make-banner.py
 
       - name: Build compendium packs
         run: npm run build
