@@ -4,6 +4,10 @@
 > dnd5e-Schema oder die Konvertierung lernst, schreib es hier auf — im selben
 > Change. Das gehört zu "fertig".
 
+> **Inhaltliche Entscheidungen stehen in [`docs/`](docs/).** `docs/HANDOFF.md` ist der
+> Einstieg, `docs/UMBAU-REGELN.md` sagt, wie Inhalt ins Modul kommt — **vor Arbeit an
+> `src/` lesen.** Diese Datei hier deckt nur Technik ab.
+
 ## Was das ist
 
 **Die Höhlen von Blackthorn** (`id: caverns-of-blackthorn`) ist ein
@@ -56,6 +60,7 @@ src/
   journal/*.yml       Der Abenteuertext samt Begegnungsdaten
   scene/*.yml         Szenengeometrie, Beleuchtung, Tokenformationen
 assets/maps/          Platzhalterkarte (generiert)
+docs/                 Lore, NPCs, Aufhänger, Karten, Umbau-Regeln (kein Build-Input)
 packs/                LevelDB, gitignored — entsteht beim Build
 ```
 
@@ -176,22 +181,29 @@ Sie stehen im Journal auf der Seite **"Anmerkungen zur Konvertierung"** — bewu
 im Produkt und nicht nur hier, damit die Spielleitung sie am Tisch sieht und
 zurückdrehen kann. Wenn du eine änderst, ändere beide Stellen.
 
-## Die Zeitachse
+## Inhalt und Chronologie
 
-Die Quellen widersprechen sich — ältere Fassung: Ogerhort mit 76 Ogern und
-führungslosen Orks; jüngere Fassung: Blackthorn-**Orc**-Clan unter Garghuk mit
-20–28 Ogern, dafür Hobgoblins und Bugbears. Aufgelöst als **Aufstand im Coldeven
-575 CY**, mit den Duergar als heimlichen Waffenlieferanten. Wer daran etwas
-ändert, ändert es an drei Stellen: den Statblocks in
-`src/creatures/blackthorn-clan.yml`, der Übersichtsseite in
-`src/journal/blackthorn.yml` und der Clan-Seite in `src/journal/lore.yml`.
+Der Kanon steht in [`docs/LORE.md`](docs/LORE.md); Personen in
+[`docs/NPCS.md`](docs/NPCS.md), Aufhänger in [`docs/HOOKS.md`](docs/HOOKS.md).
+
+Zwei Regeln, die den Code betreffen:
+
+- **Zeit wird relativ erzählt** („vor gut einem Jahrzehnt", „im letzten Herbst",
+  „tiefer Winter"). Keine Jahreszahlen im Inhalt — so bleibt das Modul an den
+  Kampagnen-Zeitstrahl anschließbar.
+- **`docs/` ist die Quelle, das Journal folgt.** Wer eine Lore-Aussage ändert, ändert
+  sie dort und zieht `src/journal/blackthorn.yml`, `src/journal/lore.yml` und die
+  Kommentare in `src/creatures/blackthorn-clan.yml` nach.
 
 ## Was noch offen ist
 
-- **Die Karte ist ein Platzhalter.** Ersetzt wird sie durch eine handgezeichnete
-  Karte (Dungeondraft / Dungeon Alchemist); die Anleitung steht im README und als
-  Kommentar in `src/scene/blackthorn.yml`.
-- **Keine Wände.** Bewusste Entscheidung — bei einer Karte, die ohnehin ersetzt
-  wird, wären sie doppelte Arbeit. Wenn die endgültige Karte steht, lohnt ein
-  Wall-Layer; `scene.mjs` nimmt `walls` bereits entgegen.
-- **Keine Zufallsbegegnungstabelle.** Die Alarmstufen im Journal decken das ab.
+- **Zehn handgezeichnete Karten ersetzen die Platzhalterkarte.** Rasterwerte, Szenen-
+  und Pinlisten stehen in [`docs/KARTEN.md`](docs/KARTEN.md).
+- **Wände kommen mit den echten Karten.** `scene.mjs` nimmt `walls` bereits entgegen;
+  die Terrainwände am Spalt (`move: 20`, `sight: 0`) sind in `docs/KARTEN.md` spezifiziert.
+- **Mehrere Pins je Szene** brauchen ein optionales `key`-Feld im Notiz-Eintrag; die
+  Notiz-ID wird dann `note:<szene>:<key ?? area>`.
+- **Keine Zufallsbegegnungstabelle.** Die Alarmstufen decken das ab.
+
+Die vollständige Arbeitsliste steht am Ende von
+[`docs/UMBAU-REGELN.md`](docs/UMBAU-REGELN.md).
