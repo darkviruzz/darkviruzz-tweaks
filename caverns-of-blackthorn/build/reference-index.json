@@ -1,0 +1,55 @@
+{
+  "versions": {
+    "dnd5e": "5.3.3",
+    "core": "14.364",
+    "mm": "1.4.0",
+    "dmg": "2.0.0",
+    "phb": "2.2.0"
+  },
+  "references": [
+    {
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.phbAppendixCRule.JournalEntryPage.NGmwolHLA5ppbIZY",
+      "name": "Long Rest"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.phbAppendixCRule.JournalEntryPage.wVuNbEADtC16ejAi",
+      "name": "Short Rest"
+    },
+    {
+      "uuid": "Compendium.dnd-dungeon-masters-guide.content.JournalEntry.dmgPlanEncounter.JournalEntryPage.WKL34lGhm9cZOavY",
+      "name": "Combat Encounters"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.phbsplThaumaturg",
+      "name": "Thaumaturgy"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.phbsplBless00000",
+      "name": "Bless"
+    },
+    {
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.phbsplDispelMagi",
+      "name": "Dispel Magic"
+    },
+    {
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBugbearStalker",
+      "name": "Bugbear Stalker"
+    },
+    {
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmHobgoblinCapta",
+      "name": "Hobgoblin Captain"
+    },
+    {
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGnollWarrior00",
+      "name": "Gnoll Warrior"
+    },
+    {
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGnollPackLord0",
+      "name": "Gnoll Pack Lord"
+    },
+    {
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmOgre0000000000",
+      "name": "Ogre"
+    }
+  ]
+}

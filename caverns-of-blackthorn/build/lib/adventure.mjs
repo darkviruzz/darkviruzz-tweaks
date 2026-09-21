@@ -36,16 +36,8 @@ export function buildAdventure({ actors, items, journals, scenes }) {
     _id: stableId("adventure:blackthorn"),
     name: "Die Höhlen von Blackthorn",
     img: `modules/${MODULE}/assets/maps/blackthorn-banner.webp`,
-    caption: "Ein Humanoiden-Hort unter dem Gnarley-Forst — konvertiert für D&D 2024.",
-    description: `
-<p>Südöstlich von Dyvers, tief unter dem Gnarley-Forst, liegt der Bau von Blackthorn:
-mehrere hundert Orks, Gnolle und Oger, eine Fontäne aus leuchtendem Wasser, die jede
-Wunde schließt, und eine Duergar-Gesandtschaft mit eigenen Plänen.</p>
-<p><strong>Der Import legt an:</strong> die Karte als Szene mit Beleuchtung und
-vorbereiteten Begegnungen, das Abenteuer als Journal mit allen sieben Bereichen,
-15 Statblocks nach 2024er Bauweise und den Hort des Oger-Häuptlings.</p>
-<p><em>Gerechnet für vier Charaktere auf Stufe 7. Fan-Konvertierung, kein offizielles
-Produkt.</em></p>`.trim(),
+    caption: "Eine verborgene Gemeinschaft unter dem Gnarley-Forst — für vier Charaktere auf Stufe 7.",
+    description: `<p>Winter unter dem Gnarley-Forst. Garghuks befreiter Clan hält selbst Gefangene; Quelle, Versorgung und Handel schaffen Möglichkeiten für Kampf, List und Verhandlung.</p><p>Import: ${scenes.length} Szenen für zehn Orte, ${journals.reduce((n,j)=>n+j.pages.length,0)} Journalseiten, ${actors.length} Abenteuer-Statblocks und ${items.length} Gegenstände. Für vier Charaktere auf Stufe 7, mit Begegnungsvarianten und gleichwertigen XP für friedliche Lösungen.</p>`,
     sort: 0,
     folder: null,
     actors: inFolder(actors, "Actor"),
@@ -58,6 +50,6 @@ Produkt.</em></p>`.trim(),
     cards: [],
     playlists: [],
     tables: [],
-    flags: { [MODULE]: { version: 1 } }
+    flags: { [MODULE]: { version: 2 } }
   };
 }

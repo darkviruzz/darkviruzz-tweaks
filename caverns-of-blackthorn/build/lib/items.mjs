@@ -9,7 +9,7 @@ import { stableId } from "./ids.mjs";
  */
 
 /** dnd5e / Foundry ActiveEffect change modes. */
-const MODE = { ADD: 2, OVERRIDE: 5, UPGRADE: 4 };
+const MODE = { ADD: "add", OVERRIDE: "override", UPGRADE: "upgrade" };
 
 function buildEffect(def, itemId) {
   const effectId = stableId(`effect:${itemId}:${def.name}`);
@@ -17,12 +17,13 @@ function buildEffect(def, itemId) {
     _id: effectId,
     name: def.name,
     img: def.img,
-    changes: def.changes.map(c => ({
+    type: "base",
+    system: { changes: def.changes.map(c => ({
       key: c.key,
-      mode: MODE[c.mode ?? "ADD"],
+      type: MODE[c.mode ?? "ADD"],
       value: String(c.value),
       priority: c.priority ?? 20
-    })),
+    })) },
     disabled: false,
     // transfer: the effect applies to whoever carries/attunes the item, rather
     // than needing to be applied from a chat card.
@@ -103,7 +104,7 @@ export function buildItem(def) {
       }
     };
     system.magicalBonus = def.magicalBonus ?? null;
-    system.range = { value: null, long: null, units: "ft", reach: def.reach ?? 5 };
+    system.range = { value: def.range ?? null, long: def.long ?? null, units: "ft", reach: def.reach ?? 5 };
     system.activities = {
       [stableId(`activity:${itemId}:attack`)]: {
         _id: stableId(`activity:${itemId}:attack`),

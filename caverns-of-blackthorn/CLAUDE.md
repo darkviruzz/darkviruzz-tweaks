@@ -1,3 +1,25 @@
+# Aktueller Stand: Modulüberarbeitung 0.2.1
+
+Tokenhöhen sind relativ zur Szene. Monster-ActiveEffects verwenden native Core-14-Dauer {value, units: "seconds", expiry}; Aktivitäten referenzieren die IDs ihrer eingebetteten Effekte. Waffen benötigen die zur baseItem passende simple/martial-Kategorie. Journaltexte beschreiben ausschließlich die aktuelle Welt; Entwicklungsbegründungen bleiben hier oder in Arbeitsnotizen.
+
+**Nutzerwunsch für alle Folgearbeiten:** ausschließlich offline testen. Keine Foundry-Testinstanz starten und keine Browser-Sichttests durchführen. Der Nutzer importiert selbst und meldet die Auffälligkeiten gesammelt.
+
+- dnd5e 5.3.3: Bei ausdrücklich erzeugten `system.skills`-Einträgen immer das passende `ability` setzen. Ohne dieses Feld verwendet das System für diese Einträge DEX; die Initialisierung des richtigen Attributs greift nur für fehlende Einträge. Der Generator und ein Regressionstest berücksichtigen das.
+
+Maßgeblich sind docs/HANDOFF.md und docs/UMBAU-REGELN.md. Die nachfolgende ältere technische Dokumentation bleibt als Hintergrund erhalten; diese geprüften Änderungen gehen ihr vor:
+
+- Ziel: Foundry 14.364 / dnd5e 5.3.3. Neun Szenen, zehn Orte, 18 Abenteuer-Statblocks, sieben Gegenstände und 21 Journalseiten. Die Platzhalterszene ist ersetzt.
+- Karten nutzen 60 Pixel pro 5-ft-Feld. Quellenkoordinaten sind Pixel in der skalierten Szenenfläche (`coordinateScale: 1`). Kein Szenenrand. Boden-Tokens haben elevation 0; Höhlentiefen aus der Wege-Datei sind reine Ortsinformationen. Core 14 verlangt ein ganzzahliges Raster ab 20 Pixel, nicht pauschal 50 Pixel.
+- XP-Budgets sind Obergrenzen: <=3.000 niedrig, <=5.200 mittel, <=6.800 hoch; darüber Überschreitung. Keine Verdoppelung des hohen Budgets als normale Kategorie.
+- Build benutzt die exportierte API `compilePack(src, dest)` aus @foundryvtt/foundryvtt-cli. Der CLI-Prozess selbst greift beim Start auf globale AppData-Konfiguration zu; die API vermeidet das und funktioniert unter Windows.
+- Core-14-ActiveEffects: `type: "base"`, `system.changes` mit `type: "add"`/`"override"`/`"upgrade"`. Keine alten numerischen change modes in den erzeugten Dokumenten. NPC-Quellenfeld steht unter `system.source`.
+- Mehrere Token-Gruppen desselben Actors in einer gemeinsamen Szene benötigen `area` und gegebenenfalls eigene Gruppen-ID. Pins benutzen `key` zusätzlich zu `area`. Verifier prüft alle Szenen, nicht nur die erste.
+- Targs Zauber verwenden `cast`-Aktivitäten mit bestätigten PHB-UUIDs. Verbrauch wird über `itemUses` erfasst; vorhandenes PHB erforderlich. MM-Bilder und Tokens bleiben externe Referenzen; MM ist erforderlich.
+- Externe Ziele stehen in build/reference-index.json, geprüft gegen die bereitgestellten Paketversionen. Für erneute Assetprüfung --core und --data an verify.mjs übergeben. Keine Lizenzdatei oder Vollpakete ins Repository übernehmen.
+- verify-core.mjs lädt echte Core-Dokumentklassen, aber keine dnd5e-Clientmodelle. Ein grüner Lauf ist Strukturprüfung, keine Behauptung eines erfolgreichen Live-Imports.
+
+---
+
 # CLAUDE.md — Arbeitsanleitung für dieses Modul
 
 > **Halte diese Datei aktuell.** Wenn du etwas über das Foundry-Pack-Format, das

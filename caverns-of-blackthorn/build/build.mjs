@@ -15,8 +15,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { compilePack } from "@foundryvtt/foundryvtt-cli";
 import yaml from "js-yaml";
 
 import { buildActor, xpForCR } from "./lib/actors.mjs";
@@ -26,7 +25,6 @@ import { buildScene } from "./lib/scene.mjs";
 import { buildAdventure } from "./lib/adventure.mjs";
 import { assignKeys } from "./lib/keys.mjs";
 
-const execFileAsync = promisify(execFile);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src");
 const STAGE = join(ROOT, "dist", "pack-source");
@@ -63,14 +61,7 @@ async function stage(pack, collection, documents) {
 }
 
 async function packOne(pack) {
-  const cli = join(ROOT, "node_modules", ".bin", "fvtt");
-  await execFileAsync(cli, [
-    "package", "pack", "-n", pack,
-    "--id", "caverns-of-blackthorn",
-    "--type", "Module",
-    "--in", join(STAGE, pack),
-    "--out", PACKS
-  ], { cwd: ROOT });
+  await compilePack(join(STAGE, pack), join(PACKS, pack));
 }
 
 async function main() {
@@ -81,13 +72,13 @@ async function main() {
   const journalDefs = await loadYamlDir("journal");
   const sceneDefs = await loadYamlDir("scene");
 
-  const actors = creatureDefs.map(buildActor);
+  const actors = creatureDefs.map(def => buildActor(def, itemDefs));
   const items = itemDefs.map(buildItem);
 
   // The journal needs the actor roster so encounter blocks can link statblocks
   // by uuid and print each creature's XP without the numbers being retyped.
   const bestiary = new Map(
-    creatureDefs.map((def, i) => [def.key, { id: actors[i]._id, name: def.name, cr: def.cr, xp: xpForCR(def.cr), img: def.tokenImg ?? def.img, size: actors[i].prototypeToken.width }])
+    creatureDefs.map((def, i) => [def.key, { id: actors[i]._id, name: def.name, cr: def.cr, xp: xpForCR(def.cr), img: def.tokenImg ?? def.img, tokenVariants: def.tokenVariants, size: actors[i].prototypeToken.width, sourceUuid: def.sourceUuid }])
   );
   const journals = journalDefs.map(def => buildJournal(def, { bestiary }));
   const scenes = sceneDefs.map(def => buildScene(def, { bestiary, journals }));

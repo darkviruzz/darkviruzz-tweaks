@@ -1,242 +1,121 @@
-# Aufhänger — Blackthorn
+# Blackthorn – HOOKS
 
-**Vorschläge, keine Reihenfolge.** Die Gruppe wird etwas anderes tun als geplant;
-deshalb liegen hier mehrere Angebote nebeneinander. Der DM greift, was zieht, und
-lässt den Rest liegen.
+# Hooks und Begleiter
 
-Gegenwart: tiefer Winter. Spieler: **Uhtred, Gaglath, Rhogar** auf Stufe 7, dazu
-Sidekicks bis auf 4–5 Spieler-Äquivalente. **Faylith ist in diesem Abenteuer die
-Spielleitung.**
+## Überfall und Handelsroute
 
----
+Ein laufender oder bereits geschehener Überfall bringt die Gruppe mit Blackthorn in Kontakt. Überlebende berichten von geraubten Waren und verschleppten Menschen. Der Schutz einer bekannten Falkenroute kann ein bestehendes Versprechen berühren. Aufklärung, Warnung, Verhandlung und bewaffneter Schutz sind jeweils mögliche Antworten.
 
-## 1 · Der Einstieg
+## Gwen
 
-Kein Auftraggeber, keine Armee, keine Vorwarnung über die Bewohner. Es gibt vier
-Fäden; einer genügt, zwei sind besser, alle vier braucht niemand.
+Gwen ist etwa fünfzehn Jahre alt, ein ehrliches, zurückhaltendes Bugbear-Mädchen. Die Erzählungen ihrer Großmutter vom früheren Zusammenleben und Hurreks praktische Anleitung prägten sie. Schon als Kind erlebte sie Verhandlungen, Versorgungsarbeit, unmittelbare Gefahr und Zeiten, in denen sie auf sich gestellt war. Daraus kommt ihre überraschende Reife. Optional half sie beim Aufstand mit Botengängen, Vorräten oder dem Schutz jüngerer Kinder; heute möchte sie einen anderen Weg als fortgesetzte Gewalt finden.
 
-### Radagast kennt eine Stelle
-Sein Stamm meidet den schwarzen Fleck seit Generationen: Nichts Essbares wächst dort,
-Tiere gehen nicht hinein, der Frost setzt sich nicht. **Dass dort Orks sind, weiß er
-nicht** — und das ist konsistent, denn man sieht von außen nichts.
+Bei Vertrauen will sie mit der Gruppe Richtung Gnarley reisen und ihre Sippe für ein freieres Zusammenleben gewinnen. Bei schlechter Behandlung kann sie selbstständig zurückkehren. Ist sie bei der Gruppe, bietet sie Kontakte und Erinnerungen an Alltagswege; bei neueren Vorgängen fragt sie nach. Ist sie schon in Blackthorn, kann Hurrek ein Treffen vermitteln. Ist sie fort oder tot, tragen Spuren, Bewohner und die anderen Hooks das Abenteuer. Ihre Rückkehr kann Nachrichten aus dem Tempel nach Blackthorn bringen. Eine Aussöhnung mit der Sippe braucht deren eigene Entscheidung.
 
-Er reist nicht mit, will aber ohnehin zum Steinkreis und ist erreichbar. Er liefert
-die Beunruhigung, nicht die Lösung.
+## Radagast und der Hain
 
-### Der Überfall liefert die Richtung
-Ein Überfall vor ihren Augen, oder frisch genug, dass die Spur warm ist.
+Radagast kennt die auffällige Frostgrenze, ungewöhnliche Pflanzen und örtliche Erzählungen. Er teilt diese Beobachtungen und kann die Gruppe zum Hain führen. Von dort erschließen Spuren und eigene Erkundung die Eingänge.
 
-| Genommen | Liegengelassen |
-|---|---|
-| Korn, Pökelfleisch, Salz | Münzen |
-| Äxte, Sägen, Zugholz, Geschirr | Tuch, Wein, Schmuck |
-| **Saatgetreide** | Waffen (außer Eisen als Rohstoff) |
+## Rhogar und Keshra
 
-Das Saatgut ist der Hinweis: Wer Saatgut raubt, denkt an nächstes Jahr. Uhtred oder
-Rhogar sehen das an einem geplünderten Wagen — und ab da ist Blackthorn kein
-Räubernest mehr, sondern jemand mit einem Plan.
+Der ungewöhnliche Elementarort spricht Rhogars Interesse an. Berichte oder Beobachtungen heilenden Wassers geben seiner Hoffnung für Keshra ein greifbares Ziel. Seine Kenntnis von Gestein und Wasserwegen hilft bei der Erkundung. Keshras spätere Anreise lässt sich durch Geleit, Absprachen und eine gesicherte Route vorbereiten.
 
-### Gwendolyn erkennt jemanden
-Unter den Räubern ein Gesicht mit Namen — ein Vetter, eine Tante, jemand aus ihrer
-Sippe. Sie sagt es vielleicht nicht sofort. Aber sie erstarrt, und Gaglath oder Uhtred
-sehen es.
+## Weitere Bezüge zur Gruppe
 
-Das liefert in einem Zug: die Richtung, den persönlichen Einsatz, den Beweis, dass ihre
-Restsippe wirklich dort ist — und einen Grund, **nicht** alles niederzumachen.
+Silba kann gemeinsame Sprache und Herkunft in Gespräche einbringen. Thalerta kann mit Targ über Glauben und Verantwortung streiten. Fayliths Beitrag richtet sich nach Anwesenheit und tatsächlich verfügbaren Verständigungsmitteln; Sending Stones folgen ihren Gegenstandsregeln. Zusagen für Fruztii und One Ford binden bereits Land und Versorgung. Ein Handel mit Blackthorn kann deshalb zunächst dessen Leben am eigenen Ort sichern.
 
-### Rhogar spürt etwas
-Für ihn allein. In den alten Geschichten von Radagasts Stamm gibt es eine Quelle, die
-heilt, was nicht zu heilen ist; Radagast hält das für eine Sage. Rhogar hat eine
-Schwester, die nicht mehr laufen kann.
+# Was ohne Eingreifen geschieht
 
-Details unter „Die Aufhänger nach Charakter".
+## Zeit und Eigeninitiative
 
----
+Bei Beginn des Abenteuers die folgenden Fristen festlegen und von diesem Zeitpunkt an fortführen. Bereits verstrichene Zeit verändert die Lage. Vorbereitung, Streit und Nachrichten machen die Entwicklung für die Gruppe erkennbar.
 
-## 2 · Zwei Wege hinein
-
-| Weg | Wohin | Wie |
-|---|---|---|
-| **Der Beute nach** | Tunnelmündung (Karte 01) | Bewacht. Uhtred wird diesen wollen. |
-| **Rhogars Gefühl nach** | Schacht im Dickicht (Karte 01) | Unbewacht, 250 Fuß Leiter. |
-
-Die Räuber ziehen in eine Richtung ab, aber die Spur, die Rhogar *zieht*, geht
-woandershin. Zwei Signale, und er kann nicht sagen, welches echt ist — genau sein
-Problem aus dem Hintergrund. **Beide Wege enden in Blackthorn**, nur an verschiedenen
-Stellen.
-
-Der Zugang ist ein teurer Fund. Wer ihn zu billig verschenkt, verschenkt auch die
-Entscheidung, hineinzugehen, statt eine Streitmacht zu holen.
-
----
-
-## 3 · Warum sie bleiben: drei Uhren
-
-Keine Mauer, kein Labyrinth, keine Fähigkeit, die versagt. Stattdessen laufen drei
-Uhren gleichzeitig. Wer hinausgeht und mit achtzig Leuten wiederkommt, verliert
-konkret etwas.
-
-| Uhr | Was passiert, wenn sie ausläuft |
-|---|---|
-| **Die Kolonne** | Eine Sklavenkolonne wird in den nächsten Stunden verlegt. Wer zurückkommt, findet leere Ringe im Fels. Die Beweise sind weg, die Menschen auch. |
-| **Der nächste Trupp** | Steht bereit. Ziel ist die **Falkenroute** — für deren Sicherheit die Gruppe öffentlich gebürgt hat. Zwei Tage Marsch hin und zurück = ein Wagenzug weniger. |
-| **Gwendolyn** | Ist drin. Sobald sie drin ist, will niemand am Tisch mehr „abmarschieren" aussprechen. |
-
-Rhogars Sog bleibt — als Sog, nicht als Mauer. Er kann jederzeit gehen. Er wird nur
-wissen, dass er etwas zurücklässt, und sein Gefühl wird ihn nicht schlafen lassen.
-Ob das ein echtes Zeichen ist oder der Nachhall vom Donnergrat, kann er nicht
-unterscheiden.
-
-**Zwei bis drei lange Rasten sind eingeplant.** Gildrun kommt erst in ein paar Tagen —
-es passiert nicht alles sofort.
-
----
-
-## 4 · Die Aufhänger nach Charakter
-
-### Rhogar — die Quelle
-Sie heilt alle Schäden sowie Krankheiten, Verbrennungen, Läsionen und Körperverfall.
-
-**Keshra** hat ihn am Donnergrat aus dem Felssturz gestoßen und dabei die
-Beweglichkeit ihres linken Beins verloren. Sie ist nicht in den Fordlanden; sie bleibt
-Motiv aus der Ferne. Er sucht erst den Ort.
-
-**Warum die Quelle und nicht ein Priester:** Was sie tut, tut auch ein hinreichend
-mächtiger Priester. Nur will ein Priester etwas dafür — eine Pilgerfahrt, eine
-Stiftung, ein Bekenntnis, eine Gefälligkeit, die ein Tempel irgendwann einfordert. Die
-Quelle will nichts. Keshra müsste niemanden überzeugen und niemandem etwas schulden.
-Sie müsste nur **hinkommen**.
-
-**Die eingebaute Komplikation:** Das Wasser wirkt nur an seinem Ort. Nicht abfüllbar,
-nicht käuflich. Damit ist Abschlachten keine Lösung, ohne dass es irgendwo
-hingeschrieben werden muss — man trägt keine gehbehinderte Frau durch ein
-Schlachtfeld. Man braucht freies Geleit, und freies Geleit verhandelt man.
-
-Für die Gruppe im Bau ist die Quelle nebenbei eine echte Ressource: Wer hinkommt,
-steht wieder auf. Der Raum ist umkämpft, und die Bewohner wissen genau, was er wert
-ist.
-
-**Die bittere Pointe:** Er hat seine Fähigkeit verloren, Wege zu finden. Der Ort, der
-seine Schwester heilen könnte, liegt hinter einem Weg, den er finden muss.
-
-**Sein zweiter Faden:** Er liest Steine. Die Katalysatorsteine aus dem Erdtempel
-stammen aus zwei Gesteinen, vulkanisch-jung und uralt, aus weit entfernten Regionen; er
-hat das Muster auf Pergament gezeichnet. Wenn er im Steinbruch (Karte 06) die Hand auf
-einen frisch gebrochenen Block legt und dasselbe Gestein wiedererkennt, hat er seine
-Antwort **selbst** gefunden. Kein NPC erklärt ihm etwas.
-
-### Gaglath — Gwendolyns Sippe
-Er hat sich bei ihr entschuldigt und wurde abgewiesen. Hier kann er es begleichen.
-
-Ihre drei Vorschläge waren Viehzucht, Wildbret und **Führerdienste durch den Wald**.
-Uhtred braucht Sicherheit auf der Falkenroute und darf sie nicht durch Abschlachten
-herstellen. **Das ist dieselbe Antwort von zwei Seiten: aus Wegelagerern Wegführer
-machen.**
-
-Und Gwendolyn, die genau dafür weggesperrt wurde, bekommt recht.
-
-**Sein zweiter Faden:** Die Falkenroute war sein Vorschlag. Die Falken bürgen öffentlich
-für ihre Sicherheit, und die Vorauskarawane hat schon zweimal Banditen abgewehrt. Wenn
-Blackthorn die Route trifft, steht sein Name darunter — die Lüge, die funktioniert hat,
-bis sie jemanden umgebracht hat. Sein Kernthema, noch einmal, mit Publikum.
-
-### Uhtred — der Sklavenweg und das Lila
-Karte 08 hat **Eisenringe im Boden**, eine Bank und einen Schreibtisch. Da muss niemand
-etwas erklären.
-
-Die Spur, die nur er erkennen kann:
-
-- Der Tempelkult transportierte Gefangene in **lila Kitteln**.
-- Das Sklavenschiff, auf dem er vier Jahre ruderte, hatte **lila Segel**.
-- Der Händler dort trug einen **lila Mantel**.
-
-Das ist keine Farbe, das ist eine **Marke**. Ein Haus oder eine Kompanie, die Menschen
-kauft, egal von wem — von Piraten, vom Kult, von Blackthorn. Die Gruppe hat sie dreimal
-gesehen und nie verknüpft. Im Umschlagplatz liegt der vierte Beleg, in Gildruns Buch der
-fünfte. Kjartan herrscht laut Uhtreds Hintergrund in Highport im Pomarj.
-
-**Sein zweiter Faden:** Wer in den Fordlanden Herrschaftsanspruch hat, ist offen. Die
-Falken handeln faktisch schon wie Lehnsherren. Ein Ork-Clan im Gnarley, der die
-Fordlande bedroht, ist genau das Problem, das ein Lehnsherr löst — **und der Beweis,
-dass er einen Titel verdient. Ausdrücklich nicht durch Abschlachten von Garghuks
-Leuten.** Er muss zeigen, dass er Sicherheit *herstellen* kann, nicht dass er töten kann.
-
----
-
-## 5 · Was in Blackthorn zu holen ist
-
-Keine Aufgabenliste, sondern **Zustände, die sich ändern lassen**. Keiner erfordert,
-dass sechshundert Kreaturen sterben.
-
-| Ziel | Wo | Womit | Folge |
+| Vorgang | Plan | Erkennbar | Reaktion auf Eingriffe |
 |---|---|---|---|
-| **Den Pakt verhindern** | Garghuks Halle | Vasallen-Argument, Targ blamieren | Blackthorn bleibt ein regionales Problem statt eines strategischen |
-| **Die Kolonne befreien** | Duergar-Umschlagplatz | Vor der Verlegung dort sein | Namen und Zeugen — der Beweis, den Waldläufer und Gilde brauchen |
-| **Die Duergar-Schuld offenlegen** | Östliche Tunnel, Gildruns Buch | Lieferlisten, Grauzwergenstahl mit Punze, ein Duergar oder eine Ogerin, die redet | Garghuk verliert vor Targ das Gesicht. Der Clan bekommt einen Riss. |
-| **Die Goblinoiden herauslösen** | Orksiedlung, Bugbear-Bezirk | Gwendolyn, Hurrek, ein Angebot mit Laufzeit | Wegführer statt Wegelagerer. Löst Uhtreds Routenproblem ohne Gewalt. |
-| **Die Oger aufwiegeln** | Garghuks Halle, Ogerlager | Zwei Dutzend Gebrochene, die auf einen Grund warten — und Brakkas Jungtiere | Ein zweiter Aufstand. Räumt den Bau gründlicher als jede Söldnerkompanie. |
-| **Die Hornkette brechen** | Oberfläche, obere Höhle | Drei Hörner am Waldrand, die Posten an den Treppen | Alarmstufe steigt eine Stufe langsamer. Entscheidet, ob ein Rückzug gelingt. |
-| **Die Quelle erreichen** | Fontänenhöhle | Zeit, Ruhe, freies Geleit | Rhogars Antwort — und Keshras Weg |
-| **Den Sklavenweg kartieren** | Östliche Tunnel und tiefer | Den Duergar-Führern folgen statt sie zu erschlagen | Die Route in den Pomarj. Wertvoller als jeder Hort. |
-| **Aufklärung liefern** | überall | Zählen, mitschreiben, lebend rauskommen | Die Waldläufer-Operation wird abgeblasen, bevor zweihundert Freiwillige in einen Trichter marschieren |
+| Raubzug | Abmarsch in ungefähr einem Tag im nächsten passenden Reisezeitfenster. Zwölf Orks, vier Bugbears, vier Gnolle. | Gepackte Vorräte, verteilte Waffen, Gespräche über die Warenroute. | Ein Schutzvertrag oder Versorgungstausch kann ihn stoppen. Fehlende Führer verzögern ihn. Bei einem gemeldeten Angriff auf den Bau hält Garghuk den Trupp zurück oder lässt ihn durch einen Boten zurückrufen. |
+| Hurreks Forderung | Vor Abmarsch sollen die Führerdienste begrenzt werden. | Gegenbuch, wartende Führer und hörbarer Streit. | Anerkannte Bedingungen sichern Mitarbeit. Sonst verweigert Hurrek zusätzliche Dienste. Garghuk kann erfahrene Orks einsetzen; Vorbereitung und Durchführung werden schwieriger. |
+| Gildruns Besuch | Ankunft in ungefähr drei Tagen; Abrechnung und Ruhe, Abreise am folgenden Morgen. | Lieferzettel, bereitgestellte Ware, Reiseproviant für Gefangene. | Bezahlung, Freilassung und blockierte Wege verändern den Ablauf. Bei bestätigtem Alarm wartet Gildrun am äußeren Posten oder verhandelt über Sicherheit. |
 
-### Der Ausgang, den kein Aufhänger vorsieht
-**Garghuk als Puffer.** Ein Clan im Gnarley, der niemandem im Süden gehört, keine
-Sklaven weiterreicht und Karawanen in Ruhe lässt, weil er anders satt wird — und der
-zwischen den Fordlanden und allem, was von unten kommt, im Weg steht.
+Die zwölf Menschen sitzen bereits in 08. Bei einem gemeldeten Befreiungsversuch kann Garghuk die Bewachung verstärken oder eine vorgezogene Übergabe anbieten. Dazu müssen Gildrun oder ein bevollmächtigter Verwalter zustimmen. Boten, Absprachen und Transporte brauchen Zeit. Außenstehende reagieren auf Überfälle und Hilfsgesuche entsprechend ihren verfügbaren Kräften und Reisewegen.
 
-Das ist kein Sieg. Das ist ein Handel mit einem Massenmörder. Genau deshalb interessant.
+# Informationen und ihre Zugänge
 
-### Druck im Hintergrund
-Wenn die Gruppe gar nichts löst, marschiert in einigen Wochen eine Waldläufer-Operation
-mit zweihundert Freiwilligen in einen Trichter, von dem niemand weiß, dass er einer ist.
-Das ist kein Einstieg und kein Auftrag — es ist der Preis des Nichtstuns, und er darf
-erwähnt werden, ohne dass jemand die Gruppe darum bittet.
+## Wissen im Spiel
 
----
+Sichtbare Fesseln, Arbeitslager und Heilungen werden unmittelbar beschrieben. Proben erschließen verborgene Einzelheiten, Täuschungen oder schwer zugängliche Unterlagen. Jede Auskunft folgt dem Wissen und Interesse ihres Trägers. Die Gruppe kann mit einem Teil des Wissens sinnvolle Ziele verfolgen; zusätzliche Erkenntnisse eröffnen weitere Bündnisse und Lösungen.
 
-## 6 · Alarmstufen
+| Information | Früher Zugang | Weitere Zugänge | Entscheidung |
+|---|---|---|---|
+| Blackthorn ist eine Gemeinschaft | Vorräte und Träger in 02, Gärtner in 03 | Gwen, Bewohner in 07, gefangener Räuber | Umfang des Ortes und Folgen eines Angriffs einschätzen. |
+| Eingänge und Hauptweg | Beobachtung in 02, Erklärung der Wache | Gwen, Träger, Hurrek | Route und Rückzug planen: von 03 über 06 nach 07. |
+| Garghuks Autorität | Die Wache nennt ihn bei der Zutrittsfrage | Banner, Bewohner, Hurrek | Audienz oder gezielte Forderung. |
+| Ogerherrschaft und heutige Gefangenschaft | Lager und Rechtfertigung der Aufseher in 06 | Brakka, Garghuk, ältere Bewohner | Vergangenheit und heutige Verantwortung bewerten. |
+| Schlüssel und Meldeweg | Beobachtung in 06 | Brakka, Träger, Diensttafel | Befreiung und Schutz der Angehörigen planen. |
+| Raubzug, Route und Abmarsch | Rukhas Forderung in 04, Ausrüstung in 07 | Hurrek, Garghuk, Bote | Warnen, abfangen, verhandeln oder sabotieren. |
+| Menschen wurden verschleppt | Überlebende und Spuren in 10 | Räuber, Transportgespräche, Gwen kennt die Praxis | Nach Gefangenen suchen. |
+| Zwölf Menschen und Übergabetermin | Hurrek oder Garghuk auf Nachfrage | Listen, Wachen und Gefangene in 08 | Zeit für Rettung oder Freikauf abschätzen. |
+| Gold wird angenommen; Rechnung | Garghuks Audienz | Hurreks Gegenbuch, Verwalter, Gildrun | Konkreten Freikauf anbieten. |
+| Lilakittel-Verbindung | Lila Kleidung und der Name Gildrun in 08 | Lieferunterlagen, Zeugen, bekannter Tempelbrief | Den bekannten Vermittler identifizieren und Belege sichern. |
+| Targs Pomarj-Idee und Valerias | Gespräch mit Targ, orkische Nachricht am Schrein | Hurrek hörte das Lob; Garghuk kennt den Gesandtschaftswunsch | Wissen über die Piraten einbringen und Bündnispläne beeinflussen. |
+| Weitertransport Richtung Highport | Verwalter oder Gildruns Reisekladde | Befragung der Eskorte | Transportspur und Abnehmer weiterverfolgen. |
+| Goblinoide als Führer und Händler | Gwen und Hurrek | Ausrüstung, Alltag und Gespräche in 07 | Entlohnte Zusammenarbeit anbieten. |
+| Heilkraft und Ortsbindung | Beobachtete Behandlung und eigener Versuch in 03 | Aufpasser, Brakka, Hurrek | Heilung nutzen und spätere Besuche planen. |
+| Canyonpfad 05–06 | Leiter in 05 oder Abzweig in 06 | Brakka und andere Ortskundige | Halle oder Grabung über eine zweite Route erreichen. |
 
-Blackthorn reagiert. Der DM hält fest, wie laut die Gruppe war.
+Zeugen schildern ihre Perspektive. Die alte Waffenlieferung ist vielen Aufständischen bekannt. Ein Name oder Versandziel eröffnet eine Spur; die Rollen weiterer Beteiligter werden durch zusätzliche Belege geklärt. Wer die Quelle aufsucht und anschließend geht, kann den Ort mit offenen politischen Fragen verlassen.
 
-| Stufe | Auslöser | Folge |
+# Zutritt, Alarm und Rückzug
+
+## Geleit
+
+Am Eingang wird das Ziel vereinbart: Audienz über 02–03–05, Quellenbesuch über 02–03, Sippenbesuch über 02–03–06–07 oder Handel bis 08. Ein Begleiter und ein gekerbtes Holzzeichen bestätigen den Auftrag. Bei widersprüchlichem Verhalten fragt ein Posten nach und schickt gegebenenfalls einen Boten.
+
+## Nachrichten und Reaktion
+
+Für jeden Bereich notieren: Wer hat was gesehen, welche Meldung ist angekommen und welche Kräfte wurden bewegt? Ein Horn meldet Gefahr in Hörweite. Einzelheiten überbringen Läufer. Ihre Reisezeiten ergeben sich aus den Ortsseiten und ihrer tatsächlichen Bewegung; Schleichen, Lasten und Verletzte verlängern Wege. Zwischen 02 und 05 liegen die Wege über 03. Der Posten 06–07 liegt dagegen unmittelbar neben der Grabung.
+
+| Auslöser | Sofort | Danach |
 |---|---|---|
-| **Ruhig** | Ausgangslage | Patrouillen wie beschrieben, keine Verstärkung |
-| **Aufmerksam** | Kampf länger als 3 Runden, oder eine Leiche gefunden | Patrouillen zu zweit, Begegnungen +1W6 Ork-Krieger |
-| **Alarm** | Jemand ist entkommen und hat berichtet | Garghuk schickt Trupps. Alle 10 Minuten 2W6 Ork-Krieger und 1W3 Oger |
-| **Jagd** | Garghuk weiß, wer die Gruppe ist | Beide Oberflächenausgänge besetzt. Der Rückweg nach oben ist zu — es bleiben Klippe und Schlucht |
+| Gespräch am Eingang | Wache fragt nach Zweck, Waffen und Begleitern. | Begrenztes Geleit, Wartezeit auf eine Antwort oder ein Gegenvorschlag. |
+| Kurzer Kampf in 02 endet | Überlebende sichern Deckung und melden. | Waffenruhe, Verwundetenversorgung, Wiedergutmachung oder Abzug aushandeln. Todesfälle belasten Vertrauen. |
+| Heimliches Eindringen wird entdeckt | Der Beobachter sichert sich und meldet seine Wahrnehmung. | Nachforschung folgt Spuren, Zeitpunkt und letzter bekannter Richtung. |
+| Gefangene werden eigenmächtig befreit | Örtliche Wache greift ein und schickt einen Boten nach 07. | Verfolgung anhand vorhandener Spuren; Ablenkung, Verhandlung und Wegsperren können sie beenden. |
+| Kampf mit Gildrun bei vereinbarter Neutralität | Eskorte verteidigt ihn; Orks sichern Bewohner und vereinbarte Grenzen. | Schäden an Clanleuten können Garghuks Haltung ändern. |
+| Gildrun wird als Gast angegriffen | Orkwache sichert den Platz und fordert Waffenruhe. | Garghuk hört Vorwürfe und Belege an und bestimmt seine Haltung. |
+| Feuer, Einsturz oder Überschwemmung | Familien, Vorräte und Wege werden gesichert. | Schäden, gerettete Leben und erkennbare Verursacher bestimmen Dank, Forderungen und Feindschaft. |
+| Gruppe zieht ab und holt Hilfe | Lokale Vorhaben laufen weiter; beobachtete Abreise wird gemeldet. | Garghuk verstärkt, räumt oder verhandelt entsprechend den eingetroffenen Nachrichten und verfügbaren Kräften. |
 
-Die **Hornkette** trägt jeden Alarm weiter. Wer sie unterbricht, verschiebt die
-Eskalation um eine Stufe.
+# Ogerbefreiung und Folgen
 
-Alarmstufen ersetzen eine Zufallsbegegnungstabelle. Was die Gruppe trifft, ist eine
-Folge dessen, was sie getan hat.
+## Warum die Oger bleiben
 
----
+Die Lagerabtrennung in 06 besteht aus im Fels verankertem Holz und Stein mit verstärktem Tor. Schlüssel tragen der leitende Aufseher und die Torwache Richtung 07. Kleine Arbeitsschichten halten die Erwachsenen von ihren Angehörigen getrennt. Ein gemeinsamer Kraftakt kann das Tor beschädigen, braucht aber Zeit und alarmiert die Aufseher. Der nahe Posten schützt den Zugang zur Siedlung; der Weg zur Oberfläche führt über den langen Aufstieg.
 
-## 7 · Der Sklavenstrang — zwei Enden
+Die Werkzeuge taugen als Waffen. Fünf Arbeiter könnten die unmittelbare Aufsicht überwältigen, während ihre Angehörigen hinter dem Tor und ihre Fluchtwege noch gefährdet wären. Brakka sucht deshalb eine Gelegenheit, bei der Befreiung und Schutz zusammen gelingen. Die Aufseher, teils selbst ehemalige Gefangene, rechtfertigen den Zwang als Wiedergutmachung und beziehen dabei auch die Jungen ein.
 
-**Beide werden gebaut**, der DM wählt am Tisch.
+## Wenn die Gruppe eingreift
 
-**Abgeschlossen.** Gildrun stellt sich oder fällt. Die Kolonne wird befreit, die
-Abnehmerliste landet beim Witan oder bei Dravis. Das Lila bekommt einen Namen, und damit
-ist die Sache für die Fordlande erledigt.
+Bei Gewalt sichern zwei Aufseher das Tor, einer läuft nach 07; der Veteran versucht, die Arbeiter getrennt zu halten. Der Bote braucht ungefähr 1½ Minuten, die Torwache anschließend eine Minute bis zum Aufgang. Weitere Reserve sammelt sich mindestens drei Minuten. Brakka bringt bei einer Öffnung zuerst die Jungen zusammen. Zwei Erwachsene verfolgen womöglich einen früheren Peiniger; Ansprache, Schutz und ein erkennbarer Fluchtplan können sie zurückholen.
 
-**Offen.** Gildrun entkommt über die *Rückzugsklausel*. Die Liste bleibt unvollständig,
-aber die Marke ist identifiziert und führt nach Highport — zu Kjartan, zu Uhtreds
-eigener Rechnung, und damit als Aufhänger ins nächste Abenteuer und womöglich zum
-nächsten DM.
+## Eine besetzte Engstelle
 
-**Wichtig für beide:** Der Sklavenstrang fällt **erst im Bau** auf, nicht vorher. Sonst
-holt Uhtred eine Armee, statt hineinzugehen.
+Vereinte Oger können 06 halten und damit den Hauptweg zwischen Fontäne und Siedlung unterbrechen. Garghuk muss dann Durchlass, Versorgung oder Abzug aushandeln oder Kräfte für einen Angriff sammeln. Brakka will mit allen Angehörigen fort. Die Gruppe kann vermitteln, begleiten, einen anderen Weg sichern oder die neue Lage sich selbst überlassen.
 
----
+# Erfolge und veränderte Lage
 
-## 8 · Der Sending Stone
+## Erfolge und neue Konflikte
 
-Uhtred trägt einen. Eine Nachricht am Tag, 25 Wörter, an Faylith — die in diesem
-Abenteuer die Spielleitung ist.
+Die erreichten Ziele getrennt festhalten: gerettete Menschen, Status der Oger, Sicherheit der Handelsroute, Zugang zur Quelle, beglichene Forderung, neue Handelskontakte, gesicherte Belege und das Schicksal wichtiger Personen. Jedes Ergebnis verändert Blackthorn auf eigene Weise.
 
-Für den DM ist das ein Ventil und ein Druckmittel zugleich: ein einziger Satz nach
-draußen pro Tag, in einem Bau, in dem man kaum rasten kann. Die Spieler formulieren
-ihn meistens dreimal um. Das ist der Punkt.
+| Ergebnis | Folgen |
+|---|---|
+| Gruppe besiegt den Eingangsposten | Der Rückzug nach 01 bleibt zunächst offen. Überlebende melden den Angriff; spätere Gespräche beginnen mit Verwundeten, Verlusten und Wiedergutmachung. |
+| Quelle erreicht | Das persönliche Heilungsziel kann erfüllt werden. Beim Abzug laufen die übrigen Vorhaben weiter. |
+| Gefangene freigekauft | Die konkrete Rechnung wird beglichen. Geleit bringt die zwölf Menschen sicher hinaus; die künftige Versorgung bleibt ein eigenes Thema. |
+| Heimliche Befreiung in 08 | Der Rückweg führt über 07–06–03–02. Vorhandene Posten lassen sich umgehen, ablenken, überzeugen oder überwinden. |
+| Oger halten 06 | Sie kontrollieren den Hauptweg. Brakka fordert Abzug und Schutz, Garghuk braucht Zugang und Versorgung. |
+| Gildrun gefangen oder tot | Verwalter, Gefangene und Unterlagen tragen die Handelsspur weiter. Seine Geschäftspartner erfahren später, was geschehen ist. |
+| Garghuk fällt | Veteranen schützen Familien. Targ sucht Gefolgschaft, Hurrek einen Versorgungsrat. Nachrichten und sichtbare Handlungen bestimmen den Übergang. |
+| Auswärtige Hilfe organisiert | Reisezeit, Versorgung und Engstellen bestimmen ihren Einsatz. Gegner reagieren auf eingetroffene Berichte und die erkennbare Übermacht. |
+| Nur einzelne Hinweise entdeckt | Beobachtete Gefangene, bedrohte Reisende und die Quelle bieten weiterhin konkrete Ziele. Die Gruppe entscheidet mit ihrem bisherigen Wissen. |
+| Konflikte friedlich gelöst | Abmachungen, Zeugen und verantwortliche Personen festhalten. Die vereinbarten Gegenleistungen bestimmen, wie tragfähig der Erfolg ist. |

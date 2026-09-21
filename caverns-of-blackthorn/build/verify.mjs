@@ -11,7 +11,7 @@
 import { ClassicLevel } from "classic-level";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKS = join(ROOT, "packs");
@@ -65,9 +65,8 @@ const main = async () => {
   const itemIds = new Set((adv.items ?? []).map(i => i._id));
 
   // --- scene tokens must point at actors the adventure brings along --------
-  const scene = adv.scenes?.[0];
-  if (!scene) fail("adventure has no scene");
-  else {
+  if (adv.scenes?.length !== 9) fail("expected nine scenes for ten areas");
+  for (const scene of adv.scenes ?? []) {
     notes.push(`scene "${scene.name}": ${scene.width}x${scene.height}px, grid ${scene.grid.size}px = ${scene.grid.distance} ${scene.grid.units}`);
     notes.push(`scene contents: ${scene.tokens.length} tokens, ${scene.lights.length} lights, ${scene.notes.length} notes`);
 
@@ -99,15 +98,20 @@ const main = async () => {
 
   // --- @UUID links in every journal must resolve --------------------------
   const journalIds = new Set((adv.journal ?? []).map(j => j._id));
-  const uuidRe = /@UUID\[Compendium\.([^.]+)\.([^.]+)\.(Actor|Item|JournalEntry)\.([A-Za-z0-9]+)\]/g;
+  const uuidRe = /@UUID\[(Compendium\.[^\]]+)\]/g;
+  const external = new Set(JSON.parse(readFileSync(join(ROOT, "build", "reference-index.json"), "utf8")).references.map(r => r.uuid));
   let linkCount = 0;
   let pageCount = 0;
   for (const page of (adv.journal ?? []).flatMap(j => j.pages ?? [])) {
     pageCount++;
     const html = page.text?.content ?? "";
-    for (const [full, mod, pack, type, id] of html.matchAll(uuidRe)) {
+    for (const [full, uuid] of html.matchAll(uuidRe)) {
       linkCount++;
-      if (mod !== MODULE) fail(`${page.name}: link points at foreign module "${mod}"`);
+      const [,mod,pack,type,id] = uuid.split(".");
+      if (mod !== MODULE) {
+        if (!external.has(uuid)) fail(`${page.name}: unverified external link ${uuid}`);
+        continue;
+      }
       const target = type === "Actor" ? actorIds : type === "Item" ? itemIds : journalIds;
       if (!target.has(id)) fail(`${page.name}: ${full} does not resolve to a bundled ${type}`);
     }
@@ -118,6 +122,20 @@ const main = async () => {
     if (/\{\{item:[^}]+\}\}/.test(html)) fail(`${page.name}: unresolved {{item:...}} placeholder`);
   }
   notes.push(`journals: ${adv.journal?.length ?? 0} entr(ies), ${pageCount} pages, ${linkCount} compendium links`);
+
+  for (const [, uuid] of JSON.stringify(adv).matchAll(/(?:@UUID\[|"uuid":")((?:Compendium\.)[^"\]\\]+)/g)) {
+    if (!uuid.startsWith(`Compendium.${MODULE}.`) && !external.has(uuid)) fail(`unverified external reference ${uuid}`);
+  }
+  for (const scene of adv.scenes) {
+    for (const field of ["tokens", "notes", "walls", "lights"]) {
+      const ids=scene[field].map(x=>x._id);
+      if (new Set(ids).size!==ids.length) fail(`${scene.name}: duplicate ${field} IDs`);
+    }
+    if (!Number.isInteger(scene.grid.size) || scene.grid.size < 20) fail(`${scene.name}: invalid grid size`);
+    for (const w of scene.walls) if(w.c.length!==4 || w.c.some(v=>!Number.isFinite(v))) fail(`${scene.name}: invalid wall`);
+  }
+  const areas=(adv.journal??[]).flatMap(j=>j.pages).map(p=>p.flags?.[MODULE]?.area).filter(x=>x!=null).sort((a,b)=>a-b);
+  if(JSON.stringify(areas)!==JSON.stringify([1,2,3,4,5,6,7,8,9,10]))fail("each of ten areas must have exactly one page");
 
   // --- actor sanity -------------------------------------------------------
   for (const actor of topLevel(actorPack, "actors")) {
@@ -148,6 +166,25 @@ const main = async () => {
     if (!existsSync(join(ROOT, rel))) fail(`referenced asset is missing from the module: ${rel}`);
   }
   notes.push(`module assets referenced: ${referenced.size}`);
+  const arg = key => { const i=process.argv.indexOf(key); return i<0?null:process.argv[i+1]; };
+  const core=arg("--core"), data=arg("--data");
+  if (core && data) {
+    const allAssets=new Set(JSON.stringify(adv).match(/(?:icons|systems|modules)\/[A-Za-z0-9_./-]+\.(?:svg|webp|png|jpg)/g)??[]);
+    for(const src of allAssets) {
+      const file=src.startsWith(`modules/${MODULE}/`)?join(ROOT,src.slice(`modules/${MODULE}/`.length)):
+        src.startsWith("icons/")?join(core,"public",src):join(data,src);
+      if(!existsSync(file))fail(`missing referenced asset: ${src}`);
+    }
+    notes.push(`core/system/module assets checked: ${allAssets.size}`);
+    const urls = new Set(JSON.stringify(adv).match(/https:\/\/raw\.githubusercontent\.com\/IsThisMyRealName\/too-many-tokens-dnd\/main\/[^"\\]+/g) ?? []);
+    for (const url of urls) {
+      const [creature, filename] = url.split("/main/")[1].split("/").map(decodeURIComponent);
+      const catalog = join(data,"modules/too-many-tokens-online/dnd/links",`${creature}.txt`);
+      if (!existsSync(catalog) || !readFileSync(catalog,"utf8").split(/\r?\n/).includes(filename)) fail(`TMTO image absent from local catalog: ${url}`);
+    }
+    notes.push(`TMTO image references checked against local catalog: ${urls.size} (offline, not downloaded)`);
+  }
+
 
   const journalTop = topLevel(journalPack, "journal");
   if (journalTop.length !== (adv.journal?.length ?? 0)) {

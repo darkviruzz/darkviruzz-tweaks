@@ -1,628 +1,493 @@
-key: blackthorn-lore
-name: Blackthorn — Lore, Fraktionen & Aufhänger
-party: { level: 7, size: 4 }
-sort: 200000
-
+key: blackthorn-dm
+name: Blackthorn – Spielleitung
+party:
+  level: 7
+  size: 4
 pages:
-  - key: haine
-    name: Die Blackthorn-Haine
-    content: |
-      <p><em>Oberfläche. Gnarley-Forst, südöstlich von Dyvers, Die Freien Lande.</em></p>
-
-      <p>Es gibt eine Stelle im Gnarley, an der der Wald aufhört, Wald zu sein.</p>
-
-      <p>Kein Kahlschlag, keine Lichtung — im Gegenteil. Auf etwa einer halben Meile
-      steht das Unterholz so dicht, dass ein Mensch nicht hindurchkommt, ohne sich
-      freizuschneiden. Schlehdorn, Yarpick und Brombeere, ineinander verwachsen zu
-      etwas, das eher Mauer ist als Gestrüpp. Die Dornen sind lang wie ein Fingerglied
-      und brechen in der Wunde ab.</p>
-
-      <p>Die Waldläufer nennen die Stelle <strong>den schwarzen Fleck</strong> und
-      führen keine Fremden hin. Nicht aus Geheimniskrämerei — es gibt dort schlicht
-      nichts zu holen. Kein Wild, keine Beeren, die man essen möchte, kein Holz, das
-      sich schlagen ließe.</p>
-
-      <h2>Was daran falsch ist</h2>
-
-      <p>Drei Dinge, in aufsteigender Reihenfolge der Beunruhigung:</p>
-
-      <p><strong>Erstens: Es blüht zu lang.</strong> Schlehdorn blüht im Coldeven, bevor
-      das Laub kommt. Die Haine von Blackthorn blühen bis in den Patchwall hinein, und
-      im Sunsebb tragen einzelne Zweige noch Früchte. Ein Kräuterkundiger findet das
-      erwähnenswert. Ein Druide findet es beunruhigend.</p>
-
-      <p><strong>Zweitens: Die Tiere meiden es.</strong> Nicht panisch — sie gehen nur
-      nicht hinein. Vögel überfliegen den Fleck, statt darin zu nisten. Rehwechsel
-      biegen hundert Schritt davor ab. Nach dem Muster, das Tiere sonst um alte
-      Schlachtfelder ziehen.</p>
-
-      <p><strong>Drittens: Es ist im Winter warm.</strong> Wer im Sunsebb im Hain
-      steht, sieht keinen Reif am Boden, während zwanzig Schritt weiter alles weiß ist.
-      Es ist nicht wärmer im eigentlichen Sinn — Hände werden trotzdem kalt. Aber der
-      Frost setzt sich nicht.</p>
-
-      <p class="cob-note"><em>Die Erklärung liegt 500 Fuß tiefer: die Fontäne des
-      Reinen Lichts. Was sie speist, kommt oben als etwas an, das den Wald nicht
-      wärmt, aber ihn wachhält. Für eine Gruppe, die an Ley-Linien arbeitet, ist der
-      schwarze Fleck kein botanisches Kuriosum — es ist ein Messwert.</em></p>
-
-      <h2>Der Schacht und das, was ihn ersetzt hat</h2>
-
-      <p>Mitten im dichtesten Dornengeflecht liegt der ursprüngliche Zugang: ein
-      Schacht, keine drei Fuß im Durchmesser, in den vor Jahren jemand eine Leiter
-      gehängt hat. Er fällt 250 Fuß. Wer nicht weiß, dass er da ist, findet ihn nicht —
-      und wer es weiß, kommt trotzdem nur mit Axt und Zeit heran.</p>
-
-      <p>Diesen Weg benutzt heute niemand mehr. Die Orks haben einen bequemeren
-      geschlagen: einen Tunnel mit Stufen, dessen Mündung nordöstlich unter einem
-      Felsüberhang liegt, getarnt und bewacht.</p>
-
-      <p><strong>Und hier liegt das eigentliche Kunststück von Blackthorn:</strong>
-      Von außen sieht man nichts. Kein Abraum, keine Halden, kein Strom von Arbeitern.
-      Es gibt keinen Weg, der hinführt, weil es keinen Weg gibt, der weggeht. Wer nach
-      Blackthorn kommt, kommt von unten.</p>
-
-      <p>Der Aushub — und in einem Jahrzehnt Grabung ist das eine Menge Stein — wird
-      nicht nach oben geschafft. Er geht nach unten, die Treppen hinab, in die Schlucht
-      und in den Fluss. Der Fluss trägt ihn fort, und was in einer unterirdischen
-      Schlucht in tausend Fuß Tiefe landet, sieht kein Waldläufer je.</p>
-
-      <h2>Was oben trotzdem zu finden ist</h2>
-
-      <table>
-        <thead><tr><th>Spur</th><th>SG</th><th>Was sie verrät</th></tr></thead>
-        <tbody>
-          <tr><td>Hornposten</td><td>SG 15 Wahrnehmung</td>
-              <td>In Bäumen am Rand des Hains hängen Hörner aus Rothé-Horn, mit Fett
-              gegen Nässe eingerieben. Drei Stück, in Sichtweite zueinander. Ein
-              Frühwarnsystem — und wer eines abnimmt, macht ein Loch in die Kette.</td></tr>
-          <tr><td>Fußangeln</td><td>SG 14 Wahrnehmung</td>
-              <td>Krähenfüße und angespitzte Pflöcke in den Zugängen, gegen Reiter und
-              Hunde. Nicht gegen Menschen — gegen die reicht der Dorn.</td></tr>
-          <tr><td>Kein Abfall</td><td>SG 13 Überlebenskunst</td>
-              <td>Ein Lager von mehreren hundert Wesen produziert Müll. Hier gibt es
-              keinen. <em>Das</em> ist der Hinweis: nicht was da ist, sondern was fehlt.</td></tr>
-          <tr><td>Der Reifrand</td><td>SG 12 Naturkunde</td>
-              <td>Im Winter zeichnet die Frostgrenze den Umriss des Hains nach — eine
-              scharfe Linie im Gras, wie mit dem Lineal gezogen.</td></tr>
-          <tr><td>Aufgebrochene Dornen</td><td>SG 17 Nachforschung</td>
-              <td>Eine Bresche, sorgfältig wieder zugeflochten. Wer sie findet, hat den
-              Tunnelausgang (1B) auf hundert Schritt genau.</td></tr>
-        </tbody>
-      </table>
-
-      <p class="cob-note"><em>Die Vorlage rät ausdrücklich, die Gruppe den genauen
-      Zugang <strong>nicht</strong> finden zu lassen — sonst kommt sie mit einer Armee
-      wieder und das Abenteuer ist vorbei. Die Tabelle oben ist entsprechend gebaut:
-      Sie liefert Gewissheit, dass hier etwas ist, aber der letzte Eintrag ist teuer.
-      Wenn die Gruppe ihn schafft, hat sie ihn verdient.</em></p>
-
-  - key: clan
-    name: Der Blackthorn-Clan
-    content: |
-      <p style="text-align:center">
-        <img src="modules/caverns-of-blackthorn/assets/maps/blackthorn-banner.webp"
-             alt="Das Banner des Blackthorn-Clans" style="max-height:420px;border:none">
-      </p>
-
-      <p><strong>„Ein Stamm, eine Peitsche, eine Beute."</strong><br>
-      <em>Wahlspruch des Blackthorn-Clans</em></p>
-
-      <p>Wer vor zwei Jahren nach Blackthorn kam, fand einen Ogerhort: sechsundsiebzig
-      Oger, die herrschten, weil sie die Stärksten waren, und dreihundert Orks, die
-      Fels brachen, weil man sie schlug. Die Orks hatten keine Anführer. Die Oger
-      hatten sie längst erschlagen.</p>
-
-      <p>Wer heute kommt, findet den <strong>Blackthorn-Clan</strong>: eine
-      Konföderation von vier- bis sechshundertfünfzig Seelen unter einem
-      Ork-Kriegshäuptling, mit Hobgoblin-Drillmeistern, Bugbear-Nachtjägern, einem
-      Klerus und einem Banner. Die Oger sind auf zwanzig bis achtundzwanzig
-      zusammengeschmolzen. Sie stehen jetzt an Engstellen, wo man sie hinstellt.</p>
-
-      <h2>Der Aufstand — Coldeven 575 CY</h2>
-
-      <p>Es gibt zwei Geschichten darüber, und der Unterschied zwischen ihnen ist der
-      Schlüssel zu diesem Ort.</p>
-
-      <p><strong>Die Geschichte, die erzählt wird:</strong> Gruumsh gab
-      [[creature:garghuk]] ein Zeichen. Er sammelte die Krieger in der Lärmhöhle, wo
-      die Aufseher sie nicht zählen konnten, und in einer Nacht erschlugen sie die
-      Oger in ihrem eigenen Dreck. [[creature:targ]] hat die Zeichen gelesen und den
-      Aufstand gesegnet. So steht es im Horn, so wird es gesungen.</p>
-
-      <p><strong>Was tatsächlich geschah:</strong> Die Waffen kamen von den Duergar.
-      Dreihundert Orks mit Steinhämmern gegen sechsundsiebzig Oger — das ist ein
-      Massaker, und zwar an den Orks. Dreihundert Orks mit Kriegspicken aus
-      Grauzwergenstahl sind etwas anderes. Die Duergar hatten die Oger satt: unberechenbar,
-      unverhandelbar, und mit nichts zu locken außer Alkohol. Ein Ork-Häuptling, der
-      ihnen seinen Thron verdankt, war die bessere Investition.</p>
-
-      <p><strong>Garghuk weiß das. Targ nicht</strong> — oder er tut so, was aufs
-      Gleiche hinausläuft, solange niemand es ausspricht.</p>
-
-      <p class="cob-note"><em>Das ist der Riss, an dem dieser Ort auseinanderbricht.
-      Wer im Bau öffentlich beweist, dass Garghuk den Sieg gekauft hat, nimmt ihm vor
-      dem Clan das, worauf seine Herrschaft steht. Es ist keine Anschuldigung — es ist
-      die Wahrheit, und Targ wird sie prüfen.</em></p>
-
-      <h2>Garghuk</h2>
-
-      <p>Mitte dreißig, was bei Orks alt ist. Zehn Jahre unter der Peitsche, ein Jahr
-      an ihrem Griff. Er trägt sie am Gürtel, wo jeder sie sieht, und das ist keine
-      Trophäe, sondern eine Ankündigung.</p>
-
-      <p>Er spricht leise. Unter Orks ist das eine Drohung — man muss näher kommen, um
-      zu hören. Er hat rechnen gelernt, weil er musste: wie viele Krieger ein Überfall
-      kostet, wie viele Münder ein Winter frisst, wie lange Pilze und Rothé
-      sechshundert Wesen tragen. Die Antwort auf die letzte Frage ist: nicht mehr lang.
-      <strong>Deshalb raubt er.</strong> Nicht aus Bosheit — aus Arithmetik.</p>
-
-      <p>Und er hat eine Schwäche, die im Kampf niemandem nützt und am
-      Verhandlungstisch alles entscheidet: <strong>Er weiß, was ein Sklave ist.</strong>
-      Wenn die Sklavenherren Ware bei ihm bestellen, ist das für ihn kein Geschäft
-      unter anderen. Er wird es trotzdem erwägen. Aber er wird darüber nicht laut
-      reden, und wer ihn beim Zögern erwischt, hat einen Hebel.</p>
-
-      <h2>Targ, Auge des Gruumsh</h2>
-
-      <p>Er hat sich das rechte Auge genommen, wie es die Strengsten tun, und behauptet
-      seither, mit dem leeren zu sehen. Er hütet die Tabus, die Hörner, die Zeichen.
-      Er hat den Aufstand gesegnet und erinnert Garghuk seither täglich daran, wem der
-      Sieg gehörte.</p>
-
-      <p>Für Targ ist ein Bündnis mit dem Pomarj kein Handel, sondern Erfüllung:
-      Gruumsh sammelt seine Kinder für den Krieg, den er seit dem Anbeginn führt.
-      Sklaven sind dabei kein moralisches Problem, sondern Beute. <strong>Wer in
-      Blackthorn Frieden verhandeln will, muss an Targ vorbei</strong> — durch
-      Überzeugung, durch Diskreditierung oder über seine Leiche. Der dritte Weg ist der
-      einfachste und der teuerste.</p>
-
-      <h2>Wer sonst noch mitredet</h2>
-
-      <table>
-        <thead><tr><th>Fraktion</th><th>Stärke</th><th>Will</th><th>Preis</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Garghuk &amp; die Kriegerkaste</strong></td><td>220–300</td>
-              <td>Beute, volle Mägen, keinen neuen Herrn</td>
-              <td>Eine Nahrungsquelle, die keinen Krieg kostet</td></tr>
-          <tr><td><strong>Targ &amp; der Klerus</strong></td><td>8–12</td>
-              <td>Den Krieg als Gottesdienst, das Bündnis mit dem Pomarj</td>
-              <td>Nicht käuflich. Nur schlagbar oder zu diskreditieren</td></tr>
-          <tr><td><strong>Hobgoblin-Drillmeister</strong></td><td>30–45</td>
-              <td>Sold und Ordnung</td>
-              <td>Besserer Sold. Sie sind Söldner und tun nicht so, als wären sie mehr</td></tr>
-          <tr><td><strong>Bugbear-Nachtjäger</strong></td><td>25–40</td>
-              <td>Beuteanteil, freie Hand</td>
-              <td>Beute. Loyalität war nie Teil der Abmachung</td></tr>
-          <tr><td><strong>Oger-Reste</strong></td><td>20–28</td>
-              <td>Rache, oder wenigstens einen Grund, jemanden zu erschlagen</td>
-              <td>Ein Aufstand gegen Garghuk — den sie allein nicht schaffen</td></tr>
-          <tr><td><strong>Gnolle</strong></td><td>15–30</td>
-              <td>Fressen und weiterziehen</td>
-              <td>Sie bleiben, weil ein Gnollrudel sonst nirgends geduldet wird</td></tr>
-          <tr><td><strong>Duergar</strong></td><td>3–30 Gäste</td>
-              <td>Rückzahlung: die Humanoiden als Rammbock, während sie das Eigentliche holen</td>
-              <td>Nichts, was eine Gruppe bieten kann. Aber sie sind bestechlich in der Frage <em>wann</em></td></tr>
-          <tr><td><strong>Svirfneblin</strong></td><td>unbekannt</td>
-              <td>Die Duergar weg. Die Orks sind ihnen gleichgültig</td>
-              <td>Verbündete gegen die Grauzwerge — und sie kennen jeden Tunnel</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Was die Gruppe hören wird</h2>
-
-      <p>Der Schlachtruf des Clans, gebrüllt beim Angriff und gesungen bei der
-      Verteilung der Beute. Wer ihn einmal gehört hat, erkennt Blackthorn beim nächsten
-      Mal an drei Silben:</p>
-
-      <blockquote>
-      <p><em>Horn zuerst! Blut danach!<br>
-      Dorn beißt! Schädel ruft!<br>
-      Von unten kommen wir — stampf, stampf —<br>
-      an der Enge zermalmen wir — schlag, schlag —<br>
-      Blutet! Blutet und sterbt!<br>
-      Ihr seid schwach; wir sind staaaark!<br>
-      Brecht ihre Götzen, nehmt ihr Eisen — HA!<br>
-      Blackthorn! Blackthorn! RAUB!</em></p>
-      </blockquote>
-
-      <p><strong>Das Banner:</strong> ein schwarzer Dorn auf ungebleichtem Leinen,
-      darüber ein roter Schrägstrich wie ein Klauenhieb, darunter ein roter Schädel.
-      Der Dorn stand schon vor dem Aufstand für den Ort. Der Schrägstrich kam mit
-      Garghuk dazu — es ist der Hieb, mit dem eine Kette durchtrennt wird.</p>
-    encounters:
-      - name: Garghuk und der innere Zirkel
-        note: >-
-          Der Bosskampf des aktuellen Standes, in Bereich 4. Targ eröffnet aus der
-          zweiten Reihe, die Drillmeister halten die Linie, Garghuk zieht sich Ziele
-          mit der Kette heran. Fällt ein Drillmeister, verliert die Linie ihren
-          Rüstungsbonus — das ist der Hebel für die Gruppe.
-        creatures:
-          - { key: garghuk, count: 1 }
-          - { key: targ, count: 1 }
-          - { key: hobgoblin-drillmeister, count: 2 }
-      - name: Ein Nachtjagd-Paar
-        note: >-
-          Was die Gruppe im Wald trifft, bevor sie den Bau überhaupt findet. Bugbears
-          arbeiten paarweise und weit vor der Linie; sie greifen nachts an, nehmen
-          einen Charakter und ziehen sich zurück. Ein Paar hat die vierköpfige
-          Dyvers-Patrouille aufgerieben — nicht in einem Kampf, sondern in drei Nächten.
-        creatures:
-          - { key: bugbear-schleicher, count: 2 }
-      - name: Targ hält Hof
-        note: >-
-          Wenn die Gruppe als Gast oder Gefangener vor den Klerus kommt. Als Kampf
-          gedacht ist das nicht — aber wenn die Verhandlung kippt, steht sie sofort.
-        creatures:
-          - { key: targ, count: 1 }
-          - { key: ork-veteran, count: 4 }
-    scaling:
-      steps:
-        - for: 4× Stufe 5
-          creatures:
-            - { key: garghuk, count: 1 }
-            - { key: hobgoblin-drillmeister, count: 1 }
-        - for: 4× Stufe 7 (Standard)
-          creatures:
-            - { key: garghuk, count: 1 }
-            - { key: targ, count: 1 }
-            - { key: hobgoblin-drillmeister, count: 2 }
-        - for: 4× Stufe 9
-          creatures:
-            - { key: garghuk, count: 1 }
-            - { key: targ, count: 1 }
-            - { key: hobgoblin-drillmeister, count: 2 }
-            - { key: bugbear-schleicher, count: 2 }
-            - { key: ork-veteran, count: 4 }
-
+  - key: lage
+    name: Blackthorn auf einen Blick
+    content: >-
+      <h2>Blackthorn im Winter</h2><p>Für vier Charaktere auf Stufe 7. Tief unter einem auffälligen Waldhain
+      lebt eine Gemeinschaft, die ihre Freiheit erkämpft hat und nun selbst andere gefangen hält. Garghuk
+      sichert seine Herrschaft mit Vorräten, Schutz und persönlichen Bindungen. Gildrun liefert zu hohen
+      Preisen und nimmt Menschen als besonders günstiges Zahlungsmittel an. Zwischen diesen Interessen liegen
+      eine heilende Quelle, bedrohte Handelswege und Familien, die über ihre Zukunft entscheiden
+      wollen.</p><h2>Von den Waldlagern in die Höhlen</h2><p>Vor gut einem Jahrzehnt lebten die später
+      verschleppten Orks in befestigten Waldlagern. Jagd, Viehhaltung, kleiner Anbau und Tausch ergänzten sich
+      mit Fehden und Überfällen. Garghuk war damals ein junger Krieger. Die Oger erschlugen die Anführer und
+      brachten die überlebenden Familien nach Blackthorn. Getrennte Arbeitsgruppen, Entwaffnung, Misstrauen
+      und die Sorge um Angehörige hielten die Gefangenen lange unter Kontrolle.</p><p>Hobgoblins und Bugbears
+      hatten zuvor als Führer, Versorger und Händler gearbeitet. Unter den Ogern wurden diese Dienste
+      erzwungen. Gwens Großmutter erinnert sich an ein freieres Leben mit verlässlichem Tausch und gemeinsamen
+      Wegen. Ihre Erzählungen verbinden wirkliche Erfahrungen mit der Sehnsucht nach einer verlorenen
+      Heimat.</p><p>Garghuk schlichtete Streit und organisierte gegenseitige Hilfe. Seine Verbindungen
+      zwischen den Arbeitsgruppen ermöglichten einen gemeinsamen Aufstand. Duergar lieferten Waffen; vor knapp
+      zwei Jahren stürzten die Verbündeten die Ogerführung. Erbeutete Vorräte, Wertgegenstände und vereinbarte
+      spätere Lieferungen bezahlten die Waffen. Der Vertrag ist erfüllt.</p><h2>Die heutige
+      Abhängigkeit</h2><p>Spätere Versorgungskäufe schufen neue Schulden. Gildrun verlangt hohe Preise für
+      Salz, lagerfähige Nahrung, Metall und Werkzeuge. Für Gefangene bietet er eine attraktive Anrechnung.
+      Garghuk entscheidet bewusst, bei Warenüberfällen Menschen gefangen zu nehmen und zu verkaufen. Gold und
+      Beutegut bleiben ebenfalls gültige Zahlungsmittel. Ein begrenzter Überfall bringt Waren und Gefangene;
+      eine Häufung von Raubzügen würde Händler vertreiben und bewaffnete Gegenwehr anziehen.</p><p>Pilzanbau,
+      Rothés, Jagd und Vorräte sichern die Grundversorgung. Futter und organisches Material kommen auch aus
+      dem Wald. Bei ausbleibender Lieferung reichen eingeschränkte Rationen für einige Wochen. Dauerhafte
+      Sicherheit erfordert neue Handelsbeziehungen oder geringeren Verbrauch. Targ wirbt derweil für Kontakte
+      zu orkischen Sippen im Pomarj; er möchte einen Vertrauten nach Highport
+      schicken.</p><h2>Bewohner</h2><p>Zum Clan gehören 456 Personen. Die Namensträger sind in diesen Zahlen
+      enthalten. Dazu kommen zwölf menschliche Gefangene und acht ortsansässige Duergar-Gäste: insgesamt 476
+      Personen. Gildruns Besuch bringt fünf weitere Personen und einen Steeder. Wer auf Jagd, Reise oder
+      Raubzug ist, fehlt währenddessen im
+      Bau.</p><table><thead><tr><th>Gruppe</th><th>Gesamt</th><th>Zusammensetzung</th></tr></thead><tbody><tr><td>Orks</td><td>336</td><td>180
+      kampferfahrene oder zum Wachdienst eingeteilte Angehörige; 156 weitere Erwachsene, Alte und Kinder.
+      Handwerk, Ruhezeiten und Familie binden einen großen Teil der
+      Bewaffneten.</td></tr><tr><td>Hobgoblins</td><td>36</td><td>18 regelmäßig Bewaffnete und 18 übrige
+      Angehörige.</td></tr><tr><td>Bugbears</td><td>36</td><td>18 regelmäßig Bewaffnete und 18 übrige
+      Angehörige. Diese Familien blieben während der Tempelabordnung in
+      Blackthorn.</td></tr><tr><td>Oger</td><td>24</td><td>14 arbeitsfähige Erwachsene einschließlich Brakka,
+      vier Alte und sechs Junge. Fünf Erwachsene arbeiten je Schicht, neunzehn Personen bleiben im
+      Lager.</td></tr><tr><td>Gnolle</td><td>24</td><td>16 Jäger einschließlich Rukha, acht abhängige
+      Angehörige.</td></tr></tbody></table><p>Orks und Goblinoide bewohnen die elf Mehrfamilienhöfe in 07.
+      Schlafnischen liegen hinter den gemeinschaftlichen Arbeits- und Wohnbereichen. Enge, Schichtarbeit und
+      die Verteilung von Lebensmitteln prägen den Alltag. Lastentransporte brauchen an Treppen und Engstellen
+      länger als unbeladene Fußgänger.</p>
+  - key: personen
+    name: Personen und Fraktionen
+    content: >-
+      <h2>Garghuk</h2><p>Spielwerte: [[creature:garghuk]]. Er spricht bedächtig und merkt sich genaue Zusagen.
+      „Nennt mir, was ihr wollt, und was morgen davon bleibt.“ Er kennt Waffenhandel, Lieferungen und Schulden
+      aus eigener Beteiligung. Vom Tempel hat er die Berichte gehört, die tatsächlich eingetroffen
+      sind.</p><p><strong>Ziel:</strong> Eine unabhängige Heimat unter seiner Führung. Er verwechselt
+      Widerspruch leicht mit einer Gefahr für die Gemeinschaft.</p><p><strong>Nächster Schritt:</strong>
+      Gildruns Lieferung abrechnen und einen begrenzten Raubzug ausrüsten. Hurreks Forderung möchte er nach
+      der Abrechnung behandeln.</p><p><strong>Verhandlung:</strong> Er akzeptiert echte Zahlung, befristeten
+      Schutz einer benannten Route, begrenzte Quellenbesuche, entlohnte Führerdienste und den Abzug einzelner
+      Familien. Für die zwölf Menschen verlangt er Ersatz des vorgesehenen Rechnungsanteils. Die Oger sieht er
+      als gefährliche ehemalige Herren: Für ihren Abzug braucht er glaubhafte Begleitung, Schutz vor einem
+      Gegenschlag und eine Vereinbarung, die alle Angehörigen umfasst.</p><p><strong>Gewalt und
+      Führungswechsel:</strong> Er dämmt örtliche Angriffe ein, sammelt Berichte und bietet bei begrenzten
+      Zielen Waffenruhe an. Bei drohender Niederlage sucht er die Leiterroute nach 06 und anschließend 07. In
+      Gefangenschaft verhandelt er weiter. Nach seinem Tod sichern Veteranen die Familien; Targ beansprucht
+      Führung, Hurrek organisiert Versorgung.</p><h2>Targ</h2><p>Spielwerte: [[creature:targ]]. Der
+      Gruumsh-Priester trägt sein geopfertes Auge offen. „Freiheit bleibt denen, die sie verteidigen können.“
+      Er deutet den Aufstand als Bestätigung seines Glaubens.</p><p><strong>Ziel:</strong> Kriegserfolge,
+      Zusammenhalt orkischer Sippen und Einfluss auf Garghuks Entscheidungen.</p><p><strong>Nächster
+      Schritt:</strong> Den Raubzug unterstützen und bei dessen Beratung eine spätere Gesandtschaft in den
+      Pomarj fordern. Bei Ablehnung sucht er unter den Veteranen
+      Unterstützer.</p><p><strong>Verhandlung:</strong> Waffenruhe und Geleit sind möglich, wenn sie dem Clan
+      erkennbar nützen. Eine Friedensordnung, die ihn übergeht, beantwortet er mit öffentlichen Einwänden und
+      Forderungen nach Gegenleistungen. Belege für neue Fremdherrschaft oder militärische Schwäche können sein
+      südliches Vorbild erschüttern; der örtliche Sklavenhandel ist ihm bekannt und für ihn
+      hinnehmbar.</p><p><strong>Gewalt und Führungswechsel:</strong> Er verteidigt sich und ruft Helfer. Einen
+      gewaltsamen Machtversuch plant er erst mit konkreten Unterstützern und Erfolgsaussicht. Nach seinem Tod
+      reagieren Anhänger auf Anlass und Zeugenberichte; Garghuk wägt seine eigene Stellung ab.</p><h2>Targs
+      Verbindung in den Pomarj</h2><p>Vor dem Winter brachte ein zurückkehrender Raubtrupp einen reisenden
+      Gruumsh-Priester nach Blackthorn. Dieser erzählte von südlichen orkischen Sippen und lobte Valerias, der
+      auch Menschen führe und Siedlungen seinen Willen aufzwinge. Er hinterließ eine orkische Nachricht mit
+      einem Kontakt in Highport und reiste weiter. Sie liegt an Targs Schrein. Das Angebot ist ein Gespräch
+      mit möglichen Verbündeten. Targ möchte einen Vertrauten schicken; Garghuk verlangt greifbaren Nutzen und
+      fürchtet neue Abhängigkeit.</p><p>Targs Kenntnis Valerias’ beruht auf diesen beschönigenden Berichten.
+      Auskunft über dessen konkrete Geschäfte müsste er erst einholen. Gildruns örtlichen Gefangenenhandel
+      kennt er aus Blackthorn. Sein Urteil über Crossford richtet sich nach eingetroffenen Nachrichten.
+      Glaubhafte Berichte der Gruppe können deshalb sein Bild stark
+      verändern.</p><h2>Hurrek</h2><p>Spielwerte: [[creature:hurrek]]. Der ältere Hobgoblin war
+      Geschäftspartner von Gwens Großmutter. Heute verwaltet er Versorgung und bildet Formationen aus. „Ich
+      will wissen, wann unsere Schuld bezahlt ist.“</p><p><strong>Ziel:</strong> Anerkannte Abrechnung,
+      begrenzte Dienstpflichten und freie Entscheidungen seiner Familien über künftige
+      Arbeit.</p><p><strong>Nächster Schritt:</strong> Vor der nächsten Abstellung von Führern eine
+      schriftliche Dienstregelung verlangen. Bei Verweigerung zieht er zusätzliche Dienste zurück und führt
+      die innere Versorgung weiter.</p><p><strong>Verhandlung:</strong> Sein Gegenbuch trennt Hilfe beim
+      Aufstand von seither geleisteter Arbeit. Eine Einigung braucht Garghuks Anerkennung. Hurrek vermittelt
+      Unterkunft, Kontakte und Geleit, solange die Sicherheit der Angehörigen gewahrt bleibt. Seine Annahme
+      von Raubgut macht ihn am bestehenden System mitverantwortlich.</p><p><strong>Gewalt und
+      Führungswechsel:</strong> Er schützt Familien und Vorräte. Fällt Garghuk, versucht er mit verbliebenen
+      Verantwortlichen einen Versorgungsrat zu bilden. Gwen bietet er ein Bett und Gehör; bei ihrer Sippe
+      vermittelt er eine Anhörung.</p><p>Hurrek vermittelte Gwen Common bei kleinen Handels- und
+      Versorgungsaufgaben. Er kannte sie als Kind und wurde zu einer Vaterfigur. Ihre Ausdrucksweise ist
+      schlicht, manchmal schief; ihre Einsichten kommen aus früh erlebter Verantwortung. Den heutigen
+      Aufenthaltsort der Großmutter legt der DM passend zum Kampagnenstand
+      fest.</p><h2>Brakka</h2><p>Spielwerte: [[creature:brakka]]. Die Ogerin gehörte zum früheren
+      Herrenhaushalt und kommandierte selbst unfreie Arbeiter. Heute sorgt sie vor allem für die Jungen. „Die
+      Kleinen kommen mit.“</p><p><strong>Ziel:</strong> Alle Angehörigen lebend und gemeinsam aus der
+      Gefangenschaft bringen.</p><p><strong>Nächster Schritt:</strong> Nahrung zurücklegen, arbeitsfähige
+      Erwachsene zusammenhalten und eine Gelegenheit am Lagertor suchen.</p><p><strong>Verhandlung:</strong>
+      Ein Plan für Toröffnung, Schutz und Abzug gewinnt ihre Mitarbeit. Sie kennt Arbeitswege, Wachwechsel und
+      die frühere Nutzung der Höhlen. Den Aufstand und die neuen Waffen hat sie erlebt; deren Verträge und
+      Herkunftspunzen kennt sie vom Hörensagen.</p><p><strong>Gewalt und Führungswechsel:</strong> Sie sammelt
+      die Jungen und drängt zum gemeinsamen Abzug. Zwei Erwachsene wollen einen früheren Peiniger verfolgen.
+      Brakka versucht sie zurückzuholen und braucht dabei Unterstützung. Besetzt ihre Gruppe 06, verhandelt
+      sie über Versorgung und freien Durchlass.</p><h2>Rukha</h2><p>Spielwerte: [[creature:rukha]]. Die
+      brutale, eigennützige Gnollin führt ein Rudel mit abhängigen Angehörigen. „Was frisst mein Rudel, wenn
+      wir eure Wagen verschonen?“</p><p><strong>Ziel:</strong> Eine sichere Höhle, Nahrung und ein lohnender
+      Jagdanteil.</p><p><strong>Nächster Schritt:</strong> Beteiligung am nächsten Raubzug einfordern. Bei
+      ausbleibender Versorgung verlangt sie ihren Anteil und bereitet anschließend eine eigene Jagd
+      vor.</p><p><strong>Verhandlung:</strong> Vorräte können sichere Passage vor ihrem Lager, den Verzicht
+      auf eine einzelne Karawane oder einen Rückzug erkaufen. Sie hält Vereinbarungen, solange deren Nutzen
+      und Durchsetzbarkeit für ihr Rudel überzeugen.</p><p><strong>Gewalt und Führungswechsel:</strong> Sie
+      nutzt Überzahl und angeschlagene Gegner. Sind ihre Angehörigen bedroht, deckt sie deren Rückzug. Nach
+      ihrem Tod übernimmt der erfahrenste überlebende Jäger die Führung und versucht, das Rudel
+      zusammenzubringen.</p><h2>Gildrun</h2><p>Spielwerte: [[creature:gildrun]]. Ein Duergar-Makler der
+      Lilakittel mit eigener Eskorte und einem Netz von Abnehmern. „Gold ist ebenso gut. Legt es auf den
+      Tisch.“ Er vermittelte der Sippenführung einst einen entlohnten Tempelsöldnervertrag; heute verdient er
+      an Versorgung und Gefangenen.</p><p><strong>Ziel:</strong> Gewinn, wiederkehrende Geschäfte und Schutz
+      seiner Geschäftskontakte.</p><p><strong>Nächster Schritt:</strong> Lieferung abrechnen, Gefangene oder
+      Gold übernehmen und am folgenden Morgen weiterreisen.</p><p><strong>Verhandlung:</strong> Er akzeptiert
+      die vereinbarte Summe und quittiert die Forderung. Unkritische Angaben verkauft er bereitwillig. Die
+      Namen wichtiger Abnehmer hält er zurück und sichert belastende Unterlagen. In Gefangenschaft bietet er
+      Wissen und Geld für sein Leben und die Freilassung.</p><p><strong>Gewalt und Führungswechsel:</strong>
+      Seine Eskorte hält Zugänge, während er mit Unsichtbarkeit einen Sperrposten zu erreichen versucht. Bei
+      seinem Tod versuchen Begleiter zu entkommen oder ergeben sich. Entfernte Geschäftspartner erfahren
+      später durch Überlebende, ausbleibende Lieferung oder eigene Nachfragen davon.</p><h2>Gespräche
+      leiten</h2><p>Ein offenkundig nützliches und durchführbares Angebot kann unmittelbar angenommen werden.
+      Bei unsicherem Ausgang: SG 10 für eine kleine verträgliche Bitte, SG 15 für ein echtes Zugeständnis, SG
+      20 für einen erheblichen, glaubhaft abgesicherten Interessenkonflikt. Ein Misserfolg bringt einen
+      konkreten Einwand, Preis oder Gegenvorschlag. Für Geld, Geleit und Zustimmung weiterer Beteiligter
+      braucht es die tatsächlichen Mittel.</p>
+  - key: entwicklung
+    name: Was ohne Eingreifen geschieht
+    content: >-
+      <h2>Zeit und Eigeninitiative</h2><p>Bei Beginn des Abenteuers die folgenden Fristen festlegen und von
+      diesem Zeitpunkt an fortführen. Bereits verstrichene Zeit verändert die Lage. Vorbereitung, Streit und
+      Nachrichten machen die Entwicklung für die Gruppe
+      erkennbar.</p><table><thead><tr><th>Vorgang</th><th>Plan</th><th>Erkennbar</th><th>Reaktion auf
+      Eingriffe</th></tr></thead><tbody><tr><td>Raubzug</td><td>Abmarsch in ungefähr einem Tag im nächsten
+      passenden Reisezeitfenster. Zwölf Orks, vier Bugbears, vier Gnolle.</td><td>Gepackte Vorräte, verteilte
+      Waffen, Gespräche über die Warenroute.</td><td>Ein Schutzvertrag oder Versorgungstausch kann ihn
+      stoppen. Fehlende Führer verzögern ihn. Bei einem gemeldeten Angriff auf den Bau hält Garghuk den Trupp
+      zurück oder lässt ihn durch einen Boten zurückrufen.</td></tr><tr><td>Hurreks Forderung</td><td>Vor
+      Abmarsch sollen die Führerdienste begrenzt werden.</td><td>Gegenbuch, wartende Führer und hörbarer
+      Streit.</td><td>Anerkannte Bedingungen sichern Mitarbeit. Sonst verweigert Hurrek zusätzliche Dienste.
+      Garghuk kann erfahrene Orks einsetzen; Vorbereitung und Durchführung werden
+      schwieriger.</td></tr><tr><td>Gildruns Besuch</td><td>Ankunft in ungefähr drei Tagen; Abrechnung und
+      Ruhe, Abreise am folgenden Morgen.</td><td>Lieferzettel, bereitgestellte Ware, Reiseproviant für
+      Gefangene.</td><td>Bezahlung, Freilassung und blockierte Wege verändern den Ablauf. Bei bestätigtem
+      Alarm wartet Gildrun am äußeren Posten oder verhandelt über Sicherheit.</td></tr></tbody></table><p>Die
+      zwölf Menschen sitzen bereits in 08. Bei einem gemeldeten Befreiungsversuch kann Garghuk die Bewachung
+      verstärken oder eine vorgezogene Übergabe anbieten. Dazu müssen Gildrun oder ein bevollmächtigter
+      Verwalter zustimmen. Boten, Absprachen und Transporte brauchen Zeit. Außenstehende reagieren auf
+      Überfälle und Hilfsgesuche entsprechend ihren verfügbaren Kräften und Reisewegen.</p>
+  - key: handel
+    name: Gefangene und Abrechnung
+    content: >-
+      <h2>Zwölf Gefangene</h2><p>Die Menschen stammen aus zwei Warenüberfällen: Fuhrleute, Handwerker und
+      Begleitschutz. Zwei sind verletzt oder erschöpft und benötigen langsames Geleit. Bei Kontakt fragen sie
+      nach ihren Mitgefangenen, Angehörigen und einem sicheren Rückweg. Garghuks Orks bewachen sie bis zur
+      Übergabe; die Duergar schützen Waren und Handelszugänge. Nach angenommener Übergabe verfügt Gildrun über
+      den Transport.</p><h2>Die Rechnung</h2><p>1.800 Gold für frühere Versorgung plus 2.400 Gold für die
+      anstehende Lieferung ergeben 4.200 Gold. Gildrun rechnet die zwölf Gefangenen bei diesem Geschäft mit
+      insgesamt 3.600 Gold an. Garghuk hat weitere 600 Gold in Münzen und Waren bereitgestellt. Wer die 3.600
+      Gold ersetzt, kann mit Garghuks Zustimmung die Menschen freikaufen. Wer 4.200 Gold selbst bezahlt,
+      begleicht die ganze Forderung. Nach Zahlung quittiert Gildrun die Rechnung; weitere Schulden entstehen
+      durch spätere Geschäfte.</p><p>Ein Freikauf kann Bestandteil eines Waffenstillstands sein. Die Oger, die
+      Zukunft der Raubzüge und der Zugang zur Quelle bleiben jeweils eigene Verhandlungsfragen. Für einen
+      sicheren Rückweg der Befreiten werden Begleitung und Durchlass bis zur Oberfläche
+      vereinbart.</p><h2>Ware und Transport</h2><p>Die neue Lieferung besteht aus zwölf Säcken haltbarer
+      Nahrung zu je 50 Pfund, vier Salzsäcken zu je 25 Pfund, zwei Werkzeugkisten zu je 50 Pfund und sechs
+      Metallbündeln zu je 40 Pfund: zusammen 1.040 Pfund zuzüglich Verpackung. Die Ladung wird am äußeren
+      Posten bereitgestellt. Örtliche Träger übernehmen sie in mehreren Gängen; der Steeder trägt einen Anteil
+      innerhalb seiner Tragkraft. Gildruns Preis enthält hohe Aufschläge für Beschaffung, Risiko und
+      Kredit.</p><p>Garghuks 600 Gold liegen zur Zahlung bereit. Saatgut und Lebensmittel dienen der
+      Versorgung. Wertgegenstände aus dem früheren Ogerbesitz liegen in der Halle; den Glücksstein trägt
+      Garghuk. Wer fremde Vorräte oder Besitz an sich nimmt, verändert damit die Grundlage weiterer
+      Gespräche.</p>
+  - key: informationen
+    name: Informationen und ihre Zugänge
+    content: >-
+      <h2>Wissen im Spiel</h2><p>Sichtbare Fesseln, Arbeitslager und Heilungen werden unmittelbar beschrieben.
+      Proben erschließen verborgene Einzelheiten, Täuschungen oder schwer zugängliche Unterlagen. Jede
+      Auskunft folgt dem Wissen und Interesse ihres Trägers. Die Gruppe kann mit einem Teil des Wissens
+      sinnvolle Ziele verfolgen; zusätzliche Erkenntnisse eröffnen weitere Bündnisse und
+      Lösungen.</p><table><thead><tr><th>Information</th><th>Früher Zugang</th><th>Weitere
+      Zugänge</th><th>Entscheidung</th></tr></thead><tbody><tr><td>Blackthorn ist eine
+      Gemeinschaft</td><td>Vorräte und Träger in 02, Gärtner in 03</td><td>Gwen, Bewohner in 07, gefangener
+      Räuber</td><td>Umfang des Ortes und Folgen eines Angriffs einschätzen.</td></tr><tr><td>Eingänge und
+      Hauptweg</td><td>Beobachtung in 02, Erklärung der Wache</td><td>Gwen, Träger, Hurrek</td><td>Route und
+      Rückzug planen: von 03 über 06 nach 07.</td></tr><tr><td>Garghuks Autorität</td><td>Die Wache nennt ihn
+      bei der Zutrittsfrage</td><td>Banner, Bewohner, Hurrek</td><td>Audienz oder gezielte
+      Forderung.</td></tr><tr><td>Ogerherrschaft und heutige Gefangenschaft</td><td>Lager und Rechtfertigung
+      der Aufseher in 06</td><td>Brakka, Garghuk, ältere Bewohner</td><td>Vergangenheit und heutige
+      Verantwortung bewerten.</td></tr><tr><td>Schlüssel und Meldeweg</td><td>Beobachtung in
+      06</td><td>Brakka, Träger, Diensttafel</td><td>Befreiung und Schutz der Angehörigen
+      planen.</td></tr><tr><td>Raubzug, Route und Abmarsch</td><td>Rukhas Forderung in 04, Ausrüstung in
+      07</td><td>Hurrek, Garghuk, Bote</td><td>Warnen, abfangen, verhandeln oder
+      sabotieren.</td></tr><tr><td>Menschen wurden verschleppt</td><td>Überlebende und Spuren in
+      10</td><td>Räuber, Transportgespräche, Gwen kennt die Praxis</td><td>Nach Gefangenen
+      suchen.</td></tr><tr><td>Zwölf Menschen und Übergabetermin</td><td>Hurrek oder Garghuk auf
+      Nachfrage</td><td>Listen, Wachen und Gefangene in 08</td><td>Zeit für Rettung oder Freikauf
+      abschätzen.</td></tr><tr><td>Gold wird angenommen; Rechnung</td><td>Garghuks Audienz</td><td>Hurreks
+      Gegenbuch, Verwalter, Gildrun</td><td>Konkreten Freikauf
+      anbieten.</td></tr><tr><td>Lilakittel-Verbindung</td><td>Lila Kleidung und der Name Gildrun in
+      08</td><td>Lieferunterlagen, Zeugen, bekannter Tempelbrief</td><td>Den bekannten Vermittler
+      identifizieren und Belege sichern.</td></tr><tr><td>Targs Pomarj-Idee und Valerias</td><td>Gespräch mit
+      Targ, orkische Nachricht am Schrein</td><td>Hurrek hörte das Lob; Garghuk kennt den
+      Gesandtschaftswunsch</td><td>Wissen über die Piraten einbringen und Bündnispläne
+      beeinflussen.</td></tr><tr><td>Weitertransport Richtung Highport</td><td>Verwalter oder Gildruns
+      Reisekladde</td><td>Befragung der Eskorte</td><td>Transportspur und Abnehmer
+      weiterverfolgen.</td></tr><tr><td>Goblinoide als Führer und Händler</td><td>Gwen und
+      Hurrek</td><td>Ausrüstung, Alltag und Gespräche in 07</td><td>Entlohnte Zusammenarbeit
+      anbieten.</td></tr><tr><td>Heilkraft und Ortsbindung</td><td>Beobachtete Behandlung und eigener Versuch
+      in 03</td><td>Aufpasser, Brakka, Hurrek</td><td>Heilung nutzen und spätere Besuche
+      planen.</td></tr><tr><td>Canyonpfad 05–06</td><td>Leiter in 05 oder Abzweig in 06</td><td>Brakka und
+      andere Ortskundige</td><td>Halle oder Grabung über eine zweite Route
+      erreichen.</td></tr></tbody></table><p>Zeugen schildern ihre Perspektive. Die alte Waffenlieferung ist
+      vielen Aufständischen bekannt. Ein Name oder Versandziel eröffnet eine Spur; die Rollen weiterer
+      Beteiligter werden durch zusätzliche Belege geklärt. Wer die Quelle aufsucht und anschließend geht, kann
+      den Ort mit offenen politischen Fragen verlassen.</p>
+  - key: alarm
+    name: Zutritt, Alarm und Rückzug
+    content: >-
+      <h2>Geleit</h2><p>Am Eingang wird das Ziel vereinbart: Audienz über 02–03–05, Quellenbesuch über 02–03,
+      Sippenbesuch über 02–03–06–07 oder Handel bis 08. Ein Begleiter und ein gekerbtes Holzzeichen bestätigen
+      den Auftrag. Bei widersprüchlichem Verhalten fragt ein Posten nach und schickt gegebenenfalls einen
+      Boten.</p><h2>Nachrichten und Reaktion</h2><p>Für jeden Bereich notieren: Wer hat was gesehen, welche
+      Meldung ist angekommen und welche Kräfte wurden bewegt? Ein Horn meldet Gefahr in Hörweite. Einzelheiten
+      überbringen Läufer. Ihre Reisezeiten ergeben sich aus den Ortsseiten und ihrer tatsächlichen Bewegung;
+      Schleichen, Lasten und Verletzte verlängern Wege. Zwischen 02 und 05 liegen die Wege über 03. Der Posten
+      06–07 liegt dagegen unmittelbar neben der
+      Grabung.</p><table><thead><tr><th>Auslöser</th><th>Sofort</th><th>Danach</th></tr></thead><tbody><tr><td>Gespräch
+      am Eingang</td><td>Wache fragt nach Zweck, Waffen und Begleitern.</td><td>Begrenztes Geleit, Wartezeit
+      auf eine Antwort oder ein Gegenvorschlag.</td></tr><tr><td>Kurzer Kampf in 02 endet</td><td>Überlebende
+      sichern Deckung und melden.</td><td>Waffenruhe, Verwundetenversorgung, Wiedergutmachung oder Abzug
+      aushandeln. Todesfälle belasten Vertrauen.</td></tr><tr><td>Heimliches Eindringen wird
+      entdeckt</td><td>Der Beobachter sichert sich und meldet seine Wahrnehmung.</td><td>Nachforschung folgt
+      Spuren, Zeitpunkt und letzter bekannter Richtung.</td></tr><tr><td>Gefangene werden eigenmächtig
+      befreit</td><td>Örtliche Wache greift ein und schickt einen Boten nach 07.</td><td>Verfolgung anhand
+      vorhandener Spuren; Ablenkung, Verhandlung und Wegsperren können sie beenden.</td></tr><tr><td>Kampf mit
+      Gildrun bei vereinbarter Neutralität</td><td>Eskorte verteidigt ihn; Orks sichern Bewohner und
+      vereinbarte Grenzen.</td><td>Schäden an Clanleuten können Garghuks Haltung
+      ändern.</td></tr><tr><td>Gildrun wird als Gast angegriffen</td><td>Orkwache sichert den Platz und
+      fordert Waffenruhe.</td><td>Garghuk hört Vorwürfe und Belege an und bestimmt seine
+      Haltung.</td></tr><tr><td>Feuer, Einsturz oder Überschwemmung</td><td>Familien, Vorräte und Wege werden
+      gesichert.</td><td>Schäden, gerettete Leben und erkennbare Verursacher bestimmen Dank, Forderungen und
+      Feindschaft.</td></tr><tr><td>Gruppe zieht ab und holt Hilfe</td><td>Lokale Vorhaben laufen weiter;
+      beobachtete Abreise wird gemeldet.</td><td>Garghuk verstärkt, räumt oder verhandelt entsprechend den
+      eingetroffenen Nachrichten und verfügbaren Kräften.</td></tr></tbody></table>
+  - key: quelle
+    name: Quelle und Rast
+    content: >-
+      <h2>Springbrunnen des Lichts</h2><p>Die Fontäne ist ein natürliches magisches Phänomen, möglicherweise
+      ein Knotenpunkt von Ley-Linien. Die Frostgrenze an der Oberfläche und die ungewöhnlichen Pflanzen
+      gehören zu ihrem Wirken. Vermutlich besteht die Quelle seit Jahrhunderten. Tunnelgrabende Völker
+      entdeckten sie vor wenigen Jahrzehnten und erkannten früh ihre heilende Wirkung. Viele Bewohner meiden
+      den grellen Schein im Alltag; als Ort der Heilung halten sie das Becken frei und lassen den Wasserstrahl
+      unangetastet.</p><h3>Wirkung</h3><p><strong>Wundversorgung:</strong> Wer am aktiven Becken eine Runde
+      lang Quellwasser über eine Wunde fließen lässt, erhält [[/r 2d4+2]] TP zurück; die Blutung kommt zum
+      Stillstand. Im Kampf kostet dies eine Aktion, anschließend muss der Kontakt mit dem Wasser bis zum
+      Beginn des nächsten eigenen Zuges anhalten. Auch ein Helfer kann das Wasser über die Wunde eines
+      Patienten führen. Pro Patient zählt jeweils eine Anwendung.</p><p><strong>Heilbad:</strong> Eine
+      ununterbrochene Minute unter der Fontäne oder im aktiven Quellbecken stellt sämtliche TP wieder her.
+      Krankheiten, körperliche Verletzungsfolgen und körperlich wirkende magische Flüche weichen: etwa
+      Blindheit durch geschädigte Augen, Narben, Verbrennungen, Geschwüre, verkrüppelte Glieder und
+      Mumienfäule. Auch Keshras bekannte Schädigung lässt sich so heilen. Abgetrennte Glieder bleiben
+      verloren; die Wirkung gilt für Lebende. Flüche auf Gegenständen, Bindungen der Seele und andere
+      Wirkungen jenseits körperlicher Schädigung bleiben bestehen.</p><p>Die Quelle kann beliebig oft genutzt
+      werden. Alter, Erschöpfung, verbrauchte Zauberplätze und begrenzte Fähigkeiten werden nach ihren
+      üblichen Regeln behandelt; Rast ist dafür weiterhin erforderlich. Die Heilkraft ist an das aktive Becken
+      gebunden. Abgefülltes Wasser, der Ablauf und die tieferen Auffangbecken enthalten gewöhnliches
+      Wasser.</p><h2>Nutzung und Zugang</h2><p>Die Bewohner behandeln ihre Verletzten an der Quelle. Garghuk
+      bevorzugt eigene Kämpfer; auch die Oger erhalten Behandlung, damit sie arbeiten können. Targ trägt sein
+      geopfertes Auge als Zeichen Gruumshs und lehnt ein Heilbad ab. Rhogar erkennt die Gesteins- und
+      Wasserverhältnisse; für Keshra kann ein später vereinbarter Besuch Hoffnung auf Heilung bedeuten. Die
+      Gruppe kann bereits beim ersten Besuch ihr persönliches Ziel erreichen.</p><h2>Rast und fortschreitende
+      Ereignisse</h2><p>Bei gesichertem Zugang können SC und Bewohner ihre TP zwischen Begegnungen auffüllen.
+      Verbraucht bleiben Zauberplätze und begrenzte Fähigkeiten. Sichere Rast lässt sich mit Hurrek in einem
+      Wohnhof vereinbaren oder an einem verborgenen Platz außerhalb des Baus suchen. Der DM hält währenddessen
+      die verstrichene Zeit und laufende Vorhaben fest. Jagende Gegner verfolgen vorhandene Spuren; eine
+      erfolgreiche Flucht ermöglicht einen ungestörten Rastplatz.</p><p>Regelverweise:
+      @UUID[Compendium.dnd-players-handbook.content.JournalEntry.phbAppendixCRule.JournalEntryPage.NGmwolHLA5ppbIZY]{Lange
+      Rast},
+      @UUID[Compendium.dnd-players-handbook.content.JournalEntry.phbAppendixCRule.JournalEntryPage.wVuNbEADtC16ejAi]{Kurze
+      Rast}.</p>
   - key: hooks
-    name: Aufhänger — sechs Wege nach Blackthorn
-    content: |
-      <p>Jeder Aufhänger nennt den Einstieg, was tatsächlich dahintersteckt und drei
-      Wege, ihn aufzulösen. Die Gruppe wird einen vierten finden — deshalb steht bei
-      jedem, <strong>was auf dem Spiel steht</strong>, statt was passieren soll.</p>
-
-      <hr>
-
-      <h2>1 · Der Weg unter dem Fluss</h2>
-      <p><em>Anschluss: das Piratenlager, Herrulf und die Fruztii, Harvester 576</em></p>
-
-      <p><strong>Einstieg:</strong> Herrulf schickt Nachricht. Beim Aufteilen der Beute
-      nach dem Aufstand im Piratenlager ist etwas übrig geblieben, das keiner haben
-      wollte: ein Buch. Frachtlisten, in einer Handschrift, die kein Fruztii lesen
-      kann. Was drinsteht, sind keine Waren, sondern Zahlen mit Namen daneben — und
-      die Übergabeorte liegen nicht an der Küste. Sie liegen im Wald.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Die Piraten haben ihre Gefangenen nie
-      selbst in den Pomarj gebracht. Der Landweg ist zu lang und zu gut bewacht. Sie
-      haben sie <em>übergeben</em> — an eine Station im Gnarley, von der aus es unter
-      Tage weitergeht. Durch die UnderOerth in den Pomarj kommt eine Kolonne, ohne dass
-      je eine Patrouille sie sieht. Blackthorn ist die Station. Die Duergar stellen die
-      Führer.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Die Gruppe hat selbst in diesem
-      Lager gesessen. Sie hat Huskarls und Gefangene befreit — aber nicht alle sind
-      mitgekommen. Von einigen wusste niemand, wo sie waren. Jetzt weiß es jemand.</p>
-
-      <table>
-        <thead><tr><th>Weg</th><th>Wie</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Die Übergabe abfangen. Ein Konvoi im
-          Wald ist ein Kampf, den die Gruppe gewinnen kann — und er verrät den Ort
-          nicht, weil die Orks vor der Gefangennahme sterben.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Herrulf als Vermittler. Er ist
-          Nordmann, kein Ork, aber er war beides: Räuber und Gefangener. Er kann
-          Garghuk erklären, was ein Sklavenpakt aus einem Clan macht — und Garghuk wird
-          zuhören, weil er es weiß.</td></tr>
-          <tr><td><strong>List</strong></td><td>Das Frachtbuch fälschen. Eine Lieferung
-          eintragen, die nicht existiert, und beobachten, wer sich beschwert. Wer
-          reklamiert, ist der Empfänger.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>2 · Der Priester aus dem Pomarj</h2>
-      <p><em>Der Aufhänger mit Uhr. Wenn er ankommt, ändert sich alles.</em></p>
-
-      <p><strong>Einstieg:</strong> Spione aus Narwell und Safeton melden einen
-      Reisenden: ein Ork in Priestertracht, mit vier Leibwachen und zwei Lasttieren,
-      auf dem Weg nach Norden. Die Lasttiere tragen keine Vorräte. Sie tragen
-      Geschenke.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Ein Priester Gruumshs, gesandt von
-      <strong>Turrosh Mak</strong>, um Blackthorn für das Orkreich zu gewinnen. Er
-      bringt magische Waffen als Handgeld. Wenn er ankommt und Targ ihn empfängt, wird
-      aus einem Räuberhort ein Brückenkopf — sechshundert Kämpfer unter dem Banner des
-      Pomarj, dreißig Meilen von Dyvers und im Rücken jeder Patrouille, die Greyhawk
-      nach Süden schickt.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Zeit. Der Priester ist unterwegs,
-      und er hat einen Vorsprung. Die Gruppe kann ihn abfangen — oder zuerst da sein
-      und dafür sorgen, dass er ins Leere redet.</p>
-
-      <table>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Ihn auf der Straße stellen. Sauber,
-          schnell, und es löst nichts: Turrosh Mak schickt einen zweiten, und beim
-          zweiten Mal reist er mit einer Kompanie.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Garghuk vorher erreichen. Das
-          Argument, das zieht, ist nicht Moral, sondern Rang: Ein Bündnis mit Turrosh
-          Mak macht Garghuk nicht zum Verbündeten, sondern zum Vasallen. Er hat gerade
-          erst einen Herrn erschlagen.</td></tr>
-          <tr><td><strong>List</strong></td><td>Die Geschenke abfangen und den Priester
-          durchlassen. Ein Gesandter, der mit leeren Händen und großen Worten ankommt,
-          blamiert sich vor sechshundert Orks — und Targ, der ihn empfohlen hat, gleich
-          mit.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>3 · Die Karawanen</h2>
-      <p><em>Der wirtschaftliche Aufhänger. Anschluss: Händlergilde, Hubert Hander,
-      der Hilfskonvoi.</em></p>
-
-      <p><strong>Einstieg:</strong> Die Händlergilde in Greyhawk hat den Konvoi in den
-      Süden mitfinanziert und erwartet Gegenleistung. Jetzt bricht die Nordroute weg:
-      drei Karawanen auf der Straße Greyhawk–Dyvers in sechs Wochen, keine Überlebenden
-      bei zweien, und die Ladung nicht geplündert, sondern <em>ausgewählt</em>. Eisen
-      und Werkzeug sind weg. Tuch, Wein und Gewürze liegen im Dreck.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Das ist kein Raubzug, das ist Beschaffung.
-      Blackthorn braucht Eisen — für sechshundert Kämpfer, von denen viele noch mit
-      Steinhämmern und Grubenwerkzeug bewaffnet sind. Und Blackthorn braucht Nahrung:
-      Pilze und eine Rothé-Herde tragen keine Konföderation durch den Winter. Wer
-      Greyhawk schwächen will, greift die Nordroute an, während im Süden Piraten
-      brennen. Wer nur seine Leute satt bekommen will, tut zufällig dasselbe.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Der Ruf der Gruppe bei der
-      Händlergilde — und die Frage, ob sie den Unterschied zwischen einem Feldzug und
-      einer Hungersnot erkennt, bevor sie handelt.</p>
-
-      <table>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Eine Lockkarawane. Die Gruppe hat das
-          schon einmal versucht, südlich von One Ford, und es ging katastrophal aus.
-          Diesmal wissen sie, wie es schiefgeht.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Der absurde Vorschlag: ein
-          Abkommen. Getreide gegen Ruhe auf der Straße. Die Händlergilde wird toben,
-          Dyvers wird es abstreiten, und es wäre billiger als drei verlorene
-          Karawanen. Garghuk würde zuhören. <em>Targ nicht.</em></td></tr>
-          <tr><td><strong>List</strong></td><td>Eine Lieferung vergiften oder
-          markieren. Wo die Ladung auftaucht, ist der Hort — und ein Clan, der seinen
-          Kriegern verseuchtes Korn vorsetzt, hat ein Führungsproblem.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>4 · Die Fontäne</h2>
-      <p><em>Der Aufhänger für Faylith. Anschluss: Steinkreis, Ley-Linien, die
-      westliche Störquelle.</em></p>
-
-      <p><strong>Einstieg:</strong> Bei der Arbeit am Steinkreis fällt ein zweiter
-      Strang auf. Die Hauptstörung zieht nach Westen, zur Tempelregion — das ist
-      bekannt. Aber daneben liegt eine schwächere, stetige Ader, die nach
-      <strong>Nordwesten</strong> läuft und nicht stört, sondern <em>speist</em>. Sie
-      endet unter dem Gnarley-Forst.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Die Fontäne des Reinen Lichts. Fünfhundert
-      Fuß unter der Erde, taghell, ohne Wärme, heilt jede Wunde und jede Krankheit —
-      und sie wirkt nur an ihrem Ort. Wasser, das den Raum verlässt, ist gewöhnliches
-      Wasser. Das ist kein Zauber, das ist ein <strong>Knoten</strong>: eine Stelle, an
-      der eine Ley-Linie an die Oberfläche des Weltgefüges stößt. Deshalb blühen die
-      Haine im Winter, und deshalb liegt kein Reif im schwarzen Fleck.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Lareth ist über einen
-      Ley-Linien-Knoten entkommen. Wer verstehen will, wie das geht, braucht einen
-      Knoten, den er untersuchen kann, ohne dass ein Tempel darauf steht. Blackthorn
-      hat einen. Bewacht von sechshundert Orks, die ihn hassen und trotzdem nie
-      angerührt haben.</p>
-
-      <table>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Sich zur Fontäne durchschlagen. In
-          der Fontänenhöhle kämpfen Orks, Oger und Duergar mit Nachteil — es ist der
-          beste Kampfplatz des Baus, und die Bewohner wissen es.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Zugang aushandeln. Die Orks
-          hassen das Licht, aber sie haben die Quelle nie verschlossen — auch ein Ork
-          begreift, was ein Brunnen wert ist, der jede Wunde schließt. Wer Blackthorn
-          etwas anbietet, das es mehr braucht als einen ungenutzten hellen Raum,
-          bekommt vielleicht ein Ja.</td></tr>
-          <tr><td><strong>List</strong></td><td>Über die Svirfneblin von unten. Sie
-          kennen jeden Tunnel und haben eigene Gründe, den Bau zu betreten.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>5 · Der Aufruf der Gnarley-Waldläufer</h2>
-      <p><em>Der offizielle Weg. Anschluss: Nachtwache 2.0, Dravis' autonome Rolle.</em></p>
-
-      <p><strong>Einstieg:</strong> Die Waldläufer des Gnarley haben Humanoide aus dem
-      Boden kommen sehen. Sie stellen eine gemeinsame Operation auf die Beine — Ranger,
-      Miliz aus Dyvers, Waldleute — und werben in Greyhawk Söldner an. Für die
-      Nachtwache in ihrer neuen, autonomeren Form ist das genau der Auftrag, für den
-      Dravis sie freigestellt hat.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Die Operation ist zum Scheitern
-      verurteilt. Die Waldläufer rechnen mit einem Ork-Nest von vielleicht achtzig
-      Kriegern. Es sind sechshundert, in einem Bau mit einem einzigen engen Zugang, den
-      sie seit einem Jahrzehnt für genau diesen Fall herrichten. Wer da hineinmarschiert,
-      marschiert in einen Trichter.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Zweihundert Freiwillige, die
-      loslaufen, wenn niemand ihnen sagt, was da unten wirklich steht. Das ist keine
-      Kampfaufgabe, das ist eine Aufklärungsaufgabe — und die unangenehme Wahrheit
-      danach zu überbringen ist der schwierigere Teil.</p>
-
-      <table>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Mitmarschieren und retten, was zu
-          retten ist. Der Wachposten in der oberen Höhle fällt. Alles darunter nicht.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Die Operation abblasen. Erfordert,
-          dass Waldläufer und Miliz einer Gruppe glauben, die sagt: <em>Wir waren
-          unten, es sind sechshundert, geht nicht hin.</em> Ohne Beweis glaubt das
-          niemand.</td></tr>
-          <tr><td><strong>List</strong></td><td>Den Trichter umdrehen. Wenn die
-          Operation ohnehin läuft, kann sie als Ablenkung dienen, während eine kleine
-          Gruppe von der Schlucht aus einsteigt.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>6 · Die Halb-Ork-Anwerbung</h2>
-      <p><em>Der verdeckte Aufhänger. Anschluss: die Bastionen an der Wild Coast.</em></p>
-
-      <p><strong>Einstieg:</strong> An der Wild Coast werden Halb-Orks Arbeit
-      angeboten. Gut bezahlt, keine Fragen. Das ist die Auffälligkeit: In Teilen dieser
-      Region erschlägt man jeden mit Ork- oder Goblinblut auf offener Straße. Wer dort
-      gezielt Halb-Orks sucht, sucht etwas Bestimmtes.</p>
-
-      <p><strong>Was dahintersteckt:</strong> Agenten der Sklavenherren brauchen
-      Mittelsleute — jemanden, der in einem Ork-Lager verhandeln kann, ohne sofort
-      erschlagen zu werden, und der in einer menschlichen Stadt einen Vertrag
-      unterschreiben kann. Verbindungsleute zwischen den Sklavenherren und den
-      Humanoiden-Heeren in Turrosh Maks Diensten. Blackthorn steht auf ihrer Liste.</p>
-
-      <p><strong>Was auf dem Spiel steht:</strong> Die Gruppe kann sich hier
-      <em>einschleusen</em> statt einbrechen — und die Kette von oben aufrollen, statt
-      unten anzufangen. Es ist der einzige Aufhänger, bei dem sie Blackthorn betreten
-      können, ohne sich hineinzukämpfen.</p>
-
-      <table>
-        <tbody>
-          <tr><td><strong>Gewalt</strong></td><td>Die Anwerber hochnehmen. Liefert
-          Namen und beendet die Spur an derselben Stelle.</td></tr>
-          <tr><td><strong>Diplomatie</strong></td><td>Einen echten Halb-Ork überreden,
-          das Treffen anzunehmen und zu berichten. Er geht ein Risiko ein, das die
-          Gruppe nicht für ihn tragen kann — und er wird das ansprechen.</td></tr>
-          <tr><td><strong>List</strong></td><td>Eines der eigenen Gruppenmitglieder als
-          Halb-Ork verkleiden und sich anwerben lassen. Führt bei Erfolg als
-          <em>Gast</em> nach Blackthorn — mit Zugang zu Garghuk, Targ und dem
-          Verhandlungstisch, an dem gerade über Menschen als Ware gesprochen wird.</td></tr>
-        </tbody>
-      </table>
-
-      <hr>
-
-      <h2>Und wenn die Gruppe etwas ganz anderes tut</h2>
-
-      <p>Wird sie. Diese sechs Aufhänger laufen alle auf dieselben vier Fragen zu, und
-      solange die beantwortet werden, funktioniert jeder Weg dorthin:</p>
-
-      <ol>
-        <li><strong>Bekommt Turrosh Mak Blackthorn?</strong> Wenn ja, steht ein Heer
-        im Rücken von Dyvers.</li>
-        <li><strong>Läuft der Sklavenweg unter Tage weiter?</strong> Wenn ja, ist jede
-        Patrouille an der Oberfläche Theater.</li>
-        <li><strong>Hält Garghuk?</strong> Fällt er, zerfällt die Konföderation in
-        sechs Fraktionen — und sechs kleine Warlords im Gnarley sind für die Region
-        schlimmer als einer, mit dem man reden kann.</li>
-        <li><strong>Was ist die Fontäne?</strong> Die Frage, die keiner der Bewohner
-        stellt.</li>
-      </ol>
-
-  - key: ziele
-    name: Was man in Blackthorn erreichen kann
-    content: |
-      <p>Der Bau lässt sich nicht leerräumen. Die folgende Liste ist deshalb keine
-      Aufgabenliste, sondern eine Sammlung von <strong>Zuständen, die sich ändern
-      lassen</strong> — jeder für sich ein Sitzungsziel, und keiner erfordert, dass
-      sechshundert Kreaturen sterben.</p>
-
-      <table>
-        <thead><tr><th>Ziel</th><th>Wo</th><th>Womit</th><th>Folge</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><strong>Den Pakt verhindern</strong></td>
-            <td>Bereich 4 oder auf der Straße</td>
-            <td>Den Priester abfangen, Garghuk überzeugen oder Targ blamieren</td>
-            <td>Blackthorn bleibt ein regionales Problem statt eines strategischen.</td>
-          </tr>
-          <tr>
-            <td><strong>Gefangene befreien</strong></td>
-            <td>Bereich 5, die Grabung</td>
-            <td>Zehn bis dreißig, „rotierender Bestand“ — Handwerker und Träger werden
-            behalten, der Rest geht weiter nach unten</td>
-            <td>Namen und Zeugen. Der Beweis, den die Waldläufer und die Gilde
-            brauchen.</td>
-          </tr>
-          <tr>
-            <td><strong>Die Duergar-Schuld offenlegen</strong></td>
-            <td>Bereich 6, östliche Tunnel</td>
-            <td>Lieferlisten, Grauzwergenstahl mit Punze, ein Duergar, der redet</td>
-            <td>Garghuk verliert vor Targ das Gesicht. Der Clan bekommt einen Riss,
-            den die Gruppe nutzen oder verkaufen kann.</td>
-          </tr>
-          <tr>
-            <td><strong>Die Oger aufwiegeln</strong></td>
-            <td>Bereich 4</td>
-            <td>Zwanzig bis achtundzwanzig gebrochene Oger, die auf einen Grund warten</td>
-            <td>Ein zweiter Aufstand. Chaotisch, blutig, und er räumt den Bau
-            gründlicher als jede Söldnerkompanie.</td>
-          </tr>
-          <tr>
-            <td><strong>Die Hornkette brechen</strong></td>
-            <td>Oberfläche und Bereich 1</td>
-            <td>Drei Hörner am Waldrand, die Posten an den Treppen</td>
-            <td>Die Alarmstufe steigt eine Stufe langsamer. Klingt klein, entscheidet
-            aber, ob ein Rückzug gelingt.</td>
-          </tr>
-          <tr>
-            <td><strong>Die Fontäne untersuchen</strong></td>
-            <td>Bereich 2</td>
-            <td>Zeit, Ruhe und jemand, der Ley-Linien lesen kann</td>
-            <td>Ein zweiter Datenpunkt neben dem Steinkreis — und womöglich der
-            Hinweis, wie Lareth einen Knoten als Tür benutzt hat.</td>
-          </tr>
-          <tr>
-            <td><strong>Den Sklavenweg kartieren</strong></td>
-            <td>Bereich 6 und tiefer</td>
-            <td>Den Duergar-Führern folgen statt sie zu erschlagen</td>
-            <td>Die Route in den Pomarj. Wertvoller als jeder Hort, und der einzige
-            Fund, der auch anderen nützt.</td>
-          </tr>
-          <tr>
-            <td><strong>Aufklärung liefern</strong></td>
-            <td>überall</td>
-            <td>Zählen, mitschreiben, lebend rauskommen</td>
-            <td>Die Ranger-Operation wird abgeblasen. Zweihundert Freiwillige gehen
-            nach Hause und wissen nie, wofür sie der Gruppe danken müssten.</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h2>Der Verhandlungstisch</h2>
-
-      <p>Falls die Gruppe tatsächlich reden will — und dieser Ort ist dafür gebaut —
-      hier die Werte, an denen eine Verhandlung mit Garghuk hängt:</p>
-
-      <table>
-        <thead><tr><th>Ansatz</th><th>SG</th><th>Anmerkung</th></tr></thead>
-        <tbody>
-          <tr><td>Überzeugen, ohne Hebel</td><td>SG 22</td>
-              <td>Er ist Kriegshäuptling eines Volkes, das gerade seine Ketten
-              abgeworfen hat. Warum sollte er Menschen zuhören?</td></tr>
-          <tr><td>… mit Nahrung im Angebot</td><td>SG 17</td>
-              <td>Sein echtes Problem. Sechshundert Mäuler, Pilze und eine Rothé-Herde.</td></tr>
-          <tr><td>… mit dem Vasallen-Argument</td><td>SG 15</td>
-              <td>Ein Bündnis mit Turrosh Mak macht ihn zum Untergebenen. Er hat gerade
-              erst einen Herrn erschlagen.</td></tr>
-          <tr><td>… wenn die Duergar-Schuld offenliegt</td><td>SG 13</td>
-              <td>Er braucht dann dringend einen Erfolg, der ihm allein gehört.</td></tr>
-          <tr><td>… in Targs Anwesenheit</td><td>+5 auf alles</td>
-              <td>Targ redet dazwischen. Ihn zu beschäftigen ist eine eigene Aufgabe.</td></tr>
-          <tr><td>Targ überzeugen</td><td>—</td>
-              <td>Nicht möglich. Nur diskreditieren oder erschlagen.</td></tr>
-        </tbody>
-      </table>
-
-      <p class="cob-note"><em>Ein Ergebnis, das die Gruppe erreichen kann und das
-      keiner der Aufhänger vorsieht: Garghuk als <strong>Puffer</strong>. Ein Clan im
-      Gnarley, der nicht dem Pomarj gehört, keine Sklaven weiterreicht und Karawanen in
-      Ruhe lässt, weil er anders satt wird — und der zwischen Dyvers und allem, was aus
-      dem Süden kommt, im Weg steht. Das ist kein Sieg, das ist ein Handel mit einem
-      Massenmörder. Genau deshalb ist es interessant.</em></p>
+    name: Hooks und Begleiter
+    content: >-
+      <h2>Überfall und Handelsroute</h2><p>Ein laufender oder bereits geschehener Überfall bringt die Gruppe
+      mit Blackthorn in Kontakt. Überlebende berichten von geraubten Waren und verschleppten Menschen. Der
+      Schutz einer bekannten Falkenroute kann ein bestehendes Versprechen berühren. Aufklärung, Warnung,
+      Verhandlung und bewaffneter Schutz sind jeweils mögliche Antworten.</p><h2>Gwen</h2><p>Gwen ist etwa
+      fünfzehn Jahre alt, ein ehrliches, zurückhaltendes Bugbear-Mädchen. Die Erzählungen ihrer Großmutter vom
+      früheren Zusammenleben und Hurreks praktische Anleitung prägten sie. Schon als Kind erlebte sie
+      Verhandlungen, Versorgungsarbeit, unmittelbare Gefahr und Zeiten, in denen sie auf sich gestellt war.
+      Daraus kommt ihre überraschende Reife. Optional half sie beim Aufstand mit Botengängen, Vorräten oder
+      dem Schutz jüngerer Kinder; heute möchte sie einen anderen Weg als fortgesetzte Gewalt finden.</p><p>Bei
+      Vertrauen will sie mit der Gruppe Richtung Gnarley reisen und ihre Sippe für ein freieres Zusammenleben
+      gewinnen. Bei schlechter Behandlung kann sie selbstständig zurückkehren. Ist sie bei der Gruppe, bietet
+      sie Kontakte und Erinnerungen an Alltagswege; bei neueren Vorgängen fragt sie nach. Ist sie schon in
+      Blackthorn, kann Hurrek ein Treffen vermitteln. Ist sie fort oder tot, tragen Spuren, Bewohner und die
+      anderen Hooks das Abenteuer. Ihre Rückkehr kann Nachrichten aus dem Tempel nach Blackthorn bringen. Eine
+      Aussöhnung mit der Sippe braucht deren eigene Entscheidung.</p><h2>Radagast und der Hain</h2><p>Radagast
+      kennt die auffällige Frostgrenze, ungewöhnliche Pflanzen und örtliche Erzählungen. Er teilt diese
+      Beobachtungen und kann die Gruppe zum Hain führen. Von dort erschließen Spuren und eigene Erkundung die
+      Eingänge.</p><h2>Rhogar und Keshra</h2><p>Der ungewöhnliche Elementarort spricht Rhogars Interesse an.
+      Berichte oder Beobachtungen heilenden Wassers geben seiner Hoffnung für Keshra ein greifbares Ziel.
+      Seine Kenntnis von Gestein und Wasserwegen hilft bei der Erkundung. Keshras spätere Anreise lässt sich
+      durch Geleit, Absprachen und eine gesicherte Route vorbereiten.</p><h2>Weitere Bezüge zur
+      Gruppe</h2><p>Silba kann gemeinsame Sprache und Herkunft in Gespräche einbringen. Thalerta kann mit Targ
+      über Glauben und Verantwortung streiten. Fayliths Beitrag richtet sich nach Anwesenheit und tatsächlich
+      verfügbaren Verständigungsmitteln; Sending Stones folgen ihren Gegenstandsregeln. Zusagen für Fruztii
+      und One Ford binden bereits Land und Versorgung. Ein Handel mit Blackthorn kann deshalb zunächst dessen
+      Leben am eigenen Ort sichern.</p>
+  - key: befreiung
+    name: Ogerbefreiung und Folgen
+    content: >-
+      <h2>Warum die Oger bleiben</h2><p>Die Lagerabtrennung in 06 besteht aus im Fels verankertem Holz und
+      Stein mit verstärktem Tor. Schlüssel tragen der leitende Aufseher und die Torwache Richtung 07. Kleine
+      Arbeitsschichten halten die Erwachsenen von ihren Angehörigen getrennt. Ein gemeinsamer Kraftakt kann
+      das Tor beschädigen, braucht aber Zeit und alarmiert die Aufseher. Der nahe Posten schützt den Zugang
+      zur Siedlung; der Weg zur Oberfläche führt über den langen Aufstieg.</p><p>Die Werkzeuge taugen als
+      Waffen. Fünf Arbeiter könnten die unmittelbare Aufsicht überwältigen, während ihre Angehörigen hinter
+      dem Tor und ihre Fluchtwege noch gefährdet wären. Brakka sucht deshalb eine Gelegenheit, bei der
+      Befreiung und Schutz zusammen gelingen. Die Aufseher, teils selbst ehemalige Gefangene, rechtfertigen
+      den Zwang als Wiedergutmachung und beziehen dabei auch die Jungen ein.</p><h2>Wenn die Gruppe
+      eingreift</h2><p>Bei Gewalt sichern zwei Aufseher das Tor, einer läuft nach 07; der Veteran versucht,
+      die Arbeiter getrennt zu halten. Der Bote braucht ungefähr 1½ Minuten, die Torwache anschließend eine
+      Minute bis zum Aufgang. Weitere Reserve sammelt sich mindestens drei Minuten. Brakka bringt bei einer
+      Öffnung zuerst die Jungen zusammen. Zwei Erwachsene verfolgen womöglich einen früheren Peiniger;
+      Ansprache, Schutz und ein erkennbarer Fluchtplan können sie zurückholen.</p><h2>Eine besetzte
+      Engstelle</h2><p>Vereinte Oger können 06 halten und damit den Hauptweg zwischen Fontäne und Siedlung
+      unterbrechen. Garghuk muss dann Durchlass, Versorgung oder Abzug aushandeln oder Kräfte für einen
+      Angriff sammeln. Brakka will mit allen Angehörigen fort. Die Gruppe kann vermitteln, begleiten, einen
+      anderen Weg sichern oder die neue Lage sich selbst überlassen.</p>
+  - key: ausgaenge
+    name: Erfolge und veränderte Lage
+    content: >-
+      <h2>Erfolge und neue Konflikte</h2><p>Die erreichten Ziele getrennt festhalten: gerettete Menschen,
+      Status der Oger, Sicherheit der Handelsroute, Zugang zur Quelle, beglichene Forderung, neue
+      Handelskontakte, gesicherte Belege und das Schicksal wichtiger Personen. Jedes Ergebnis verändert
+      Blackthorn auf eigene
+      Weise.</p><table><thead><tr><th>Ergebnis</th><th>Folgen</th></tr></thead><tbody><tr><td>Gruppe besiegt
+      den Eingangsposten</td><td>Der Rückzug nach 01 bleibt zunächst offen. Überlebende melden den Angriff;
+      spätere Gespräche beginnen mit Verwundeten, Verlusten und Wiedergutmachung.</td></tr><tr><td>Quelle
+      erreicht</td><td>Das persönliche Heilungsziel kann erfüllt werden. Beim Abzug laufen die übrigen
+      Vorhaben weiter.</td></tr><tr><td>Gefangene freigekauft</td><td>Die konkrete Rechnung wird beglichen.
+      Geleit bringt die zwölf Menschen sicher hinaus; die künftige Versorgung bleibt ein eigenes
+      Thema.</td></tr><tr><td>Heimliche Befreiung in 08</td><td>Der Rückweg führt über 07–06–03–02. Vorhandene
+      Posten lassen sich umgehen, ablenken, überzeugen oder überwinden.</td></tr><tr><td>Oger halten
+      06</td><td>Sie kontrollieren den Hauptweg. Brakka fordert Abzug und Schutz, Garghuk braucht Zugang und
+      Versorgung.</td></tr><tr><td>Gildrun gefangen oder tot</td><td>Verwalter, Gefangene und Unterlagen
+      tragen die Handelsspur weiter. Seine Geschäftspartner erfahren später, was geschehen
+      ist.</td></tr><tr><td>Garghuk fällt</td><td>Veteranen schützen Familien. Targ sucht Gefolgschaft, Hurrek
+      einen Versorgungsrat. Nachrichten und sichtbare Handlungen bestimmen den
+      Übergang.</td></tr><tr><td>Auswärtige Hilfe organisiert</td><td>Reisezeit, Versorgung und Engstellen
+      bestimmen ihren Einsatz. Gegner reagieren auf eingetroffene Berichte und die erkennbare
+      Übermacht.</td></tr><tr><td>Nur einzelne Hinweise entdeckt</td><td>Beobachtete Gefangene, bedrohte
+      Reisende und die Quelle bieten weiterhin konkrete Ziele. Die Gruppe entscheidet mit ihrem bisherigen
+      Wissen.</td></tr><tr><td>Konflikte friedlich gelöst</td><td>Abmachungen, Zeugen und verantwortliche
+      Personen festhalten. Die vereinbarten Gegenleistungen bestimmen, wie tragfähig der Erfolg
+      ist.</td></tr></tbody></table>
+  - key: begegnungen
+    name: Begegnungen, Skalierung und XP
+    content: >-
+      <h2>Vier Charaktere auf Stufe 7</h2><p>Die XP-Budgets betragen 3.000 niedrig, 5.200 mittel und 6.800
+      hoch. Es sind Obergrenzen des jeweiligen Budgets. Die Summe der Gegner-XP wird direkt verglichen.
+      Aktionszahl, Deckung, Kontrolleffekte, verbliebene Ressourcen und eintreffende Verstärkung bestimmen die
+      tatsächliche Gefahr mit. Werte über 6.800 überschreiten das hohe
+      Budget.</p><p>@UUID[Compendium.dnd-dungeon-masters-guide.content.JournalEntry.dmgPlanEncounter.JournalEntryPage.WKL34lGhm9cZOavY]{DMG:
+      Begegnungen planen}.</p><h2>Konfliktbelohnung</h2><p>Eine gleichwertige Lösung durch List oder
+      Verhandlung bringt dieselbe einmalige XP-Belohnung wie ein Sieg über die beteiligten Gegner. Erledigte
+      Konflikte notieren. Für eine Gefangenenrettung zählt die überwundene Bewachung; die Belohnung wird
+      einmal vergeben. Freundliche Besucher erhalten für den Quellenbesuch die Heilung und die erreichten
+      Beziehungen. Gesamt-XP durch vier teilen und Bruchteile gesammelt mitführen.</p><h2>Begleiter und
+      Varianten</h2><p>Die Standardwerte gelten für die vier SC allein. Ein vollwertiger fünfter Charakter auf
+      Stufe 7 erhöht die Budgets auf 3.750 / 6.500 / 8.500 XP. Schwächere Begleiter anhand ihrer tatsächlichen
+      Kampfhilfe beurteilen. Die Varianten verändern den Dienstplan vor Szenenbeginn. Zusätzliche Wachen
+      stammen aus verfügbaren Posten oder der Reserve und fehlen dort; Abstellungen und Verluste laufend
+      notieren.</p><h2>Heilung und Gefahren</h2><p>Mit Zugang zur Quelle können TP zwischen Kämpfen aufgefüllt
+      werden. Zauberplätze und begrenzte Fähigkeiten bleiben verbraucht, während Rast die entsprechende Zeit
+      beansprucht. Die HG der eigens gestalteten Gegner sind Schätzwerte für dieses Abenteuer. Garghuks
+      Glücksstein verbessert seine Attributs- und Rettungswürfe um 1; sein HG 7 und seine Schadensleistung
+      bleiben die Grundlage der Einordnung. Der bewegliche Steeder macht besonders an Klippen und Decken einen
+      größeren taktischen Unterschied als auf ebenem Boden.</p>
+    encounters:
+      - name: 07 – zusätzliche Reserve
+        creatures:
+          - key: ork-veteran
+            count: 1
+          - key: ork-krieger
+            count: 12
+        note: >-
+          Sammelzeit mindestens 3 Minuten nach eingegangener Meldung, danach Laufzeit. Bereits abgezogene
+          Personen fehlen.
+        scaling:
+          steps:
+            - for: 'Leichter: Teilmobilisierung'
+              creatures:
+                - key: ork-veteran
+                  count: 1
+                - key: ork-krieger
+                  count: 6
+            - for: 'Schwerer: zwei Bugbears aus dem Raubtrupp abgestellt'
+              creatures:
+                - key: ork-veteran
+                  count: 1
+                - key: ork-krieger
+                  count: 12
+                - key: bugbear-schleicher
+                  count: 2
+      - name: 08 – Gildrun und Eskorte
+        creatures:
+          - key: gildrun
+            count: 1
+          - key: duergar-anfuehrer
+            count: 1
+          - key: duergar
+            count: 3
+          - key: steeder
+            count: 1
+        note: Örtliche Wachen greifen ein, wenn ihre Leute, Waren oder Schutzpflichten betroffen sind.
+        scaling:
+          steps:
+            - for: 'Leichter: kleiner Geschäftstermin'
+              creatures:
+                - key: gildrun
+                  count: 1
+                - key: duergar
+                  count: 2
+            - for: 'Schwerer: ein realer Posten greift ein'
+              creatures:
+                - key: gildrun
+                  count: 1
+                - key: duergar-anfuehrer
+                  count: 1
+                - key: duergar
+                  count: 6
+                - key: steeder
+                  count: 1
+      - name: 08 – ein äußerer Duergarposten
+        creatures:
+          - key: duergar
+            count: 3
+        note: Der zweite Posten bleibt ein anderer, tatsächlich erreichbarer Ort.
+        scaling:
+          steps:
+            - for: 'Leichter: einer anderweitig beschäftigt'
+              creatures:
+                - key: duergar
+                  count: 2
+            - for: 'Schwerer: beide Posten zusammengezogen'
+              creatures:
+                - key: duergar
+                  count: 6
+      - name: 06–07 – Aufseher plus eintreffende Torwache
+        creatures:
+          - key: ork-veteran
+            count: 2
+          - key: ork-krieger
+            count: 12
+        note: Die Torwache erreicht den Aufgang nach erfolgreicher Meldung und dem zurückgelegten Weg.
+      - name: '08 – Eskalation: Eskorte, Orkwache und beide Duergarposten'
+        creatures:
+          - key: gildrun
+            count: 1
+          - key: duergar-anfuehrer
+            count: 1
+          - key: duergar
+            count: 9
+          - key: steeder
+            count: 1
+          - key: ork-veteran
+            count: 1
+          - key: ork-krieger
+            count: 4
+        note: >-
+          Nur wenn alle diese Parteien wirklich eingreifen. Besitzstände und Wege können sie
+          auseinanderhalten.

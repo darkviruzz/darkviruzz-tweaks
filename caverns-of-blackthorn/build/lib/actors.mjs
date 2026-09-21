@@ -1,4 +1,7 @@
 import { stableId } from "./ids.mjs";
+import { buildItem } from "./items.mjs";
+
+const MARTIAL = new Set(["greataxe", "longsword", "morningstar", "warpick", "longbow", "heavycrossbow"]);
 
 /**
  * Expands the compact creature definitions in src/creatures into full dnd5e NPC
@@ -10,6 +13,13 @@ import { stableId } from "./ids.mjs";
  */
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
+// Explicitly supplied skill entries bypass dnd5e's initial-key callback and
+// otherwise inherit the RollConfigField fallback (DEX), regardless of skill.
+const SKILL_ABILITIES = {
+  acr: "dex", ani: "wis", arc: "int", ath: "str", dec: "cha", his: "int",
+  ins: "wis", itm: "cha", inv: "int", med: "wis", nat: "int", prc: "wis",
+  prf: "cha", per: "cha", rel: "int", slt: "dex", ste: "dex", sur: "wis"
+};
 
 const SIZE_TO_TOKEN = { tiny: 0.5, sm: 1, med: 1, lg: 2, huge: 3, grg: 4 };
 
@@ -98,7 +108,7 @@ function makeWeapon(action, actorId, sort) {
       identified: true,
       quantity: 1,
       proficient: null,
-      type: { value: action.kind === "ranged" ? "simpleR" : "simpleM", baseItem: action.baseItem ?? "" },
+      type: { value: action.weaponType ?? `${MARTIAL.has(action.baseItem) ? "martial" : "simple"}${action.kind === "ranged" && !action.properties?.includes("thr") ? "R" : "M"}`, baseItem: action.baseItem ?? "" },
       properties: action.properties ?? [],
       damage: { base: expandDamagePart(action.damage) },
       range:
@@ -173,6 +183,35 @@ function makeFeat(entry, actorId, sort, { passive }) {
       };
     }
   }
+  if (entry.spellUuid) {
+    const id = stableId(`activity:${actorId}:${entry.name}`);
+    item.system.activities = {[id]: {
+      _id: id, type: "cast", name: entry.name,
+      activation: {type: "action", value: 1, override: false},
+      spell: {uuid: entry.spellUuid, level: entry.spellLevel ?? null, ability: "wis", spellbook: false,
+        challenge: {override: true, attack: 7, save: 15}},
+      consumption: {spellSlot: false, targets: [], scaling: {allowed: false}}
+    }};
+  }
+  if (entry.uses) for (const activity of Object.values(item.system.activities)) {
+    activity.consumption = { spellSlot: false, targets: [{type: "itemUses", target: "", value: "1"}], scaling: {allowed: false} };
+  }
+  item.effects = (entry.activeEffects ?? []).map((effect, index) => ({
+    _id: stableId(`effect:${itemId}:${index}`), name: effect.name ?? entry.name,
+    img: effect.img ?? item.img, type: "base", disabled: false,
+    transfer: passive, statuses: effect.statuses ?? [],
+    duration: effect.seconds ? {value: effect.seconds, units: "seconds", expiry: "turnStart"} : {},
+    system: {changes: (effect.changes ?? []).map(c => ({key:c.key, value:c.value, type:c.type ?? "add", priority:20}))},
+    description: `<p>${effect.description ?? entry.text}</p>`
+  }));
+  if (!passive && item.effects.length) for (const activity of Object.values(item.system.activities)) {
+    activity.effects = item.effects.map(e => ({_id:e._id}));
+    if (entry.effectTarget) activity.target = {affects:{type:entry.effectTarget},prompt:true};
+  }
+  if (entry.heal) for (const activity of Object.values(item.system.activities)) {
+    activity.type = "heal";
+    activity.healing = {...expandDamagePart(entry.heal), types:[entry.heal.type ?? "temphp"]};
+  }
   return item;
 }
 
@@ -241,7 +280,7 @@ function validate(def) {
  * @param {object} def   A creature definition from src/creatures.
  * @returns {object}     A dnd5e NPC actor document ready to be packed.
  */
-export function buildActor(def) {
+export function buildActor(def, equipment = []) {
   validate(def);
   const actorId = def.id ?? stableId(`actor:${def.key}`);
   const prof = proficiencyForCR(def.cr);
@@ -254,7 +293,8 @@ export function buildActor(def) {
 
   const skills = {};
   for (const [skill, value] of Object.entries(def.skills ?? {})) {
-    skills[skill] = { value };
+    if (!SKILL_ABILITIES[skill]) throw new Error(`Unknown skill: ${skill}`);
+    skills[skill] = { value, ability: SKILL_ABILITIES[skill] };
   }
 
   const items = [];
@@ -271,6 +311,14 @@ export function buildActor(def) {
   }
 
   const tokenSize = SIZE_TO_TOKEN[def.size] ?? 1;
+  for (const key of def.equipment ?? []) {
+    const source = equipment.find(e => e.key === key);
+    if (!source) throw new Error(`Missing equipment ${key}`);
+    const item = buildItem({...source, id:stableId(`equipment:${actorId}:${key}`)});
+    item.system.equipped = true;
+    item.system.attuned = Boolean(source.attunement);
+    items.push(item);
+  }
 
   return {
     _id: actorId,
@@ -281,6 +329,7 @@ export function buildActor(def) {
     effects: [],
     folder: def.folder ?? null,
     system: {
+      source: { rules: "2024", revision: 1, custom: "Die Höhlen von Blackthorn" },
       abilities,
       skills,
       attributes: {
@@ -300,11 +349,10 @@ export function buildActor(def) {
         init: { ability: "dex", bonus: "" }
       },
       details: {
-        biography: { value: def.description ? `<p>${def.description}</p>` : "", public: "" },
+        biography: { value: (def.description ? `<p>${def.description}</p>` : "") + (def.sourceUuid ? `<p>Vergleichswerte: @UUID[${def.sourceUuid}].</p>` : ""), public: "" },
         alignment: def.alignment ?? "",
         type: { value: def.type, subtype: def.subtype ?? "", swarm: "", custom: "" },
-        cr: def.cr,
-        source: { rules: "2024", revision: 1, custom: "Die Höhlen von Blackthorn" }
+        cr: def.cr
       },
       traits: {
         size: def.size,
@@ -325,6 +373,7 @@ export function buildActor(def) {
       displayName: 20,
       displayBars: 40,
       actorLink: def.actorLink ?? false,
+      elevation: 0,
       width: tokenSize,
       height: tokenSize,
       disposition: def.disposition ?? -1,

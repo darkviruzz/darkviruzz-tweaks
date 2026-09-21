@@ -1,0 +1,1532 @@
+- key: garghuk
+  name: Garghuk, Herr von Blackthorn
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Individuell
+  cr: 7
+  ac: 18
+  hp:
+    value: 153
+    formula: 18d8 + 72
+  speed:
+    walk: 30
+  abilities:
+    str: 20
+    dex: 14
+    con: 18
+    int: 17
+    wis: 15
+    cha: 17
+  saves:
+    - str
+    - con
+    - wis
+  skills:
+    itm: 2
+    ath: 2
+    prc: 1
+    ins: 1
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - orc
+    - goblin
+    - giant
+  actorLink: true
+  img: modules/caverns-of-blackthorn/assets/maps/blackthorn-sigil.webp
+  description: >-
+    Garghuk gewann die Freiheit seines Clans, indem er verfeindete Arbeitsgruppen zusammenbrachte. Der
+    außergewöhnlich scharfsinnige Anführer sichert seine Herrschaft durch Schutz, Vorräte und persönliche
+    Bindungen. Den Verkauf von Gefangenen betrachtet er als nützliches Geschäft. Einen glatt geschliffenen
+    Glücksstein trägt er in einem Beutel unter seiner Rüstung.
+  traits: []
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Garghuk führt drei Angriffe mit {{item:Kettenzahn}} aus. Er kann einen davon durch {{item:Die Kette
+        werfen}} ersetzen.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Kettenzahn
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties:
+        - hvy
+        - two
+      damage:
+        number: 2
+        denom: 12
+        type: slashing
+      text: >-
+        Eine schwere Klinge an einem kurzen Schaft. Um Garghuks freien Unterarm liegt eine griffbereite
+        Wurfkette.
+      img: icons/weapons/axes/axe-double-engraved-runes.webp
+    - name: Die Kette werfen
+      kind: ability
+      save:
+        ability: dex
+        dc: 16
+        onSave: none
+      range: 20
+      text: >-
+        Ein sichtbares Ziel innerhalb von 20 ft. legt einen Geschicklichkeitsrettungswurf SG 16 ab. Bei
+        Misslingen zieht Garghuk es bis zu 15 ft. zu sich, sofern es höchstens Groß ist.
+      img: icons/weapons/misc/whip-red-yellow.webp
+    - name: Geordneter Angriff
+      kind: ability
+      activation: bonus
+      uses:
+        max: 2
+        per: lr
+      text: >-
+        Ein williger Verbündeter innerhalb von 30 ft., der Garghuk hört, kann seine Reaktion für einen
+        Waffenangriff verwenden.
+  equipment:
+    - stein-des-gluecks
+- key: targ
+  name: Targ, Auge des Gruumsh
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Individuell
+  cr: 5
+  ac: 16
+  hp:
+    value: 97
+    formula: 13d8 + 39
+  speed:
+    walk: 30
+  abilities:
+    str: 16
+    dex: 12
+    con: 16
+    int: 11
+    wis: 18
+    cha: 14
+  saves:
+    - con
+    - wis
+    - cha
+  skills:
+    rel: 2
+    itm: 1
+    ins: 2
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - orc
+    - abyssal
+  actorLink: true
+  img: icons/creatures/eyes/humanoid-single-blue.webp
+  description: >-
+    Gruumsh-Priester und politischer Gegenspieler friedlicherer Clanmitglieder. Ein reisender Glaubensgenosse
+    prägte sein bewunderndes Bild Valerias’; Targ möchte den Kontakt nach Highport vertiefen.
+  traits:
+    - name: Das leere Auge
+      text: >-
+        Targ kann nicht überrascht werden und hat Vorteil auf Rettungswürfe gegen Illusionen sowie gegen
+        Effekte, die seine Gedanken lesen oder ihn blenden würden.
+      img: icons/magic/perception/eye-ringed-glow-angry-red.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Targ führt zwei Angriffe mit {{item:Ritualspeer}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Ritualspeer
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: spear
+      properties:
+        - thr
+        - mgc
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      img: icons/weapons/polearms/spear-flared-blue.webp
+      extraDamage:
+        - number: 2
+          denom: 6
+          type: necrotic
+    - name: Gruumshs Speer
+      kind: ability
+      uses:
+        max: 1
+        per: lr
+      save:
+        ability: dex
+        dc: 15
+        onSave: half
+        damage:
+          - number: 6
+            denom: 8
+            type: necrotic
+      range: 60
+      text: >-
+        Einmal pro langer Rast: 60 ft. lange und 5 ft. breite Linie, Geschicklichkeitsrettungswurf SG 15. 6W8
+        nekrotischer Schaden, bei Erfolg halbiert.
+      img: icons/magic/fire/beam-jet-stream-embers.webp
+      target:
+        template:
+          type: line
+          size: '60'
+          width: '5'
+          units: ft
+        affects:
+          type: creature
+    - name: Das Zeichen setzen
+      kind: ability
+      activation: bonus
+      uses:
+        max: 2
+        per: lr
+      text: >-
+        Ein sichtbarer Verbündeter innerhalb von 30 ft. erhält bis zum Ende von Targs nächstem Zug Vorteil auf
+        seinen nächsten Angriff. Bei dessen Treffer verursacht er einmal zusätzlich 1W8 nekrotischen Schaden.
+        Zweimal pro langer Rast.
+      img: icons/magic/symbols/runes-star-blue.webp
+    - name: Thaumaturgie
+      kind: ability
+      spellUuid: Compendium.dnd-players-handbook.spells.Item.phbsplThaumaturg
+      spellLevel: 0
+      text: >-
+        Wirkt @UUID[Compendium.dnd-players-handbook.spells.Item.phbsplThaumaturg]{Thaumaturgie} mit Weisheit;
+        Zauber-SG 15, Zauberangriff +7. Beliebig oft.
+    - name: Segen
+      kind: ability
+      spellUuid: Compendium.dnd-players-handbook.spells.Item.phbsplBless00000
+      spellLevel: 1
+      text: >-
+        Wirkt @UUID[Compendium.dnd-players-handbook.spells.Item.phbsplBless00000]{Segen} mit Weisheit;
+        Zauber-SG 15, Zauberangriff +7. 2 Anwendungen pro langer Rast.
+      uses:
+        max: 2
+        per: lr
+    - name: Bannmagie
+      kind: ability
+      spellUuid: Compendium.dnd-players-handbook.spells.Item.phbsplDispelMagi
+      spellLevel: 3
+      text: >-
+        Wirkt @UUID[Compendium.dnd-players-handbook.spells.Item.phbsplDispelMagi]{Bannmagie} mit Weisheit;
+        Zauber-SG 15, Zauberangriff +7. 1 Anwendungen pro langer Rast.
+      uses:
+        max: 1
+        per: lr
+- key: bugbear-schleicher
+  name: Bugbear-Schleicher
+  size: med
+  type: fey
+  subtype: Goblinoid
+  alignment: Individuell
+  cr: 3
+  ac: 15
+  hp:
+    value: 65
+    formula: 10d8 + 20
+  speed:
+    walk: 30
+  abilities:
+    str: 17
+    dex: 14
+    con: 14
+    int: 11
+    wis: 12
+    cha: 9
+  saves:
+    - dex
+  skills:
+    ste: 2
+    sur: 1
+    prc: 1
+  senses:
+    darkvision: 60
+  languages:
+    - common
+    - goblin
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(1).webp
+  description: >-
+    Diese langgliedrigen Kundschafter kennen die Waldpfade und Höhlenschatten um Blackthorn. Bei Raubzügen
+    sichern sie Flanken und Rückwege; in der Siedlung leben ihre Familien.
+  traits:
+    - name: Überfall aus dem Dunkeln
+      text: >-
+        Trifft der Schleicher eine Kreatur, die ihn nicht sehen konnte, verursacht der Angriff zusätzlich 2W6
+        Schaden.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+    - name: Lange Glieder
+      text: Die Nahkampfangriffe des Schleichers reichen 5 ft. weiter als gewöhnlich.
+      img: icons/creatures/claws/claw-curved-jagged-gray.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Schleicher führt zwei Angriffe mit {{item:Morgenstern}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Morgenstern
+      kind: melee
+      ability: str
+      reach: 10
+      baseItem: morningstar
+      damage:
+        number: 2
+        denom: 8
+        type: piercing
+      img: icons/weapons/maces/mace-cube-spiked-steel.webp
+    - name: Wurfspeer
+      kind: ranged
+      ability: str
+      range: 30
+      long: 120
+      properties:
+        - thr
+      damage:
+        number: 2
+        denom: 6
+        type: piercing
+      img: icons/weapons/polearms/javelin.webp
+      baseItem: javelin
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmBugbearStalker
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(1).webp
+  tokenVariants:
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(10).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(11).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(12).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(13).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(14).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(15).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Bugbear/Bugbear%20(16).webp
+- key: hobgoblin-drillmeister
+  name: Hobgoblin-Drillmeister
+  size: med
+  type: fey
+  subtype: Goblinoid
+  alignment: Individuell
+  cr: 3
+  ac: 17
+  hp:
+    value: 58
+    formula: 9d8 + 18
+  speed:
+    walk: 30
+  abilities:
+    str: 15
+    dex: 14
+    con: 14
+    int: 13
+    wis: 12
+    cha: 12
+  saves:
+    - con
+    - wis
+  skills:
+    itm: 1
+    prc: 1
+  senses:
+    darkvision: 60
+  languages:
+    - common
+    - goblin
+    - orc
+  img: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(1).webp
+  description: >-
+    Ein erfahrener Ausbilder, der gemischte Wachtrupps zu geschlossenen Formationen zusammenführt. Seine
+    engsten Bindungen gelten den goblinoiden Familien von Blackthorn.
+  traits:
+    - name: Schlachtreihe
+      text: >-
+        Der Drillmeister hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens zwei
+        handlungsfähige Verbündete im Umkreis von 5 ft. dieser Kreatur befinden.
+      img: icons/skills/melee/shield-block-gray-yellow.webp
+    - name: Formation halten
+      text: >-
+        Verbündete im Umkreis von 15 ft. des Drillmeisters erhalten +1 auf die Rüstungsklasse, solange der
+        Drillmeister bei Bewusstsein ist. Fällt er, geht der Bonus verloren — und die gemischte Linie beginnt
+        binnen einer Runde auseinanderzufallen.
+      img: icons/equipment/shield/heater-steel-worn.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Drillmeister führt zwei Angriffe mit {{item:Langschwert}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties:
+        - ver
+      damage:
+        number: 2
+        denom: 8
+        type: slashing
+      img: icons/weapons/swords/sword-guard-steel-green.webp
+    - name: Schwere Armbrust
+      kind: ranged
+      ability: dex
+      range: 100
+      long: 400
+      properties:
+        - amm
+        - hvy
+        - lod
+        - two
+      damage:
+        number: 2
+        denom: 10
+        type: piercing
+      img: icons/weapons/crossbows/crossbow-heavy.webp
+      baseItem: heavycrossbow
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmHobgoblinCapta
+  tokenImg: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(1).webp
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(2).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(3).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampMelee%20(4).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampRanged%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampRanged%20(2).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinArmycampRanged%20(3).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Hobgoblin/HobgoblinDesertMelee%20(1).webp
+- key: duergar
+  name: Duergar
+  size: med
+  type: humanoid
+  subtype: dwarf
+  alignment: Individuell
+  cr: 1
+  ac: 16
+  hp:
+    value: 26
+    formula: 4d8 + 8
+  speed:
+    walk: 30
+  abilities:
+    str: 14
+    dex: 11
+    con: 14
+    int: 11
+    wis: 10
+    cha: 9
+  saves:
+    - con
+  skills:
+    prc: 1
+  senses:
+    darkvision: 120
+  languages:
+    - dwarvish
+    - undercommon
+  img: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(1).webp
+  description: >-
+    Grauzwergischer Wachmann an den Handelswegen unter Blackthorn. Er schützt Waren, Vertragspartner und den
+    eigenen Rückzug; Vergrößerung und Unsichtbarkeit helfen ihm, Engstellen zu behaupten.
+  traits:
+    - name: Zwergenzähigkeit
+      text: Vorteil auf Rettungswürfe gegen den Zustand Vergiftet.
+  actions:
+    - name: Kriegspicke
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: warpick
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      text: Ist der Duergar vergrößert, verursacht der Angriff zusätzlich 1W6 Wuchtschaden.
+      img: icons/weapons/polearms/pike-flared-brown.webp
+    - name: Armbrust, leicht
+      kind: ranged
+      ability: dex
+      range: 80
+      long: 320
+      properties:
+        - amm
+        - lod
+        - two
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      img: icons/weapons/crossbows/crossbow-simple-brown.webp
+      baseItem: lightcrossbow
+    - name: Vergrößern
+      kind: ability
+      activation: bonus
+      uses:
+        max: 1
+        per: lr
+      text: >-
+        Als Bonusaktion wird der Duergar für 1 Minute Groß. Er hat Vorteil auf Stärkewürfe und
+        Stärkerettungswürfe; seine Waffenangriffe verursachen zusätzlich 1W6 Wuchtschaden. Bei
+        Bewusstlosigkeit endet die Wirkung. Einmal pro langer Rast.
+      img: icons/magic/control/energy-stream-link-large-blue.webp
+      activeEffects:
+        - name: Vergrößert
+          seconds: 60
+          changes:
+            - key: system.traits.size
+              value: lg
+              type: override
+            - key: system.abilities.str.check.roll.mode
+              value: 1
+              type: add
+            - key: system.abilities.str.save.roll.mode
+              value: 1
+              type: add
+            - key: system.bonuses.mwak.damage
+              value: 1d6[bludgeoning]
+              type: add
+            - key: system.bonuses.rwak.damage
+              value: 1d6[bludgeoning]
+              type: add
+    - name: Unsichtbarkeit
+      kind: ability
+      uses:
+        max: 1
+        per: lr
+      text: >-
+        Einmal pro langer Rast als Aktion: bis zu 1 Stunde unsichtbar einschließlich getragener Ausrüstung.
+        Endet bei Angriff, Zauber, erzwungenem Rettungswurf oder Bewusstlosigkeit.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+      activeEffects:
+        - name: Unsichtbar
+          seconds: 3600
+          statuses:
+            - invisible
+  damageResistances:
+    - poison
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(10).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(2).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(3).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(4).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(5).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(6).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(7).webp
+  tokenImg: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(1).webp
+- key: duergar-anfuehrer
+  name: Duergar-Anführer
+  size: med
+  type: humanoid
+  subtype: dwarf
+  alignment: Individuell
+  cr: 2
+  ac: 16
+  hp:
+    value: 45
+    formula: 7d8 + 14
+  speed:
+    walk: 30
+  abilities:
+    str: 16
+    dex: 11
+    con: 15
+    int: 12
+    wis: 12
+    cha: 11
+  saves:
+    - con
+    - wis
+  skills:
+    prc: 1
+    ath: 1
+  senses:
+    darkvision: 120
+  languages:
+    - dwarvish
+    - undercommon
+    - common
+  img: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(8).webp
+  description: >-
+    Ein disziplinierter Anführer der grauzwergischen Eskorte. Er hält seine Leute zusammen, deckt Gildruns
+    Rückzug und wägt den Wert einer Ladung gegen das Leben seiner Mannschaft ab.
+  traits:
+    - name: Zwergenzähigkeit
+      text: Vorteil auf Rettungswürfe gegen den Zustand Vergiftet.
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Anführer führt zwei Angriffe mit {{item:Kriegspicke}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Kriegspicke
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: warpick
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      text: Ist der Anführer vergrößert, verursacht der Angriff zusätzlich 1W6 Wuchtschaden.
+      img: icons/weapons/polearms/spear-flared-steel.webp
+    - name: Vergrößern
+      kind: ability
+      activation: bonus
+      uses:
+        max: 1
+        per: lr
+      text: >-
+        Als Bonusaktion wird der Duergar für 1 Minute Groß. Er hat Vorteil auf Stärkewürfe und
+        Stärkerettungswürfe; seine Waffenangriffe verursachen zusätzlich 1W6 Wuchtschaden. Bei
+        Bewusstlosigkeit endet die Wirkung. Einmal pro langer Rast.
+      img: icons/magic/control/energy-stream-link-large-blue.webp
+      activeEffects:
+        - name: Vergrößert
+          seconds: 60
+          changes:
+            - key: system.traits.size
+              value: lg
+              type: override
+            - key: system.abilities.str.check.roll.mode
+              value: 1
+              type: add
+            - key: system.abilities.str.save.roll.mode
+              value: 1
+              type: add
+            - key: system.bonuses.mwak.damage
+              value: 1d6[bludgeoning]
+              type: add
+            - key: system.bonuses.rwak.damage
+              value: 1d6[bludgeoning]
+              type: add
+    - name: Unsichtbarkeit
+      kind: ability
+      uses:
+        max: 1
+        per: lr
+      text: >-
+        Einmal pro langer Rast als Aktion: bis zu 1 Stunde unsichtbar einschließlich getragener Ausrüstung.
+        Endet bei Angriff, Zauber, erzwungenem Rettungswurf oder Bewusstlosigkeit.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+      activeEffects:
+        - name: Unsichtbar
+          seconds: 3600
+          statuses:
+            - invisible
+  damageResistances:
+    - poison
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(8).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(9).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(10).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(11).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(12).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(13).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarMale%20(14).webp
+  tokenImg: >-
+    https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Duergar/DuergarFemale%20(8).webp
+- key: steeder
+  name: Steeder
+  size: lg
+  type: monstrosity
+  alignment: Ohne Gesinnung
+  cr: 2
+  ac: 14
+  hp:
+    value: 44
+    formula: 8d10
+  speed:
+    walk: 30
+    climb: 30
+  abilities:
+    str: 15
+    dex: 16
+    con: 10
+    int: 2
+    wis: 10
+    cha: 3
+  skills:
+    ste: 2
+    prc: 1
+  senses:
+    darkvision: 120
+  languages: []
+  img: icons/creatures/invertebrates/spider-web-black.webp
+  description: >-
+    Ein kräftiger, spinnenartiger Höhlenläufer mit federnden Beinen und ledernen Lastgurten. Er bewegt sich an
+    Wänden und Decken und überspringt Felsspalten mit abrupten, flohartigen Sätzen.
+  traits:
+    - name: Spinnenklettern
+      text: Der Steeder kann schwierige Oberflächen und Decken erklimmen, ohne einen Attributswurf abzulegen.
+      img: icons/creatures/invertebrates/spider-web-red.webp
+    - name: Standfest
+      text: >-
+        Der Steeder hat Vorteil auf Rettungswürfe gegen den Zustand <em>Liegend</em> und gegen Effekte, die
+        ihn zu Fall bringen oder wegschieben würden.
+      img: icons/magic/earth/strike-body-stone-crumble.webp
+  actions:
+    - name: Biss
+      kind: melee
+      ability: dex
+      reach: 5
+      damage:
+        number: 1
+        denom: 10
+        type: piercing
+      img: icons/creatures/invertebrates/spider-mandibles-brown.webp
+      extraDamage:
+        - number: 2
+          denom: 6
+          type: poison
+    - name: Weiter Sprung
+      kind: ability
+      activation: bonus
+      text: >-
+        Als Bonusaktion verbraucht der Steeder 10 ft. Bewegung und springt bis zu 60 ft. weit oder 30 ft.
+        hoch. Er kann aus dem Stand abspringen. Der Sprung löst Gelegenheitsangriffe nach den üblichen Regeln
+        aus.
+- key: rothe
+  name: Rothé
+  size: med
+  type: beast
+  alignment: Ohne Gesinnung
+  cr: 0.25
+  ac: 12
+  hp:
+    value: 15
+    formula: 2d8 + 6
+  speed:
+    walk: 30
+  abilities:
+    str: 15
+    dex: 10
+    con: 16
+    int: 2
+    wis: 10
+    cha: 4
+  senses:
+    darkvision: 60
+  languages: []
+  img: icons/creatures/abilities/bull-head-horns-glowing.webp
+  description: >-
+    Zottiges Höhlenvieh mit kräftigen Hörnern. Blackthorns Hirten halten die Tiere wegen Fleisch, Häuten und
+    Dung. Bei Gefahr drängt sich die Herde zusammen und sucht einen freien Fluchtweg.
+  traits:
+    - name: Sturmangriff
+      text: >-
+        Bewegt sich das Rothé mindestens 20 ft. geradlinig auf ein Ziel zu und trifft es im selben Zug mit
+        {{item:Stoßen}}, verursacht der Angriff 1W6 zusätzlichen Wuchtschaden, und das Ziel muss einen
+        SG-12-Stärkerettungswurf bestehen oder erhält den Zustand <em>Liegend</em>.
+      img: icons/creatures/abilities/bull-head-horns-glowing.webp
+  actions:
+    - name: Stoßen
+      kind: melee
+      ability: str
+      reach: 5
+      damage:
+        number: 1
+        denom: 8
+        type: bludgeoning
+      img: icons/creatures/abilities/bull-head-horns-glowing.webp
+- key: gnoll-krieger
+  name: Gnoll-Krieger
+  size: med
+  type: fiend
+  alignment: Individuell
+  cr: 0.5
+  ac: 15
+  hp:
+    value: 27
+    formula: 6d8
+  speed:
+    walk: 30
+  abilities:
+    str: 14
+    dex: 12
+    con: 11
+    int: 6
+    wis: 10
+    cha: 7
+  senses:
+    darkvision: 60
+  languages:
+    - gnoll
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+  description: >-
+    Ein Jäger aus Rukhas Rudel. Er sucht leichte Beute, schützt seine Jagdgefährten und erwartet seinen Anteil
+    an Nahrung und Ausrüstung.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Der Gnoll hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens ein handlungsfähiger
+        Verbündeter des Gnolls im Umkreis von 5 ft. der Kreatur befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+    - name: Blutrausch
+      text: >-
+        Reduziert der Gnoll mit einem Nahkampfangriff eine Kreatur auf 0 Trefferpunkte, kann er sich als
+        Bonusaktion bis zu seiner halben Bewegungsrate bewegen und einen weiteren Angriff mit {{item:Reißen}}
+        ausführen.
+      img: icons/magic/death/hand-dirt-undead-zombie.webp
+  actions:
+    - name: Reißen
+      kind: melee
+      ability: str
+      reach: 5
+      damage:
+        number: 1
+        denom: 6
+        type: piercing
+      img: icons/creatures/claws/claw-curved-jagged-gray.webp
+    - name: Knochenbogen
+      kind: ranged
+      ability: dex
+      range: 150
+      long: 600
+      properties:
+        - amm
+        - two
+      damage:
+        number: 1
+        denom: 10
+        type: piercing
+      img: icons/weapons/bows/shortbow-recurve-bone.webp
+      baseItem: longbow
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmGnollWarrior00
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+  tokenVariants:
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(2).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(3).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(4).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(5).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(6).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollSpear%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollSpear%20(10).webp
+- key: gnoll-rudelfuehrer
+  name: Gnoll-Rudelführer
+  size: med
+  type: fiend
+  alignment: Individuell
+  cr: 2
+  ac: 16
+  hp:
+    value: 45
+    formula: 7d8 + 14
+  speed:
+    walk: 30
+  abilities:
+    str: 15
+    dex: 14
+    con: 14
+    int: 10
+    wis: 11
+    cha: 12
+  saves:
+    - dex
+  skills:
+    prc: 1
+    ste: 1
+  senses:
+    darkvision: 60
+  languages:
+    - gnoll
+    - common
+    - orc
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+  description: >-
+    Ein erfahrener Rudelführer, der Jagden verteilt und Kämpfer auf angeschlagene Ziele hetzt. Er hält seine
+    Stellung durch Beute und den Schutz seiner Angehörigen.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Der Rudelführer hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens ein
+        handlungsfähiger Verbündeter im Umkreis von 5 ft. der Kreatur befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Der Rudelführer führt zwei Angriffe aus, in beliebiger Kombination aus {{item:Langschwert}} und
+        {{item:Langbogen}}.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties:
+        - ver
+      damage:
+        number: 1
+        denom: 8
+        type: slashing
+      img: icons/weapons/swords/sword-guard-blue.webp
+    - name: Langbogen
+      kind: ranged
+      ability: dex
+      range: 150
+      long: 600
+      properties:
+        - amm
+        - hvy
+        - two
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      img: icons/weapons/bows/longbow-recurve-leather-red.webp
+      baseItem: longbow
+    - name: Rudel hetzen
+      kind: ability
+      activation: bonus
+      text: >-
+        Ein Gnoll innerhalb von 30 ft., der den Befehl hört, darf seine Reaktion für einen Nahkampfangriff
+        verwenden.
+      img: icons/skills/social/intimidation-impressing.webp
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmGnollPackLord0
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+  tokenVariants:
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(2).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(3).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(4).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(5).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollBow%20(6).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollSpear%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Gnoll/GnollSpear%20(10).webp
+- key: oger-krieger
+  name: Oger-Krieger
+  size: lg
+  type: giant
+  alignment: Individuell
+  cr: 2
+  ac: 11
+  hp:
+    value: 68
+    formula: 8d10 + 24
+  speed:
+    walk: 40
+  abilities:
+    str: 19
+    dex: 8
+    con: 16
+    int: 5
+    wis: 7
+    cha: 7
+  senses:
+    darkvision: 60
+  languages:
+    - common
+    - giant
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(1).webp
+  description: >-
+    Ein kräftiger Oger aus der gefangenen Gemeinschaft in der Grabung. Schwere Werkzeuge werden in seinen
+    Händen zu Waffen. Familie, Furcht und alte Feindschaften bestimmen, wem er hilft.
+  traits: []
+  actions:
+    - name: Riesenkeule
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greatclub
+      properties:
+        - two
+      damage:
+        number: 2
+        denom: 8
+        type: bludgeoning
+      img: icons/weapons/clubs/club-heavy-barbed-grey.webp
+    - name: Wurfspeer
+      kind: ranged
+      ability: str
+      range: 30
+      long: 120
+      properties:
+        - thr
+      damage:
+        number: 2
+        denom: 6
+        type: piercing
+      img: icons/weapons/polearms/javelin.webp
+      baseItem: javelin
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmOgre0000000000
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(1).webp
+  tokenVariants:
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(1).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(10).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(11).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(12).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(13).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(14).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(15).webp
+    - https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Ogre/Ogre%20(16).webp
+- key: ork-krieger
+  name: Ork-Krieger
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Individuell
+  cr: 0.5
+  ac: 15
+  hp:
+    value: 15
+    formula: 2d8 + 6
+  speed:
+    walk: 30
+  abilities:
+    str: 16
+    dex: 12
+    con: 16
+    int: 9
+    wis: 11
+    cha: 10
+  skills:
+    ste: 1
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - orc
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+  description: >-
+    Ein bewaffneter Angehöriger von Garghuks Clan. Wachdienst und Raubzüge wechseln mit Handwerk, Versorgung
+    und Familienpflichten.
+  traits: []
+  actions:
+    - name: Hiebaxt
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties:
+        - hvy
+        - two
+      damage:
+        number: 1
+        denom: 12
+        type: slashing
+      img: icons/weapons/axes/axe-double-brown.webp
+    - name: Speer
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: spear
+      properties:
+        - thr
+      damage:
+        number: 1
+        denom: 6
+        type: piercing
+      text: Reichweite 5 ft. oder Wurf 20/60 ft.
+      img: icons/weapons/polearms/spear-flared-worn-grey.webp
+    - name: Adrenalinschub
+      text: 'Bonusaktion: Sprinten; erhält 3 temporäre TP. Zweimal pro langer Rast.'
+      img: icons/magic/control/buff-strength-muscle-damage-red.webp
+      kind: ability
+      activation: bonus
+      uses:
+        max: 2
+        per: lr
+      heal:
+        number: null
+        denom: null
+        bonus: 3
+        type: temphp
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(10).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(11).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(12).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(2).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(3).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(4).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(5).webp
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+- key: ork-veteran
+  name: Ork-Veteran
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Individuell
+  cr: 2
+  ac: 16
+  hp:
+    value: 45
+    formula: 6d8 + 18
+  speed:
+    walk: 30
+  abilities:
+    str: 18
+    dex: 12
+    con: 16
+    int: 10
+    wis: 12
+    cha: 12
+  saves:
+    - str
+    - con
+  skills:
+    ste: 1
+    itm: 1
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - orc
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(6).webp
+  description: >-
+    Ein kampferfahrener Ork, der einen Wachposten oder Arbeitstrupp führt. Viele Veteranen haben den Aufstand
+    erlebt und betrachten Blackthorns Sicherheit als ihren persönlichen Auftrag.
+  traits: []
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Ork-Veteran führt zwei Angriffe mit {{item:Hiebaxt}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Hiebaxt
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greataxe
+      properties:
+        - hvy
+        - two
+      damage:
+        number: 1
+        denom: 12
+        type: slashing
+      img: icons/weapons/axes/axe-double-brown.webp
+    - name: Schlachtruf
+      kind: ability
+      activation: bonus
+      uses:
+        max: 1
+        per: day
+      text: >-
+        Jeder Verbündete innerhalb von 30 ft., der den Ork sehen oder hören kann, erhält bis zum Ende des
+        nächsten Zuges des Orks Vorteil auf seinen nächsten Angriffswurf.
+      img: icons/skills/social/intimidation-impressing.webp
+    - name: Adrenalinschub
+      text: 'Bonusaktion: Sprinten; erhält 3 temporäre TP. Zweimal pro langer Rast.'
+      img: icons/magic/control/buff-strength-muscle-damage-red.webp
+      kind: ability
+      activation: bonus
+      uses:
+        max: 2
+        per: lr
+      heal:
+        number: null
+        denom: null
+        bonus: 3
+        type: temphp
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(6).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(7).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(8).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(9).webp
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(6).webp
+- key: ork-sippe
+  name: Ork der Sippe
+  size: med
+  type: humanoid
+  subtype: orc
+  alignment: Individuell
+  cr: 0.125
+  ac: 12
+  hp:
+    value: 9
+    formula: 2d8
+  speed:
+    walk: 30
+  abilities:
+    str: 13
+    dex: 11
+    con: 11
+    int: 10
+    wis: 11
+    cha: 10
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - orc
+  img: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+  description: >-
+    Ein Bewohner der Wohnhöfe: Handwerker, Hirte oder Angehöriger einer Familie. Bei Gefahr sucht er Schutz
+    und hilft Nachbarn, Kinder und Vorräte in Sicherheit zu bringen.
+  traits:
+    - name: Flucht statt Kampf
+      text: >-
+        Wird ein Ork der Sippe verwundet oder sieht er einen Verbündeten fallen, nutzt er seine Aktion, um
+        sich zurückzuziehen und Alarm zu schlagen, statt anzugreifen — es sei denn, ihm ist der Fluchtweg
+        abgeschnitten oder er verteidigt ein Kind.
+      img: icons/skills/movement/feet-winged-boots-brown.webp
+  actions:
+    - name: Steinhammer
+      kind: melee
+      ability: str
+      reach: 5
+      properties: []
+      damage:
+        number: 1
+        denom: 6
+        type: bludgeoning
+      img: icons/weapons/hammers/hammer-double-steel.webp
+  tokenVariants:
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(10).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(11).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(12).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(2).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(3).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(4).webp
+    - >-
+      https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(5).webp
+  tokenImg: https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/Orc/OrcUnderdarkAxe%20(1).webp
+- key: gildrun
+  name: Gildrun, Lilakittel-Makler
+  size: med
+  type: humanoid
+  subtype: dwarf
+  alignment: Individuell
+  cr: 3
+  ac: 15
+  hp:
+    value: 65
+    formula: 10d8 + 20
+  speed:
+    walk: 30
+  abilities:
+    str: 12
+    dex: 16
+    con: 14
+    int: 16
+    wis: 13
+    cha: 15
+  saves:
+    - con
+    - wis
+  skills:
+    dec: 2
+    per: 2
+    ins: 1
+  senses:
+    darkvision: 120
+  languages:
+    - common
+    - dwarvish
+    - undercommon
+  img: icons/creatures/magical/humanoid-horned-rider.webp
+  description: >-
+    Duergar-Händler, der Versorgungsabhängigkeit zu Gewinn macht. Er flieht mit Belegen, solange der Weg offen
+    ist; bei Gefangennahme bleibt er verhandelbar. HG 3 ist eine Abenteuer-Einstufung.
+  traits:
+    - name: Zwergenzähigkeit
+      text: Vorteil auf Rettungswürfe gegen den Zustand Vergiftet.
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Gildrun führt zwei Angriffe mit {{item:Leichte Armbrust}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Unsichtbarkeit
+      kind: ability
+      uses:
+        max: 1
+        per: lr
+      text: >-
+        Einmal pro langer Rast als Aktion: bis zu 1 Stunde unsichtbar einschließlich getragener Ausrüstung.
+        Endet bei Angriff, Zauber, erzwungenem Rettungswurf oder Bewusstlosigkeit.
+      img: icons/magic/perception/silhouette-stealth-shadow.webp
+      activeEffects:
+        - name: Unsichtbar
+          seconds: 3600
+          statuses:
+            - invisible
+    - name: Leichte Armbrust
+      kind: ranged
+      ability: dex
+      range: 80
+      long: 320
+      baseItem: lightcrossbow
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+    - name: Ausweichen
+      kind: ability
+      activation: bonus
+      text: >-
+        Gildrun führt die Aktion Rückzug aus. Er bewegt sich anschließend nur mit seiner verbleibenden
+        Bewegungsrate.
+  damageResistances:
+    - poison
+- key: hurrek
+  name: Hurrek, Versorgungsverwalter
+  size: med
+  type: fey
+  subtype: Goblinoid
+  alignment: Individuell
+  cr: 3
+  ac: 17
+  hp:
+    value: 58
+    formula: 9d8 + 18
+  speed:
+    walk: 30
+  abilities:
+    str: 15
+    dex: 14
+    con: 14
+    int: 13
+    wis: 12
+    cha: 12
+  saves:
+    - con
+    - wis
+  skills:
+    itm: 1
+    prc: 1
+  senses:
+    darkvision: 60
+  languages:
+    - common
+    - goblin
+    - orc
+  img: null
+  description: >-
+    Ehemaliger Händler, Gwens Vaterfigur und heutiger Ausbilder. Will bezifferte, begrenzte Dienste für seine
+    Familien. Schutz und Versorgung gehen ihm vor Rache.
+  traits:
+    - name: Schlachtreihe
+      text: >-
+        Der Drillmeister hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens zwei
+        handlungsfähige Verbündete im Umkreis von 5 ft. dieser Kreatur befinden.
+      img: icons/skills/melee/shield-block-gray-yellow.webp
+    - name: Formation halten
+      text: >-
+        Verbündete im Umkreis von 15 ft. des Drillmeisters erhalten +1 auf die Rüstungsklasse, solange der
+        Drillmeister bei Bewusstsein ist. Fällt er, geht der Bonus verloren — und die gemischte Linie beginnt
+        binnen einer Runde auseinanderzufallen.
+      img: icons/equipment/shield/heater-steel-worn.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: Der Drillmeister führt zwei Angriffe mit {{item:Langschwert}} aus.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties:
+        - ver
+      damage:
+        number: 2
+        denom: 8
+        type: slashing
+      img: icons/weapons/swords/sword-guard-steel-green.webp
+    - name: Schwere Armbrust
+      kind: ranged
+      ability: dex
+      range: 100
+      long: 400
+      properties:
+        - amm
+        - hvy
+        - lod
+        - two
+      damage:
+        number: 2
+        denom: 10
+        type: piercing
+      img: icons/weapons/crossbows/crossbow-heavy.webp
+      baseItem: heavycrossbow
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmHobgoblinCapta
+  tokenImg: modules/dnd-monster-manual/assets/tokens/hobgoblin-captain.webp
+- key: brakka
+  name: Brakka
+  size: lg
+  type: giant
+  alignment: Individuell
+  cr: 2
+  ac: 11
+  hp:
+    value: 68
+    formula: 8d10 + 24
+  speed:
+    walk: 40
+  abilities:
+    str: 19
+    dex: 8
+    con: 16
+    int: 5
+    wis: 7
+    cha: 7
+  senses:
+    darkvision: 60
+  languages:
+    - common
+    - giant
+  img: null
+  description: >-
+    Ehemalige Nutznießerin der Ogerherrschaft, heute unfrei. Will ihre Angehörigen gemeinsam herausbringen und
+    zunächst die Jungen sichern.
+  traits: []
+  actions:
+    - name: Riesenkeule
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: greatclub
+      properties:
+        - two
+      damage:
+        number: 2
+        denom: 8
+        type: bludgeoning
+      img: icons/weapons/clubs/club-heavy-barbed-grey.webp
+    - name: Wurfspeer
+      kind: ranged
+      ability: str
+      range: 30
+      long: 120
+      properties:
+        - thr
+      damage:
+        number: 2
+        denom: 6
+        type: piercing
+      img: icons/weapons/polearms/javelin.webp
+      baseItem: javelin
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmOgre0000000000
+  tokenImg: modules/dnd-monster-manual/assets/tokens/ogre.webp
+- key: rukha
+  name: Rukha, Rudelführerin
+  size: med
+  type: fiend
+  alignment: Individuell
+  cr: 2
+  ac: 16
+  hp:
+    value: 45
+    formula: 7d8 + 14
+  speed:
+    walk: 30
+  abilities:
+    str: 15
+    dex: 14
+    con: 14
+    int: 10
+    wis: 11
+    cha: 12
+  saves:
+    - dex
+  skills:
+    prc: 1
+    ste: 1
+  senses:
+    darkvision: 60
+  languages:
+    - gnoll
+    - common
+    - orc
+  img: null
+  description: >-
+    Verlangt verlässliche Fleisch- und Beuteanteile. Akzeptiert konkrete begrenzte Abmachungen und schützt die
+    abhängigen Angehörigen ihres Rudels.
+  traits:
+    - name: Rudeltaktik
+      text: >-
+        Der Rudelführer hat Vorteil auf Angriffswürfe gegen eine Kreatur, wenn sich mindestens ein
+        handlungsfähiger Verbündeter im Umkreis von 5 ft. der Kreatur befindet.
+      img: icons/creatures/abilities/paw-print-pair-purple.webp
+  actions:
+    - name: Mehrfachangriff
+      kind: ability
+      text: >-
+        Der Rudelführer führt zwei Angriffe aus, in beliebiger Kombination aus {{item:Langschwert}} und
+        {{item:Langbogen}}.
+      img: icons/skills/melee/blade-tips-triple-bent-white.webp
+    - name: Langschwert
+      kind: melee
+      ability: str
+      reach: 5
+      baseItem: longsword
+      properties:
+        - ver
+      damage:
+        number: 1
+        denom: 8
+        type: slashing
+      img: icons/weapons/swords/sword-guard-blue.webp
+    - name: Langbogen
+      kind: ranged
+      ability: dex
+      range: 150
+      long: 600
+      properties:
+        - amm
+        - hvy
+        - two
+      damage:
+        number: 1
+        denom: 8
+        type: piercing
+      img: icons/weapons/bows/longbow-recurve-leather-red.webp
+      baseItem: longbow
+    - name: Rudel hetzen
+      kind: ability
+      activation: bonus
+      text: >-
+        Ein Gnoll innerhalb von 30 ft., der den Befehl hört, darf seine Reaktion für einen Nahkampfangriff
+        verwenden.
+      img: icons/skills/social/intimidation-impressing.webp
+  sourceUuid: Compendium.dnd-monster-manual.actors.Actor.mmGnollPackLord0
+  tokenImg: modules/dnd-monster-manual/assets/tokens/gnoll-pack-lord.webp

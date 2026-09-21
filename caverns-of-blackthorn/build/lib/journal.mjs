@@ -34,11 +34,10 @@ function budgetFor(level, size) {
 
 /** Where an XP total falls relative to the party's budget. */
 function rate(xp, budget) {
-  if (xp < budget.low) return { label: "unterhalb Niedrig", cls: "trivial" };
-  if (xp < budget.moderate) return { label: "Niedrig", cls: "low" };
-  if (xp < budget.high) return { label: "Mittel", cls: "moderate" };
-  if (xp <= budget.high * 2) return { label: "Hoch", cls: "high" };
-  return { label: "tödlich — nicht als Kampf gedacht", cls: "deadly" };
+  if (xp <= budget.low) return { label: "im niedrigen Budget", cls: "low" };
+  if (xp <= budget.moderate) return { label: "im mittleren Budget", cls: "moderate" };
+  if (xp <= budget.high) return { label: "im hohen Budget", cls: "high" };
+  return { label: "über dem hohen Budget – besondere Gefahr", cls: "over" };
 }
 
 function fmt(n) {
@@ -89,22 +88,24 @@ function renderEncounter(enc, { bestiary, party }) {
   <table>
     <thead><tr><th>Anz.</th><th>Kreatur</th><th>HG</th><th>XP</th><th>Summe</th></tr></thead>
     <tbody>${rows.join("")}</tbody>
-    <tfoot><tr><th colspan="4" style="text-align:right">Gesamt</th><th style="text-align:right">${fmt(total)} XP</th></tr></tfoot>
+    <tfoot><tr><th colspan="4" style="text-align:right">Gesamt</th><th style="text-align:right">${fmt(total)} XP (${fmt(total / party.size)} je SC)</th></tr></tfoot>
   </table>
   <p class="cob-verdict"><strong>Für ${party.size}&times; Stufe ${party.level}:</strong> ${verdict.label}
   <span class="cob-budget">(Budget: niedrig ${fmt(budget.low)} · mittel ${fmt(budget.moderate)} · hoch ${fmt(budget.high)} XP)</span></p>
-</section>`.trim();
+</section>${enc.scaling ? renderScaling(enc.scaling, { bestiary, party }) : ""}`.trim();
 }
 
 /** Renders the scaling block: same encounter, three party strengths. */
-function renderScaling(scaling, { bestiary }) {
+function renderScaling(scaling, { bestiary, party }) {
   const cols = scaling.steps.map(step => {
+    let xp = 0;
     const parts = step.creatures.map(l => {
       const beast = bestiary.get(l.key);
       if (!beast) throw new Error(`Scaling step references unknown creature "${l.key}"`);
+      xp += l.count * beast.xp;
       return `${l.count}&times; ${beast.name}`;
     });
-    return `<tr><td><strong>${step.for}</strong></td><td>${parts.join(", ")}</td></tr>`;
+    return `<tr><td><strong>${step.for}</strong></td><td>${parts.join(", ")}</td><td>${fmt(xp)} XP · ${fmt(xp / party.size)} pro SC</td><td>${rate(xp, budgetFor(party.level, party.size)).label}</td></tr>`;
   });
   return `
 <section class="cob-scaling">
@@ -146,7 +147,7 @@ export function buildJournal(def, { bestiary }) {
     for (const enc of page.encounters ?? []) {
       content += "\n" + renderEncounter(enc, { bestiary, party });
     }
-    if (page.scaling) content += "\n" + renderScaling(page.scaling, { bestiary });
+    if (page.scaling) content += "\n" + renderScaling(page.scaling, { bestiary, party });
     if (page.after) content += "\n" + resolveLinks(page.after, { bestiary });
 
     return {
@@ -176,4 +177,4 @@ export function buildJournal(def, { bestiary }) {
   };
 }
 
-export { budgetFor, ENCOUNTER_DIFFICULTY };
+export { budgetFor, rate, ENCOUNTER_DIFFICULTY };

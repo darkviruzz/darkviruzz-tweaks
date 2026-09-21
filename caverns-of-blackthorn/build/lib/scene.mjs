@@ -65,8 +65,9 @@ export function buildScene(def, { bestiary, journals }) {
   // One 10 ft map cell -> pixels. The scene grid is half of this, because dnd5e
   // works in 5 ft squares and a Medium token must occupy one of them.
   const cellPx = def.cellPixels;
-  const gridSize = cellPx / 2;
-  const toPx = ([cx, cy]) => [Math.round(cx * cellPx), Math.round(cy * cellPx)];
+  const gridSize = def.gridSize ?? cellPx / 2;
+  const factor = def.coordinateScale ?? cellPx;
+  const toPx = ([cx, cy]) => [Math.round(cx * factor), Math.round(cy * factor)];
 
   // Pins bind to whichever journal actually carries area-tagged pages, not to
   // journals[0] — otherwise adding a second journal entry silently repoints every
@@ -82,17 +83,17 @@ export function buildScene(def, { bestiary, journals }) {
     placements.forEach((cell, i) => {
       const [x, y] = toPx(cell);
       tokens.push({
-        _id: stableId(`token:${def.key}:${group.key}:${i}`),
+        _id: stableId(`token:${def.key}:${group.area ?? "default"}:${group.id ?? group.key}:${i}`),
         name: beast.name,
         actorId: beast.id,
         actorLink: false,
         x,
         y,
-        elevation: 0,
+        elevation: group.heightAboveGround ?? 0,
         width: group.size ?? beast.size ?? 1,
         height: group.size ?? beast.size ?? 1,
-        texture: { src: group.img ?? beast.img ?? "icons/svg/mystery-man.svg", scaleX: 1, scaleY: 1, tint: "#ffffff" },
-        disposition: -1,
+        texture: { src: group.img ?? beast.tokenVariants?.[i % beast.tokenVariants.length] ?? beast.img ?? "icons/svg/mystery-man.svg", scaleX: 1, scaleY: 1, tint: "#ffffff" },
+        disposition: group.disposition ?? 0,
         displayName: 20,
         displayBars: 40,
         bar1: { attribute: "attributes.hp" },
@@ -121,15 +122,15 @@ export function buildScene(def, { bestiary, journals }) {
   const notes = (def.notes ?? []).map(n => {
     const [x, y] = toPx(n.at);
     return {
-      _id: stableId(`note:${def.key}:${n.area}`),
+      _id: stableId(`note:${def.key}:${n.key ?? n.area}`),
       entryId: journal?._id ?? null,
       pageId: pageIdFor(n.area),
       x,
       y,
       texture: { src: n.icon ?? "icons/svg/book.svg", tint: n.tint ?? "#ffcc66" },
-      iconSize: 48,
+      iconSize: 40,
       text: n.label,
-      fontSize: 32,
+      fontSize: 20,
       textAnchor: 1,
       textColor: "#ffffff",
       global: false,
@@ -144,11 +145,11 @@ export function buildScene(def, { bestiary, journals }) {
     navigation: true,
     navName: def.navName ?? def.name,
     background: { src: def.background, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1, tint: null },
-    width: def.widthCells * cellPx,
-    height: def.heightCells * cellPx,
-    padding: 0.05,
+    width: def.width ?? def.widthCells * cellPx,
+    height: def.height ?? def.heightCells * cellPx,
+    padding: 0,
     initial: def.initial
-      ? { x: Math.round(def.initial.at[0] * cellPx), y: Math.round(def.initial.at[1] * cellPx), scale: def.initial.scale ?? 0.3 }
+      ? { x: Math.round(def.initial.at[0] * factor), y: Math.round(def.initial.at[1] * factor), scale: def.initial.scale ?? 0.3 }
       : null,
     backgroundColor: def.backgroundColor ?? "#0a0a0a",
     grid: {
@@ -166,7 +167,7 @@ export function buildScene(def, { bestiary, journals }) {
     environment: {
       darknessLevel: def.darkness ?? 1,
       darknessLock: false,
-      globalLight: { enabled: false, alpha: 0.5, bright: false, color: null, coloration: 1, luminosity: 0.5, saturation: 0, contrast: 0, shadows: 0, darkness: { min: 0, max: 1 } },
+      globalLight: { enabled: (def.darkness ?? 1) === 0, alpha: 0.5, bright: false, color: null, coloration: 1, luminosity: 0.5, saturation: 0, contrast: 0, shadows: 0, darkness: { min: 0, max: 1 } },
       cycle: false,
       base: { hue: 0, intensity: 0, luminosity: 0, saturation: 0, shadows: 0 },
       dark: { hue: 0, intensity: 0, luminosity: -0.25, saturation: 0, shadows: 0 }
@@ -174,7 +175,7 @@ export function buildScene(def, { bestiary, journals }) {
     tokens,
     lights,
     notes,
-    walls: def.walls ?? [],
+    walls: (def.walls ?? []).map((w, i) => ({_id: stableId(`wall:${def.key}:${i}`), ...w, c: [...toPx(w.c.slice(0,2)), ...toPx(w.c.slice(2))]})),
     sounds: [],
     templates: [],
     tiles: [],
