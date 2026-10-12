@@ -294,6 +294,38 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   `getEffectStart()`, which returns a differently-shaped `{combat, initiative, round, turn}`).
   Guard the call with `typeof === "function"` rather than assuming it exists.
 
+### Formula inputs, roll data, autocomplete (Foundry v14 / dnd5e 5.3.3 + 6.0.6, verified)
+
+- **Formula fields are detectable in the DOM.** dnd5e's `FormulaField`
+  (`dnd5e.dataModels.fields.FormulaField`, `module/data/fields/formula-field.mjs`, ~78 uses)
+  renders via `_toInput` as core v14's **`<formula-input>`** (`HTMLFormulaInputElement`) and adds
+  class `formula-input` to its `.form-group`. 5.3.3 does this only when
+  `game.release.generation >= 14`; 6.x always. The `name` sits on the custom element; the inner text
+  field is `formulaInput.input` (presumably unnamed, like `<file-picker>` — not runtime-verified), so
+  `input[name=...]` selectors should not be relied on for formula fields.
+- **Core v14 formula tooling:** `foundry.applications.apps.FormulaEditor` (modal ProseMirror editor,
+  opened by the `<formula-input>` button, `edit` event) autocompletes from a **static** label map:
+  `CONFIG.formulaEditor.contexts[<context>].labels = { "abilities.cha.mod": "Charisma Modifier", ... }`;
+  the element's `context` attribute picks the context. **dnd5e 6.0.6 registers no contexts.**
+  Generic dropdown: `foundry.applications.ux.Autocomplete.implementation` →
+  `new Ac({ onSelect })`, `activate(target, [{identifier, label}], { prefix, position })`,
+  `select(±n)`, `commit()`, `dismiss()`.
+- **Roll data chain:** `activity.getRollData()` = item roll data + `activity`, `consumed`, `mod`;
+  `item.getRollData()` = actor roll data + `item`, `labels`, `scaling`; actor = `{...system}` +
+  `prof` (a `Proficiency` instance — `flat`/`dice`/`term` are **prototype getters**, invisible to
+  `Object.keys`), `flags`, `name`, `statuses`, plus `classes`/`subclasses` (creatures) and `scale`
+  (per-actor, from `ScaleValue` advancements). Items without an actor have no actor paths.
+- **dnd5e 6.x Active Effects:** changes live in `effect.system.changes` and are edited in a separate
+  `EffectChangeConfig` dialog (`templates/effects/change-config.hbs`); the change list in the effect
+  sheet has no inputs. `value` is a plain `<input>` (not `<formula-input>`) but `@` refs in it are
+  resolved against `replacementData` (actor roll data; item roll data for item-targeted changes)
+  via `field._replaceDataRefs`. Some change types restrict keys via
+  `CONFIG.ActiveEffect.changeTypes[type].keyOptions`. AE application is phased (`"initial"`/`"final"`).
+- **Autocomplete Inline Properties (AIP) 3.3.0** claims v14 but its dnd5e config targets
+  `ProficiencyConfig` (gone), `input[name="system.attack.bonus"]` (moved to activities) and
+  `input[...]` selectors, and filters targets to `INPUT`/`TEXTAREA` tags — by its code it cannot attach to
+  `<formula-input>` or dnd5e 6's change dialog (code reading, not runtime-tested).
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings (default) |
