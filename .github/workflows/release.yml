@@ -1,20 +1,17 @@
 name: Release Module
 
-# Push a version tag (e.g. `git tag v1.4.0 && git push origin v1.4.0`) or trigger
-# manually via the Actions UI (provide version + optional release notes).
+# The ONLY way to publish a release (see CLAUDE.md → Release process).
+# module.json is the single source of truth for the version: bump it (and "download"),
+# add a "## [x.y.z]" section to CHANGELOG.md, merge to main, then either
+#   - push the matching tag:  git tag v1.6.0 && git push origin v1.6.0
+#   - or run this workflow manually from the Actions tab (releases module.json's version).
+# The workflow validates, refuses a tag that doesn't match module.json, builds the zip and
+# publishes the CHANGELOG section as the release notes.
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g. 1.4.0)'
-        required: true
-      notes:
-        description: 'Release notes (Markdown). Auto-generated from merged PRs if empty.'
-        required: false
-        default: ''
 
 permissions:
   contents: write
@@ -22,49 +19,57 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Derive version and tag
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Validate module
+        run: node tools/validate.mjs
+
+      - name: Behaviour tests
+        run: node tools/test-features.mjs
+
+      - name: Resolve version from module.json
         id: ver
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Inject version and release URLs into module.json
         env:
-          REPO: ${{ github.repository }}
-          TAG: ${{ steps.ver.outputs.tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="$(jq -r .version module.json)"
+          if [ "$EVENT_NAME" = "push" ] && [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $REF_NAME does not match module.json version $version — bump module.json first."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from CHANGELOG.md
+        env:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          tmp="$(mktemp)"
-          jq \
-            --arg v "$VERSION" \
-            --arg dl "https://github.com/${REPO}/releases/download/${TAG}/module.zip" \
-            --arg mf "https://github.com/${REPO}/releases/latest/download/module.json" \
-            '.version = $v | .download = $dl | .manifest = $mf' \
-            module.json > "$tmp"
-          mv "$tmp" module.json
-          echo "----- module.json -----"
-          cat module.json
+          awk -v head="## [$VERSION]" '
+            index($0, head) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
 
       - name: Build module.zip
         run: zip -r module.zip module.json scripts styles lang README.md LICENSE
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: ${{ steps.ver.outputs.tag }}
-          body: ${{ github.event.inputs.notes }}
-          generate_release_notes: true
+          body_path: notes.md
+          make_latest: true
           files: |
             module.json
             module.zip

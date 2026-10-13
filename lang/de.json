@@ -5,14 +5,42 @@
   "DT.Settings.AbilitySwapScoreAndMod.Hint": "Macht den Wert zur großen, prominenten Zahl und den Modifikator klein. Auf dem Standard-dnd5e-Bogen rutscht der Wert zusätzlich direkt unter den Fähigkeitsnamen. Gilt auch für den Tidy 5e Character Sheet (nicht klassisch).",
   "DT.Settings.AbilityExpandedRollTargets.Name": "Wert / Modifikator zum Würfeln anklicken",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Ermöglicht das Anklicken von Fähigkeitswert oder Modifikator (nicht nur des Namens), um eine Attributsprobe zu würfeln. Gilt nur für den D&D 5e Character Sheet; der Tidy 5e Character Sheet würfelt immer über den großen oberen Knopf.",
+  "DT.AbilityScoreProminence.ModLabel": "Mod",
+  "DT.AbilityScoreProminence.ModifierTooltip": "{ability}-Modifikator",
 
   "DT.Categories.SpellEffectAutoApply.Label": "Zaubereffekte automatisch anwenden (D&D 5e)",
   "DT.Categories.SpellEffectAutoApply.Hint": "Wendet die Effekte selbst gewirkter Zauber automatisch an, sodass niemand mehr im Chat auf \"Anwenden\" klicken muss. Wird vom SL für die ganze Welt eingestellt.",
   "DT.Settings.SpellAutoApplyEnabled.Name": "Effekte selbst gewirkter Zauber automatisch anwenden",
-  "DT.Settings.SpellAutoApplyEnabled.Hint": "Wird ein Zauber von der Whitelist auf den Zauberwirker selbst gewirkt, werden seine Effekte automatisch angewendet, statt darauf zu warten, dass jemand im Chat auf \"Anwenden\" klickt. Gilt nur für Zauber mit Reichweite Selbst oder Berührung, die den Zauberwirker als Ziel haben.",
+  "DT.Settings.SpellAutoApplyEnabled.Hint": "Wird ein Zauber von der Whitelist auf den Zauberwirker selbst gewirkt, werden seine Effekte automatisch angewendet, statt darauf zu warten, dass jemand im Chat auf \"Anwenden\" klickt. Gilt nur für Zauber mit Reichweite Selbst oder Berührung, die den Zauberwirker als Ziel haben und genau einen Effekt anbieten (Zauber mit mehreren Effekt-Varianten wählt weiterhin der Spieler).",
   "DT.Settings.SpellAutoApplyWhitelist.Name": "Whitelist für automatische Zaubereffekte",
   "DT.Settings.SpellAutoApplyWhitelist.Hint": "Kommagetrennte Zaubernamen, die automatisch angewendet werden dürfen, z. B. \"Mage Armor, Shield of Faith\". Die Namen müssen exakt übereinstimmen (Groß-/Kleinschreibung egal).",
   "DT.SpellAutoApply.Banner": "Automatisch auf {name} angewendet",
 
-"DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
+  "DT.Categories.FindMyToken.Label": "Eigenes Token finden",
+  "DT.Categories.FindMyToken.Hint": "Findet dein Token auf großen Karten: schwenkt und zoomt hin, wählt es aus und pingt es auf Wunsch. Pro Benutzer. Auch als Tastenkürzel verfügbar (standardmäßig nicht belegt — unter Steuerung konfigurieren zuweisen).",
+  "DT.Settings.FindTokenButton.Name": "Knopf \"Eigenes Token finden\" anzeigen",
+  "DT.Settings.FindTokenButton.Hint": "Fügt der Token-Werkzeugleiste einen Fadenkreuz-Knopf hinzu, der zu deinem Token springt. Erfordert ein Neuladen.",
+  "DT.Settings.FindTokenZoom.Name": "Eigenes Token finden: Zoomstufe",
+  "DT.Settings.FindTokenZoom.Hint": "Wie weit auf dein Token gezoomt wird. 0 behält den aktuellen Zoom und schwenkt nur.",
+  "DT.Settings.FindTokenPing.Name": "Eigenes Token finden: Pingen",
+  "DT.Settings.FindTokenPing.Hint": "Pingt dein Token zusätzlich, nachdem hingesprungen wurde. Pings sehen alle am Tisch.",
+  "DT.Keybindings.FindMyToken.Name": "Eigenes Token finden",
+  "DT.Keybindings.FindMyToken.Hint": "Schwenkt und zoomt zu deinem Token und wählt es aus (Darkviruzz Tweaks).",
+  "DT.FindMyToken.Button": "Eigenes Token finden",
+  "DT.FindMyToken.NoToken": "Du hast kein Token in dieser Szene.",
+  "DT.FindMyToken.NoTokenGM": "Wähle zuerst ein Token aus — als SL springt \"Eigenes Token finden\" zum ausgewählten Token.",
+
+  "DT.Categories.MovementHistoryReset.Label": "Bewegungsverlauf",
+  "DT.Categories.MovementHistoryReset.Hint": "Bewegungsverlauf im Kampf (für die Bewegungsmessung des Lineals). Welt-Ebene (von der Spielleitung gesetzt).",
+  "DT.Settings.MovementHistoryResetEachRound.Name": "Bewegungsverlauf jede Runde zurücksetzen",
+  "DT.Settings.MovementHistoryResetEachRound.Hint": "Sobald eine Kampfrunde weiterschaltet, wird der Bewegungsverlauf aller Kampfteilnehmer gelöscht. Foundry macht das normalerweise über seine Zug-Ereignisse; dies ist ein Sicherheitsnetz, falls das nicht passiert (z. B. wenn ein Modul den Kampf ohne Zug-Ereignisse weiterschaltet). Benötigt eine verbundene Spielleitung.",
+
+  "DT.Categories.DefeatedTokens.Label": "Besiegte Tokens",
+  "DT.Categories.DefeatedTokens.Hint": "Wie besiegte (tote) Tokens auf der Karte dargestellt werden. Welt-Ebene (von der Spielleitung gesetzt).",
+  "DT.Settings.DefeatedOverlay.Name": "Besiegt als Vollbild-Overlay anzeigen",
+  "DT.Settings.DefeatedOverlay.Hint": "Wird ein Token als besiegt markiert (z. B. \"Tot\" über das Token-HUD), wird der Status groß über das ganze Token gelegt statt als kleines Symbol.",
+  "DT.Settings.DefeatedSendToBack.Name": "Besiegte Tokens nach hinten legen",
+  "DT.Settings.DefeatedSendToBack.Hint": "Legt besiegte Tokens hinter alle anderen Tokens auf gleicher Höhe, damit sie lebende Tokens nicht verdecken oder versehentlich ausgewählt werden. Die vorherige Reihenfolge wird wiederhergestellt, sobald der Status entfernt wird.",
+
+  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
 }

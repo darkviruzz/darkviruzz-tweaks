@@ -1,9 +1,10 @@
 /**
  * Feature: Ability Score Prominence (dnd5e)
  * -----------------------------------------
- * Foundry VTT v14+ · dnd5e (D&D 2024 / 5.x)
+ * Foundry VTT v14+ · dnd5e 5.x / 6.x
  *
- * The default dnd5e actor sheet renders each ability as:
+ * The default dnd5e actor sheet renders each ability as (character sheet partial
+ * templates/actors/character-ability-scores.hbs; the NPC header inlines the same structure):
  *
  *   <div class="ability-score" data-ability="str">
  *     <a class="label rollable ability-check" data-action="roll" data-type="ability">STR</a>
@@ -98,18 +99,14 @@ function applyTidySwap(root) {
 
     // Badge shows the score (large); the small slot below shows the modifier row label + value.
     labelContainer.dataset.dtAspScore   = scoreSpan.textContent.trim();
-    scoreLabel.dataset.dtAspRowlabel    = "Mod";
+    scoreLabel.dataset.dtAspRowlabel    = game.i18n.localize("DT.AbilityScoreProminence.ModLabel");
     scoreLabel.dataset.dtAspMod         = modSign.textContent.trim() + modValue.textContent.trim();
 
     // Update the row label's tooltip from "{Ability} Score" → "{Ability} Modifier".
     const ability = tile.dataset?.ability;
-    const abilityCfg = ability ? CONFIG?.DND5E?.abilities?.[ability] : null;
-    if (abilityCfg) {
-      const abilityName = abilityCfg.label ?? ability.toUpperCase();
-      let modLabel = game.i18n.localize("DND5E.ABILITY.SECTIONS.Modifier");
-      if (modLabel === "DND5E.ABILITY.SECTIONS.Modifier") modLabel = game.i18n.localize("DND5E.AbilityMod");
-      if (modLabel === "DND5E.AbilityMod") modLabel = "Modifier";
-      scoreLabel.setAttribute("data-tooltip", `${abilityName} ${modLabel}`);
+    const abilityName = CONFIG.DND5E?.abilities?.[ability]?.label ?? ability?.toUpperCase();
+    if (abilityName) {
+      scoreLabel.dataset.tooltip = game.i18n.format("DT.AbilityScoreProminence.ModifierTooltip", { ability: abilityName });
     }
   }
   console.debug(`${MODULE_ID} | Tidy ability swap: stamped ${tiles.length} ability tile(s).`);
@@ -148,14 +145,10 @@ function addAbilityRollTargets(app, root) {
   }
 }
 
-/** Roll an ability check across dnd5e versions (object signature 4.x+, string < 4.0). */
+/** Roll an ability check (dnd5e 5.x/6.x: `rollAbilityCheck({ ability })`). */
 async function rollAbility(actor, ability) {
-  if (!actor) return;
-  if (typeof actor.rollAbilityCheck === "function") return actor.rollAbilityCheck({ ability });
-  if (typeof actor.rollAbilityTest === "function") return actor.rollAbilityTest(ability);
-
-  const msg = game.i18n?.format?.("DT.Notifications.NoRollMethod", { ability: ability.toUpperCase() });
-  ui.notifications?.warn(msg ?? `Darkviruzz Tweaks: no ability-roll method found for ${ability.toUpperCase()}.`);
+  if (typeof actor?.rollAbilityCheck === "function") return actor.rollAbilityCheck({ ability });
+  ui.notifications?.warn(game.i18n.format("DT.Notifications.NoRollMethod", { ability: ability.toUpperCase() }));
 }
 
 export default {

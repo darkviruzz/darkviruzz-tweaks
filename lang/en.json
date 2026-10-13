@@ -5,14 +5,42 @@
   "DT.Settings.AbilitySwapScoreAndMod.Hint": "Makes the score the large, prominent number and the modifier small. On the default dnd5e sheet the score also moves directly under the ability name. Also applies to the Tidy 5e Character Sheet (non-classic).",
   "DT.Settings.AbilityExpandedRollTargets.Name": "Click Score / Modifier to Roll",
   "DT.Settings.AbilityExpandedRollTargets.Hint": "Lets you click the ability score or modifier (not just the ability name) to roll an ability check. Applies to the D&D 5e Character Sheet only; the Tidy 5e Character Sheet always rolls on the large top button.",
+  "DT.AbilityScoreProminence.ModLabel": "Mod",
+  "DT.AbilityScoreProminence.ModifierTooltip": "{ability} Modifier",
 
   "DT.Categories.SpellEffectAutoApply.Label": "Spell Effect Auto-Apply (D&D 5e)",
   "DT.Categories.SpellEffectAutoApply.Hint": "Automatically applies the effects of self-cast spells, so nobody has to click \"apply\" on the chat card. Set by the GM for the whole world.",
   "DT.Settings.SpellAutoApplyEnabled.Name": "Auto-Apply Self-Cast Spell Effects",
-  "DT.Settings.SpellAutoApplyEnabled.Hint": "When a whitelisted spell is cast on the caster themselves, apply its effects automatically instead of waiting for someone to press \"apply\" on the chat card. Only applies to spells with a range of Self or Touch that target the caster.",
+  "DT.Settings.SpellAutoApplyEnabled.Hint": "When a whitelisted spell is cast on the caster themselves, apply its effects automatically instead of waiting for someone to press \"apply\" on the chat card. Only applies to spells with a range of Self or Touch that target the caster and offer exactly one effect (spells with several effect variants are left to the player).",
   "DT.Settings.SpellAutoApplyWhitelist.Name": "Auto-Apply Spell Whitelist",
   "DT.Settings.SpellAutoApplyWhitelist.Hint": "Comma-separated spell names that may auto-apply, e.g. \"Mage Armor, Shield of Faith\". Names are matched exactly (ignoring upper/lower case).",
   "DT.SpellAutoApply.Banner": "Automatically applied to {name}",
 
-"DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
+  "DT.Categories.FindMyToken.Label": "Find My Token",
+  "DT.Categories.FindMyToken.Hint": "Quickly find your own token on big maps: pan and zoom to it, select it and optionally ping it. Per-user. Also available as a keybinding (unbound by default — assign it under Configure Controls).",
+  "DT.Settings.FindTokenButton.Name": "Show \"Find My Token\" Button",
+  "DT.Settings.FindTokenButton.Hint": "Adds a crosshair button to the Token controls toolbar that jumps to your token. Requires a reload.",
+  "DT.Settings.FindTokenZoom.Name": "Find My Token: Zoom Level",
+  "DT.Settings.FindTokenZoom.Hint": "How far to zoom in on your token. 0 keeps your current zoom and only pans.",
+  "DT.Settings.FindTokenPing.Name": "Find My Token: Ping",
+  "DT.Settings.FindTokenPing.Hint": "Also ping your token after jumping to it. Pings are visible to everyone at the table.",
+  "DT.Keybindings.FindMyToken.Name": "Find My Token",
+  "DT.Keybindings.FindMyToken.Hint": "Pan and zoom to your token and select it (Darkviruzz Tweaks).",
+  "DT.FindMyToken.Button": "Find My Token",
+  "DT.FindMyToken.NoToken": "You have no token on this scene.",
+  "DT.FindMyToken.NoTokenGM": "Select a token first — as GM, Find My Token jumps to the selected token.",
+
+  "DT.Categories.MovementHistoryReset.Label": "Movement History",
+  "DT.Categories.MovementHistoryReset.Hint": "Combat movement history (used by the ruler's movement measurement). World-level (set by the GM).",
+  "DT.Settings.MovementHistoryResetEachRound.Name": "Reset Movement History Each Round",
+  "DT.Settings.MovementHistoryResetEachRound.Hint": "Whenever a combat round advances, clear the movement history of all combatants. Foundry normally does this from its turn events; this is a safety net for when that doesn't happen (e.g. the combat was advanced by a module without turn events). Needs a GM to be connected.",
+
+  "DT.Categories.DefeatedTokens.Label": "Defeated Tokens",
+  "DT.Categories.DefeatedTokens.Hint": "How defeated (dead) tokens are shown on the canvas. World-level (set by the GM).",
+  "DT.Settings.DefeatedOverlay.Name": "Show Defeated as Full-Token Overlay",
+  "DT.Settings.DefeatedOverlay.Hint": "Whenever a token is marked defeated (e.g. \"Dead\" via the Token HUD), show the status large across the whole token instead of as a small icon.",
+  "DT.Settings.DefeatedSendToBack.Name": "Send Defeated Tokens to the Back",
+  "DT.Settings.DefeatedSendToBack.Hint": "Move defeated tokens behind all other tokens at the same elevation, so they don't cover living tokens or get selected by accident. Their previous order is restored when the defeated status is removed.",
+
+  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }
