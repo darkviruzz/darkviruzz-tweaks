@@ -172,6 +172,35 @@ the defeated status is removed (e.g. the creature is revived).
 > combat (system setting `autoApplyDowned` in dnd5e's combat settings, off by default); its
 > "Dead" effect already uses the overlay and works together with this feature.
 
+### 6. Pause Control  ·  *any system · world (GM)*
+
+Automatic pausing and unpausing — a replacement for the unmaintained
+*Koboldworks – Pause Control* module (last release 2024, made for Foundry 12). **Disable
+Koboldworks Pause Control** when you switch these on, otherwise both act at the same time.
+
+**How it works:** the connected GM's client changes the pause state for everyone
+(`game.togglePause(…, { broadcast: true })`):
+
+- *on world load* — Foundry always starts a world paused; the GM's client unpauses it when
+  the world is ready;
+- *on combat start* — when **Begin Combat** is pressed (round 0 → 1);
+- *during NPC turns* — on every turn change of a running combat: paused when the current
+  combatant has no player owner, unpaused on player turns (works even if that combatant's
+  token is on another scene);
+- *after combat* — the pause state at the moment the combat was created is remembered and
+  restored when the combat is ended/deleted.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Unpause When World Loads** | off | Unpause when the GM loads the world. Also unpauses if a GM reloads the page while the game is paused. |
+| **Unpause When Combat Starts** | off | Unpause when a combat begins. While *Pause During NPC Turns* is on, that option decides instead. |
+| **Pause During NPC Turns** | off | Pause on turns of combatants without a player owner, unpause on player turns. |
+| **Restore Pause State After Combat** | off | Restore the pause state from before the combat when it ends. |
+
+> Differences from Koboldworks: its *pause on NPC turns* option has been broken since
+> Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
+> unpaused again on every turn change. Both behave as described above here.
+
 ---
 
 ## Already built in (no tweak needed)

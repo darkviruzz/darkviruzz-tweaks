@@ -76,6 +76,7 @@ scripts/
     find-my-token.js            pan/zoom/select/ping your own token (per-user + keybinding)
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
+    pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
 styles/
@@ -425,14 +426,25 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 - **Combat5e** overrides `_onStartTurn`/`_onEndTurn`/`_onStartRound` but only adds
   `_recoverUses` after `super` — no movement-history changes.
 
-### Historical (removed features)
+### Pause (feature *Pause Control*, v1.7.0)
 
-- *Unpause When World Loads* was removed in v1.3.0 (replaced by Koboldworks Pause Control).
-  Facts kept: worlds always activate paused; `game.togglePause(false, { broadcast: true })`
-  (GM only) on `ready`; no client-side signal distinguishes a server start from a GM reload.
-  A previous session also noted a non-GM workaround
+- History: *Unpause When World Loads* existed in v1.2, was removed in v1.3.0 in favour of
+  *Koboldworks – Pause Control*, and came back in v1.7.0 as part of *Pause Control* because
+  Koboldworks is unmaintained (last release 2024-08-28, verified Foundry 12). Verified
+  2026-10-13 from its source: its "pause on NPC turns" reads `combat.data.combatants`, and
+  `Document#data` no longer exists in v13+ → throws on every combat update; its "unpause on
+  combat" runs on EVERY `updateCombat` of a started combat (unpauses after each turn); it
+  calls `game.togglePause(state, true)` — v13/v14 still convert a boolean second argument to
+  `{broadcast}` with a deprecation warning (removal planned for v15).
+- Worlds always activate paused; `game.togglePause(paused, { broadcast: true })` (GM only),
+  unpause on `ready`; no client-side signal distinguishes a server start from a GM reload.
+- Combat: `startCombat()` updates `{round: 1, turn: 0}` WITHOUT a `direction` option (fires
+  `combatStart` before the update on the initiating client); `Combat#started` = `round > 0`;
+  `Combat#combatant` = current combatant; `Combatant#isNPC` = `!actor || !hasPlayerOwner`
+  (independent of the viewed scene; `Combatant#actor` resolves via token or actorId).
+- A previous session noted a non-GM unpause workaround
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
-  not re-verified.
+  not re-verified; we don't use it.
 
 ## Current features (keep this list current)
 
@@ -443,3 +455,4 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 | Find My Token | `findMyToken` | `features/find-my-token.js` | any | user | `findTokenButton` (off, reload), `findTokenZoom` (1.5; 0 = keep zoom), `findTokenPing` (off); keybinding `findMyToken` (unbound) |
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
+| Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |

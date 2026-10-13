@@ -4,6 +4,18 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.7.0] — 2026-10-13
+
+### Added
+- **Pause Control** (any system, GM): automatic pausing and unpausing, replacing the
+  unmaintained *Koboldworks – Pause Control* module — **disable Koboldworks** when you switch
+  these on. Four options, all off by default:
+  - **Unpause When World Loads**
+  - **Unpause When Combat Starts**
+  - **Pause During NPC Turns** — pauses on turns of combatants without a player owner and
+    unpauses on player turns. (Koboldworks' version of this has been broken since Foundry v13.)
+  - **Restore Pause State After Combat**
+
 ## [1.6.0] — 2026-10-13
 
 ### Added

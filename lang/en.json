@@ -42,5 +42,16 @@
   "DT.Settings.DefeatedSendToBack.Name": "Send Defeated Tokens to the Back",
   "DT.Settings.DefeatedSendToBack.Hint": "Move defeated tokens behind all other tokens at the same elevation, so they don't cover living tokens or get selected by accident. Their previous order is restored when the defeated status is removed.",
 
+  "DT.Categories.PauseControl.Label": "Pause Control",
+  "DT.Categories.PauseControl.Hint": "Automatic pausing and unpausing — a replacement for the unmaintained \"Koboldworks – Pause Control\" module (disable that one when using these). World-level (set by the GM); a GM must be connected.",
+  "DT.Settings.PauseUnpauseOnLoad.Name": "Unpause When World Loads",
+  "DT.Settings.PauseUnpauseOnLoad.Hint": "Worlds always start paused. Unpause automatically when the GM loads the world. Note: also unpauses if a GM reloads the page while the game is paused.",
+  "DT.Settings.PauseUnpauseOnCombatStart.Name": "Unpause When Combat Starts",
+  "DT.Settings.PauseUnpauseOnCombatStart.Hint": "Unpause the game when a combat begins (Begin Combat). Has no effect while \"Pause During NPC Turns\" is on — that option then decides.",
+  "DT.Settings.PauseDuringNpcTurns.Name": "Pause During NPC Turns",
+  "DT.Settings.PauseDuringNpcTurns.Hint": "While a combat is running, pause the game on the turns of combatants without a player owner and unpause it on player turns.",
+  "DT.Settings.PauseRestoreAfterCombat.Name": "Restore Pause State After Combat",
+  "DT.Settings.PauseRestoreAfterCombat.Hint": "Remember whether the game was paused when a combat was created and restore that state when the combat ends.",
+
   "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }
