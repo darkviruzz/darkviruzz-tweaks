@@ -1,0 +1,13 @@
+{
+  "name": "darkviruzz-tweaks",
+  "private": true,
+  "description": "Repository tooling for the Darkviruzz Tweaks & QoL Foundry VTT module (not part of the released module).",
+  "type": "module",
+  "scripts": {
+    "validate": "node tools/validate.mjs",
+    "test": "node tools/test-features.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

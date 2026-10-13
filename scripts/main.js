@@ -2,8 +2,9 @@
  * Darkviruzz Tweaks & QoL — entry point / feature loader.
  *
  * Each feature lives in its own file under scripts/features/ and default-exports a
- * "feature object". This loader registers every feature's settings, runs its init(),
- * and groups the settings by feature (category headers) in the Configure Settings UI.
+ * "feature object"; scripts/features/index.js lists them. This loader registers every
+ * feature's settings and keybindings, runs its init(), and groups the settings by feature
+ * (category headers) in the Configure Settings UI.
  *
  * Feature object contract (see CLAUDE.md for the full guide):
  *
@@ -17,24 +18,20 @@
  *     settings: [                      // settings registered for this feature, in order
  *       { key: "myToggle", options: { ...game.settings.register options } }
  *     ],
+ *     keybindings: [                   // optional — registered unbound (editable: [])
+ *       { action: "myAction", options: { ...game.keybindings.register options } }
+ *     ],
  *     init() { ... }                   // register hooks etc. (called once during "init")
  *   };
  *
- * Conventions enforced here: defaults are always the vanilla behaviour (every feature
- * off by default), and all settings appear in one settings tab, categorised per feature.
+ * Conventions (enforced by tools/validate.mjs): defaults are always the vanilla behaviour
+ * (every feature off, keybindings unbound), and all settings appear in one settings tab,
+ * categorised per feature.
  */
 
 import { MODULE_ID } from "./constants.js";
+import { FEATURES } from "./features/index.js";
 import { injectCategoryHeaders } from "./lib/settings-categories.js";
-
-import abilityScoreProminence from "./features/ability-score-prominence.js";
-import spellEffectAutoApply from "./features/spell-effect-autoapply.js";
-
-/** Registry of all features. Add new features here. */
-const FEATURES = [
-  abilityScoreProminence,
-  spellEffectAutoApply
-];
 
 /** Features whose system requirement (if any) matches the active world. */
 function activeFeatures() {
@@ -42,14 +39,23 @@ function activeFeatures() {
 }
 
 Hooks.once("init", () => {
-  const active = activeFeatures();
-  for (const feature of active) {
-    for (const setting of feature.settings ?? []) {
-      game.settings.register(MODULE_ID, setting.key, setting.options);
+  const loaded = [];
+  for (const feature of activeFeatures()) {
+    // Isolate features: one broken feature must not take the whole module down.
+    try {
+      for (const { key, options } of feature.settings ?? []) {
+        game.settings.register(MODULE_ID, key, options);
+      }
+      for (const { action, options } of feature.keybindings ?? []) {
+        game.keybindings.register(MODULE_ID, action, options);
+      }
+      feature.init?.();
+      loaded.push(feature.id);
+    } catch (err) {
+      console.error(`${MODULE_ID} | feature "${feature.id}" failed to initialise`, err);
     }
-    feature.init?.();
   }
-  console.log(`${MODULE_ID} | initialised features: ${active.map(f => f.id).join(", ") || "(none)"}`);
+  console.log(`${MODULE_ID} | initialised features: ${loaded.join(", ") || "(none)"}`);
 });
 
 // Group this module's settings by feature with category headers (one settings tab).

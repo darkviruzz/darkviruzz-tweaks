@@ -27,14 +27,21 @@ export function injectCategoryHeaders(features, root) {
     // Idempotent: don't add the header twice on re-render.
     if (group.previousElementSibling?.classList?.contains("dt-category")) continue;
 
-    const label = game.i18n.localize(feature.category.label);
-    const hint = feature.category.hint ? game.i18n.localize(feature.category.hint) : "";
-
+    // Built with textContent so translated strings are never parsed as HTML.
     const header = document.createElement("div");
     header.classList.add("dt-category");
-    header.innerHTML =
-      `<h3 class="dt-category__title">${label}</h3>` +
-      (hint ? `<p class="dt-category__hint notes">${hint}</p>` : "");
+
+    const title = document.createElement("h3");
+    title.classList.add("dt-category__title");
+    title.textContent = game.i18n.localize(feature.category.label);
+    header.append(title);
+
+    if (feature.category.hint) {
+      const hint = document.createElement("p");
+      hint.classList.add("dt-category__hint", "notes");
+      hint.textContent = game.i18n.localize(feature.category.hint);
+      header.append(hint);
+    }
 
     group.insertAdjacentElement("beforebegin", header);
   }

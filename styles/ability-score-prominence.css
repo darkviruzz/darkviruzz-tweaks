@@ -12,9 +12,11 @@
    We reorder with `order` (forced because dnd5e sets its own order values)
    and swap the font sizes so the score is large and the modifier small.
 
-   `!important` is required on font-size overrides because dnd5e uses
-   `!important` on its own size rules; without it the swap swaps positions
-   but not text sizes, leaving the mod text visually dominant.
+   `!important` is required on these overrides because of SPECIFICITY: dnd5e
+   scopes its rules under `.dnd5e2.sheet.actor` (e.g. `.dnd5e2.sheet.actor
+   .ability-scores .ability-score .mod`, 6 classes; verified in dnd5e 6.0.6
+   less/v2/actors.less), which out-ranks our 4-class selectors. dnd5e itself
+   uses no `!important` there. Vanilla: modifier 16px bold, score 13px pill.
    ========================================================================== */
 
 /* Reorder: name → score → modifier */

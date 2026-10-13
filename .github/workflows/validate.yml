@@ -1,0 +1,28 @@
+name: Validate
+
+# Runs tools/validate.mjs on every pull request and push to main, so convention or
+# consistency problems show up in review instead of at release time.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Validate module
+        run: node tools/validate.mjs
+
+      - name: Behaviour tests
+        run: node tools/test-features.mjs
