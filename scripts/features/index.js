@@ -15,11 +15,13 @@ import spellEffectAutoApply from "./spell-effect-autoapply.js";
 import findMyToken from "./find-my-token.js";
 import movementHistoryReset from "./movement-history-reset.js";
 import defeatedTokens from "./defeated-tokens.js";
+import pauseControl from "./pause-control.js";
 
 export const FEATURES = [
   abilityScoreProminence,
   spellEffectAutoApply,
   findMyToken,
   movementHistoryReset,
-  defeatedTokens
+  defeatedTokens,
+  pauseControl
 ];

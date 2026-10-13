@@ -45,7 +45,8 @@ const features = {
   spell: await load("spell-effect-autoapply.js"),
   defeated: await load("defeated-tokens.js"),
   movement: await load("movement-history-reset.js"),
-  find: await load("find-my-token.js")
+  find: await load("find-my-token.js"),
+  pause: await load("pause-control.js")
 };
 for (const f of Object.values(features)) f.init();
 const fire = async (name, ...args) => { for (const h of hooks[name] ?? []) await h(...args); };
@@ -282,6 +283,65 @@ await test("find: toolbar button only when enabled", () => {
   settings.findTokenButton = true; hooks.getSceneControlButtons[0](controls);
   assert.equal(controls.tokens.tools.dtFindMyToken.button, true);
   assert.equal(typeof controls.tokens.tools.dtFindMyToken.onChange, "function");
+});
+
+/* ---------- Pause Control ---------- */
+const toggles = [];
+game.paused = true;
+game.togglePause = (paused, options) => { toggles.push({ paused, options }); game.paused = paused; return paused; };
+settings.movementHistoryResetEachRound = false;
+const pauseCombat = (npc, { round = 1, started = true } = {}) => {
+  const flags = {};
+  return { round, started, combatants: Object.assign([{}, {}], { size: 2 }),
+    combatant: { isNPC: npc },
+    setFlag: async (ns, k, v) => { flags[`${ns}.${k}`] = v; },
+    getFlag: (ns, k) => flags[`${ns}.${k}`], _flags: flags };
+};
+const resetPause = (paused = true) => { toggles.length = 0; game.paused = paused; };
+
+await test("pause: world load unpauses (broadcast) only when enabled and on the active GM", async () => {
+  resetPause(); settings.pauseUnpauseOnLoad = false; await fire("ready"); assert.equal(toggles.length, 0);
+  settings.pauseUnpauseOnLoad = true; activeGMSelf = false; await fire("ready"); assert.equal(toggles.length, 0);
+  activeGMSelf = true; await fire("ready");
+  assert.deepEqual(toggles, [{ paused: false, options: { broadcast: true } }]);
+});
+await test("pause: combat start (round 0 → 1) unpauses; rewind to round 1 and later turns don't", async () => {
+  settings.pauseUnpauseOnCombatStart = true; settings.pauseDuringNpcTurns = false;
+  resetPause(); await fire("updateCombat", pauseCombat(false), { round: 1, turn: 0 }, {});
+  assert.deepEqual(toggles.map(t => t.paused), [false]);
+  resetPause(); await fire("updateCombat", pauseCombat(false), { round: 1, turn: 0 }, { direction: -1 });
+  resetPause(); await fire("updateCombat", pauseCombat(false, { round: 2 }), { turn: 1 }, { direction: 1 });
+  assert.equal(toggles.length, 0);
+});
+await test("pause: NPC turn pauses, player turn unpauses, and it wins over 'unpause on start'", async () => {
+  settings.pauseDuringNpcTurns = true;
+  resetPause(false); await fire("updateCombat", pauseCombat(true), { round: 1, turn: 0 }, {});
+  assert.deepEqual(toggles.map(t => t.paused), [true]);
+  resetPause(true); await fire("updateCombat", pauseCombat(false, { round: 2 }), { turn: 1 }, { direction: 1 });
+  assert.deepEqual(toggles.map(t => t.paused), [false]);
+  resetPause(true); await fire("updateCombat", pauseCombat(true, { round: 2 }), { turn: 2 }, { direction: 1 });
+  assert.equal(toggles.length, 0); // already paused → no redundant toggle
+});
+await test("pause: not started / no combatants / unrelated update / non-GM → nothing", async () => {
+  resetPause(false);
+  await fire("updateCombat", pauseCombat(true, { round: 0, started: false }), { round: 0 }, {});
+  const empty = pauseCombat(true); empty.combatants = Object.assign([], { size: 0 });
+  await fire("updateCombat", empty, { turn: 1 }, {});
+  await fire("updateCombat", pauseCombat(true), { name: "x" }, {});
+  activeGMSelf = false; await fire("updateCombat", pauseCombat(true), { turn: 1 }, {}); activeGMSelf = true;
+  assert.equal(toggles.length, 0);
+});
+await test("pause: state at combat creation is restored when the combat is deleted", async () => {
+  settings.pauseRestoreAfterCombat = true; settings.pauseDuringNpcTurns = false;
+  const c = pauseCombat(false);
+  resetPause(true); await fire("createCombat", c);
+  assert.equal(c._flags[`${MODULE_ID}.pausedBeforeCombat`], true);
+  resetPause(false); await fire("deleteCombat", c);
+  assert.deepEqual(toggles.map(t => t.paused), [true]);
+  const unrecorded = pauseCombat(false);
+  resetPause(false); await fire("deleteCombat", unrecorded); assert.equal(toggles.length, 0);
+  settings.pauseRestoreAfterCombat = false; const d = pauseCombat(false);
+  await fire("createCombat", d); assert.equal(d._flags[`${MODULE_ID}.pausedBeforeCombat`], undefined);
 });
 
 console.log(`\ntest-features: ${passed} passed`);
