@@ -1,0 +1,170 @@
+name: Blackthorn
+
+# CI and releases for the caverns-of-blackthorn content module — a sub-folder of this repo
+# (see caverns-of-blackthorn/CLAUDE.md). It lives in the ROOT .github/workflows because
+# GitHub only runs workflows from there.
+#
+#   - Pull requests / pushes to main that touch the module: unit tests, pack build and
+#     cross-reference check (no release).
+#   - Tag `cob-v<version>` (must equal caverns-of-blackthorn/module.json "version") or a
+#     manual run (releases module.json's version): build and publish a release.
+#
+# Blackthorn releases are NEVER marked "Latest": the tweaks module's manifest URL
+# (releases/latest/download/module.json) must keep resolving to a TWEAKS release. Blackthorn
+# gets its stable manifest from the rolling release `cob-latest` instead, which every
+# Blackthorn release refreshes:
+#   https://github.com/darkviruzz/darkviruzz-tweaks/releases/download/cob-latest/module.json
+on:
+  pull_request:
+    paths:
+      - "caverns-of-blackthorn/**"
+      - ".github/workflows/blackthorn.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "caverns-of-blackthorn/**"
+      - ".github/workflows/blackthorn.yml"
+    tags:
+      - "cob-v*"
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Release notes (Markdown, optional). Releases the version in module.json."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: caverns-of-blackthorn
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build compendium packs
+        run: npm run build
+
+      - name: Verify cross-references
+        run: npm run verify
+
+  release:
+    needs: check
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/cob-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install Pillow
+
+      - name: Resolve version from module.json
+        id: ver
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="$(jq -r .version module.json)"
+          if [ "$EVENT_NAME" = "push" ] && [ "$REF_NAME" != "cob-v$version" ]; then
+            echo "::error::Tag $REF_NAME does not match caverns-of-blackthorn/module.json version $version — bump module.json first."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=cob-v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Render map and banner
+        run: |
+          python build/make-map.py
+          python build/make-banner.py
+
+      - name: Build compendium packs
+        run: npm run build
+
+      - name: Verify cross-references
+        run: npm run verify
+
+      - name: Inject manifest and download URLs into module.json
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          tmp="$(mktemp)"
+          jq \
+            --arg dl "https://github.com/${REPO}/releases/download/${TAG}/caverns-of-blackthorn.zip" \
+            --arg mf "https://github.com/${REPO}/releases/download/cob-latest/module.json" \
+            '.download = $dl | .manifest = $mf' \
+            module.json > "$tmp"
+          mv "$tmp" module.json
+          cat module.json
+
+      - name: Build zip
+        run: zip -r caverns-of-blackthorn.zip module.json packs assets lang README.md LICENSE
+
+      - name: Write release notes
+        env:
+          NOTES: ${{ github.event.inputs.notes }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            if [ -n "$NOTES" ]; then printf '%s\n\n' "$NOTES"; fi
+            echo "**Die Höhlen von Blackthorn** ${VERSION} — see caverns-of-blackthorn/docs for details."
+            echo
+            echo "Install / update in Foundry with the manifest URL:"
+            echo
+            echo "https://github.com/${REPO}/releases/download/cob-latest/module.json"
+          } > notes.md
+
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Blackthorn ${{ steps.ver.outputs.tag }}
+          body_path: caverns-of-blackthorn/notes.md
+          make_latest: false
+          files: |
+            caverns-of-blackthorn/module.json
+            caverns-of-blackthorn/caverns-of-blackthorn.zip
+          fail_on_unmatched_files: true
+
+      - name: Refresh rolling release cob-latest (stable manifest URL)
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: cob-latest
+          name: Blackthorn — latest (manifest)
+          body: >-
+            Rolling release that always carries the newest Blackthorn module.json and zip.
+            Use its module.json as the manifest URL in Foundry. The versioned releases are
+            tagged cob-v<version>.
+          make_latest: false
+          files: |
+            caverns-of-blackthorn/module.json
+            caverns-of-blackthorn/caverns-of-blackthorn.zip
+          fail_on_unmatched_files: true

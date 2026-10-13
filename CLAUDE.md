@@ -17,13 +17,13 @@ each tweak is a self-contained feature that the user can toggle on/off.
 > not a tweak. It has its own `module.json`, its own build and its own
 > **[caverns-of-blackthorn/CLAUDE.md](caverns-of-blackthorn/CLAUDE.md)** — read that one
 > when working in it, not this file. The rules below (one feature per file, settings
-> grouped by feature, defaults off) do not apply there. The folder is meant to be movable
-> to its own repository; its releases are intended to use the tag prefix `cob-v*`.
-> **Known issue (2026-10-13):** its release workflow lives in
-> `caverns-of-blackthorn/.github/workflows/release.yml`, and GitHub only runs workflows from
-> the repository ROOT `.github/workflows/` — so it has never run (no `cob-v*` tag exists).
-> To release it from this repo, the workflow must be copied/moved to the root (it already
-> uses `working-directory: caverns-of-blackthorn`). Not fixed yet — ask the user first.
+> grouped by feature, defaults off) do not apply there. Its CI/release workflow is
+> `.github/workflows/blackthorn.yml` (root — GitHub only runs workflows from there; an
+> earlier copy inside the sub-folder never ran). Blackthorn releases use the tag prefix
+> `cob-v*` and are **never** marked "Latest" — otherwise this module's manifest URL
+> (`releases/latest/download/module.json`) would serve the Blackthorn manifest. Blackthorn's
+> stable manifest is the rolling release `cob-latest`. Details in its CLAUDE.md.
+> Consequence for THIS module: its release workflow must keep `make_latest: true`.
 
 ## Non-negotiable conventions
 
@@ -87,7 +87,8 @@ tools/validate.mjs              zero-dependency convention/consistency checks (`
 tools/test-features.mjs         behaviour tests with stubbed Foundry/dnd5e objects (`npm test`)
 package.json                    repo tooling only (type: module, scripts) — NOT shipped
 .github/workflows/validate.yml  runs the validator on every PR and push to main
-.github/workflows/release.yml   the ONLY release path (tag v* or manual dispatch)
+.github/workflows/release.yml   the ONLY release path (tag v* or manual dispatch; make_latest: true)
+.github/workflows/blackthorn.yml CI + releases of caverns-of-blackthorn (tag cob-v*, never "Latest")
 ```
 
 `scripts/main.js` is the only esmodule entry; it imports everything else with relative

@@ -4,7 +4,13 @@ Greyhawk-Abenteuer für vier Charaktere auf Stufe 7 im Winter. Neun Szenen bilde
 
 ## Installation
 
-Den Ordner caverns-of-blackthorn aus dem ZIP nach Data/modules kopieren. module.json liegt direkt in diesem Ordner. Foundry aktualisieren, das Modul und seine benötigten Pakete aktivieren, dann das Kompendium **Blackthorn — Abenteuer (Import)** öffnen und importieren.
+In Foundry unter **Add-on Modules → Install Module** diese Manifest-URL einfügen (Updates bietet Foundry dann selbst an):
+
+```
+https://github.com/darkviruzz/darkviruzz-tweaks/releases/download/cob-latest/module.json
+```
+
+Alternativ den Ordner caverns-of-blackthorn aus dem ZIP nach Data/modules kopieren; module.json liegt direkt in diesem Ordner. Danach das Modul und seine benötigten Pakete aktivieren, das Kompendium **Blackthorn — Abenteuer (Import)** öffnen und importieren.
 
 - Foundry VTT 14, geprüftes Datenformat 14.364; dnd5e 5.3.3.
 - Monster Manual und Player’s Handbook benötigt; Dungeon Master’s Guide für den Regelverweis empfohlen.

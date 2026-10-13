@@ -86,6 +86,31 @@ docs/                 Lore, NPCs, Aufhänger, Karten, Umbau-Regeln (kein Build-I
 packs/                LevelDB, gitignored — entsteht beim Build
 ```
 
+## Prüfung in CI und Release
+
+Der Workflow liegt **im Wurzelverzeichnis des Repos**: `.github/workflows/blackthorn.yml`
+(GitHub führt nur Workflows von dort aus — die frühere Kopie unter
+`caverns-of-blackthorn/.github/` ist deshalb nie gelaufen und wurde entfernt).
+
+- **Jeder PR / Push auf `main`, der diesen Ordner berührt:** `npm ci`, `npm test`,
+  `npm run build`, `npm run verify` — offline, ohne Foundry. `verify-core.mjs` und die
+  `--core/--data`-Prüfung von `verify.mjs` brauchen eine lokale Foundry-Installation und
+  laufen dort nicht.
+- **Release:** `version` in `module.json` erhöhen, mergen, dann Tag
+  `cob-v<version>` pushen (muss zur `module.json` passen) oder den Workflow manuell
+  starten (veröffentlicht die Version aus `module.json`). Der Workflow rendert Karte und
+  Banner neu, baut, prüft, setzt `manifest`/`download` ein und veröffentlicht
+  `module.json` + `caverns-of-blackthorn.zip`.
+- **Niemals als „Latest" markieren.** Die Manifest-URL des Tweaks-Moduls lautet
+  `releases/latest/download/module.json` — ein Blackthorn-Release als „Latest" würde allen
+  Tweaks-Installationen das Blackthorn-Manifest unterschieben. Der Workflow setzt deshalb
+  `make_latest: false` (ohne Angabe setzt die GitHub-API ein neues Release auf „Latest").
+- **Stabile Manifest-URL:** Jedes Release aktualisiert zusätzlich das rollende Release
+  `cob-latest`; Foundry installiert und aktualisiert über
+  `https://github.com/darkviruzz/darkviruzz-tweaks/releases/download/cob-latest/module.json`.
+- **Umzug in ein eigenes Repository:** den Workflow mitnehmen, `working-directory` und die
+  Pfad-Präfixe entfernen; dort kann das Manifest dann wieder `releases/latest/…` nutzen.
+
 ## Verifizierte Fakten & Fallstricke
 
 ### Foundry-Compendium-Packs (v11+)
