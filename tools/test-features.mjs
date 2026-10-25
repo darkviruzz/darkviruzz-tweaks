@@ -46,7 +46,8 @@ const features = {
   defeated: await load("defeated-tokens.js"),
   movement: await load("movement-history-reset.js"),
   find: await load("find-my-token.js"),
-  pause: await load("pause-control.js")
+  pause: await load("pause-control.js"),
+  art: await load("token-art-picker.js")
 };
 for (const f of Object.values(features)) f.init();
 const fire = async (name, ...args) => { for (const h of hooks[name] ?? []) await h(...args); };
@@ -342,6 +343,135 @@ await test("pause: state at combat creation is restored when the combat is delet
   resetPause(false); await fire("deleteCombat", unrecorded); assert.equal(toggles.length, 0);
   settings.pauseRestoreAfterCombat = false; const d = pauseCombat(false);
   await fire("createCombat", d); assert.equal(d._flags[`${MODULE_ID}.pausedBeforeCombat`], undefined);
+});
+
+/* ---------- Token Art Picker (Too Many Tokens) ---------- */
+const tmt = await import(pathToFileURL(join(ROOT, "scripts/lib/too-many-tokens.js")).href);
+const artModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-art-picker.js")).href);
+const DND = "https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-dnd/main/";
+
+await test("tmt: list parsing skips blanks and Prompts.txt; variant tags ignore order/counter/typos", () => {
+  assert.deepEqual(tmt.parseListing("A (1).webp\r\n\r\nPrompts.txt\nB.png"), ["A (1).webp", "B.png"]);
+  assert.deepEqual(tmt.describeVariant("Bandit", "BanditHalflingUrbanFemaleMelee (3).webp").tags, ["Halfling", "Urban", "Female", "Melee"]);
+  assert.deepEqual(tmt.describeVariant("Bandit Captain", "BanditCaptainHalfOrcCostalMale (1).webp").tags, ["HalfOrc", "Coastal", "Male"]);
+  assert.deepEqual(tmt.describeVariant("Giant Crawling Hand", "Giant Crawling Hand (12).webp").tags, []);
+  assert.deepEqual(tmt.describeVariant("Xulgath Leader", "_017aa1ad-3a36-4b69-b82e-20c46ffb3c3b_cleanup.jpg").tags, []);
+});
+await test("tmt: image URLs round-trip in both encodings; legacy wildcard paths are parsed", () => {
+  const url = tmt.imageUrl("dnd", "Bandit Captain", "BanditCaptainHumanMale (1).webp");
+  assert.equal(url, `${DND}Bandit%20Captain/BanditCaptainHumanMale%20(1).webp`);
+  assert.deepEqual(tmt.parseImageUrl(url), { system: "dnd", creature: "Bandit Captain", file: "BanditCaptainHumanMale (1).webp" });
+  assert.equal(tmt.parseImageUrl(`${DND}Commoner/CommonerHumanTavernMale (22).webp`).creature, "Commoner");
+  assert.equal(tmt.parseImageUrl("https://raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-pf/main/Tokens/Boar/BoarSummer%20(1).webp").system, "pf");
+  assert.equal(tmt.parseImageUrl("icons/svg/mystery-man.svg"), null);
+  assert.ok(tmt.sameImage(`${DND}Veteran/V%20(5).webp`, `${DND}Veteran/V (5).webp`));
+  const legacy = tmt.parseLegacyWildcard("tmtopptmtopptmtopp_dnd_Commoner/Scout_.*(Human).*(Male).*.webp");
+  assert.deepEqual(legacy.creatures, ["Commoner", "Scout"]);
+  assert.ok(legacy.regex.test("Scout/ScoutHumanMaleForest (1).webp"));
+  assert.ok(!legacy.regex.test("Scout/ScoutElfFemaleForest (1).webp"));
+  assert.equal(tmt.parseLegacyWildcard(`${DND}Bandit/x.webp`), null);
+});
+await test("tmt: creature ranking prefers exact/longer names and maps D&D 2024 renames", () => {
+  const names = ["Bandit", "Bandit Captain", "Thug", "Veteran", "Tribal Warrior", "Guard"];
+  assert.equal(tmt.rankCreatures(names, ["Bandit Captain 3"])[0].name, "Bandit Captain");
+  assert.equal(tmt.rankCreatures(names, ["Tough"])[0].name, "Thug");
+  assert.equal(tmt.rankCreatures(names, ["Warrior Veteran"])[0].name, "Veteran");
+  assert.equal(tmt.rankCreatures(names, ["Guard (Bastion Defender)"])[0].name, "Guard");
+  assert.deepEqual(tmt.rankCreatures(names, ["Brida"]), []);
+});
+await test("tmt: pools are stored compactly and spread without repeats", () => {
+  const urls = [`${DND}Bandit/a.webp`, `${DND}Scout/b.webp`];
+  const pool = tmt.compactPool(urls);
+  assert.equal(pool.base, DND);
+  assert.deepEqual(tmt.expandPool(pool), urls);
+  assert.deepEqual(tmt.expandPool({ base: 3, files: ["x", null] }), ["x"]);
+  assert.deepEqual(tmt.expandPool(undefined), []);
+  assert.equal(new Set(tmt.distribute(["a", "b", "c"], 3)).size, 3);
+  assert.equal(tmt.distribute(["a"], 4).join(), "a,a,a,a");
+  assert.equal(tmt.randomPick(["a", "b"], "a", () => 0), "b");
+});
+
+const artActor = (pool, protoSrc = `${DND}Bandit/a.webp`) => ({
+  id: "act1", name: "Bandit", isOwner: true, prototypeToken: { texture: { src: protoSrc } },
+  getFlag: (ns, k) => (ns === MODULE_ID && k === "tokenArtPool" ? pool : undefined)
+});
+const pendingToken = (actor, src) => ({
+  baseActor: actor, actorId: actor?.id, texture: { src }, updated: null,
+  updateSource(changes) { this.updated = changes; }
+});
+const fullPool = tmt.compactPool([`${DND}Bandit/a.webp`, `${DND}Bandit/b%20(2).webp`, `${DND}Bandit/c.webp`]);
+
+await test("token art: wildcard pool randomises new tokens only when enabled and on the prototype image", () => {
+  const pre = hooks.preCreateToken[0];
+  settings.tokenArtEnabled = false;
+  let doc = pendingToken(artActor(fullPool), `${DND}Bandit/a.webp`); pre(doc); assert.equal(doc.updated, null);
+  settings.tokenArtEnabled = true;
+  doc = pendingToken(artActor(fullPool), `${DND}Bandit/a.webp`); pre(doc);
+  assert.ok(tmt.expandPool(fullPool).includes(doc.updated["texture.src"]));
+  for (let i = 0; i < 10; i++) {   // never the same image twice in a row
+    const next = pendingToken(artActor(fullPool), `${DND}Bandit/a.webp`); pre(next);
+    assert.notEqual(next.updated["texture.src"], doc.updated["texture.src"]);
+    doc = next;
+  }
+  doc = pendingToken(artActor(fullPool), `${DND}Bandit/zzz.webp`); pre(doc); assert.equal(doc.updated, null);   // pasted variant
+  doc = pendingToken(artActor(tmt.compactPool([`${DND}Bandit/a.webp`])), `${DND}Bandit/a.webp`); pre(doc); assert.equal(doc.updated, null);
+  doc = pendingToken(null, "x.webp"); pre(doc); assert.equal(doc.updated, null);
+});
+await test("token art: planUpdates spreads images over tokens per scene and sets prototype/pool/portrait", () => {
+  const sceneA = { id: "A" }; const sceneB = { id: "B" };
+  const tokens = [{ id: "t1", parent: sceneA }, { id: "t2", parent: sceneA }, { id: "t3", parent: sceneB }];
+  const urls = [`${DND}Bandit/a.webp`, `${DND}Bandit/b.webp`, `${DND}Bandit/c.webp`];
+  const withPool = artActor(fullPool); const without = artActor(undefined);
+  let plan = artModule.planUpdates({ tokens, actors: [withPool], urls, prototype: true, wildcard: true, portrait: false });
+  assert.equal(plan.tokenUpdates.get(sceneA).length, 2); assert.equal(plan.tokenUpdates.get(sceneB).length, 1);
+  assert.equal(new Set([...plan.tokenUpdates.values()].flat().map(u => u["texture.src"])).size, 3);
+  const update = plan.actorUpdates[0].update;
+  assert.equal(update["prototypeToken.texture.src"], urls[0]);
+  assert.equal(update["prototypeToken.randomImg"], false);
+  assert.deepEqual(tmt.expandPool(update[`flags.${MODULE_ID}.tokenArtPool`]), urls);
+  assert.equal(plan.actorUpdates[0].clearPool, false);
+  plan = artModule.planUpdates({ actors: [withPool, without], urls, prototype: true, wildcard: false });
+  assert.deepEqual(plan.actorUpdates.map(a => a.clearPool), [true, false]);
+  assert.equal(plan.actorUpdates[0].update[`flags.${MODULE_ID}.tokenArtPool`], undefined);
+  plan = artModule.planUpdates({ actors: [withPool], urls, prototype: false, portrait: true });
+  assert.deepEqual(plan.actorUpdates[0], { actor: withPool, update: { img: urls[0] }, clearPool: false });
+});
+await test("token art: opening is guarded (disabled, TMT not installed, nothing owned)", () => {
+  notes.length = 0;
+  settings.tokenArtEnabled = false; assert.equal(artModule.openTokenArtPicker(), null);
+  settings.tokenArtEnabled = true; game.modules = { get: () => undefined }; assert.equal(artModule.openTokenArtPicker(), null);
+  game.modules = { get: id => (id === "too-many-tokens-online" ? { active: false } : undefined) };
+  canvas.tokens.controlled = [{ document: { isOwner: false } }]; assert.equal(artModule.openTokenArtPicker(), null);
+  canvas.tokens.controlled = [];
+  assert.deepEqual(notes, ["DT.TokenArt.Disabled", "DT.TokenArt.NoTmt", "DT.TokenArt.NoTarget"]);
+});
+await test("token art: Actors sidebar entry uses the v14 ContextMenuEntry shape and is gated", () => {
+  const items = []; hooks.getActorContextOptions[0]({}, items);
+  const entry = items[0];
+  assert.equal(entry.label, "DT.TokenArt.ContextEntry"); assert.equal(typeof entry.onClick, "function");
+  const owned = artActor(undefined); game.actors = { get: id => (id === "act1" ? owned : undefined) };
+  const li = { closest: () => ({ dataset: { entryId: "act1" } }) };
+  settings.tokenArtEnabled = false; assert.equal(entry.visible(li), false);
+  settings.tokenArtEnabled = true; assert.equal(entry.visible(li), true);
+  owned.isOwner = false; assert.equal(entry.visible(li), false);
+});
+await test("token art: Token HUD button only with both options on and an owned token", () => {
+  globalThis.document = { createElement: tag => ({ tag, className: "", dataset: {}, attrs: {}, children: [], listeners: {},
+    setAttribute(k, v) { this.attrs[k] = v; }, append(...c) { this.children.push(...c); },
+    addEventListener(t, f) { this.listeners[t] = f; } }) };
+  globalThis.HTMLElement = class {};
+  const column = { children: [], append(...c) { this.children.push(...c); } };
+  const root = Object.assign(new HTMLElement(), { querySelector: sel => (sel === ".col.right" ? column : null) });
+  const hud = owner => ({ object: { document: { isOwner: owner } } });
+  settings.tokenArtEnabled = true; settings.tokenArtHudButton = false;
+  hooks.renderTokenHUD[0](hud(true), root); assert.equal(column.children.length, 0);
+  settings.tokenArtHudButton = true;
+  hooks.renderTokenHUD[0](hud(false), root); assert.equal(column.children.length, 0);
+  hooks.renderTokenHUD[0](hud(true), root);
+  assert.equal(column.children.length, 1);
+  assert.match(column.children[0].className, /control-icon dt-token-art-hud/);
+  assert.equal(typeof column.children[0].listeners.click, "function");
+  delete globalThis.document; delete globalThis.HTMLElement;
 });
 
 console.log(`\ntest-features: ${passed} passed`);

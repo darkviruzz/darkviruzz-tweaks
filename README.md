@@ -201,6 +201,55 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
+### 7. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
+
+Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –
+Online* in a gallery with preview — a replacement for that module's macro *"DND/PF – Get Too
+Many Tokens For Selected Tokens"*. **The module *Too Many Tokens – Online* must be
+installed**; it may stay deactivated — the picker only reads its image lists, and the images
+are loaded from GitHub exactly as before.
+
+**How it works:**
+
+- **Open it** for the selected tokens with the Token HUD button (option below) or a
+  keybinding; for an actor's prototype token via **right-click on the actor in the Actors
+  sidebar → Token Art (Too Many Tokens)**; or from a macro:
+  `game.modules.get("darkviruzz-tweaks").api.openTokenArtPicker();`
+- **Creature:** guessed from the current Too Many Tokens image, the token/actor name and the
+  compendium the actor came from (D&D 2024 names such as *Tough* → *Thug*, *Warrior Veteran*
+  → *Veteran* are mapped). Suggestions appear as buttons; the search field offers every
+  creature (Enter takes the best match). Switch between the D&D and Pathfinder collections.
+- **Gallery:** filter chips built from the file names (*Human*, *Female*, *Melee*, *Forest* …,
+  combined with AND, counts update live) and a text filter. Hover shows a large preview.
+  Click picks one image, **Ctrl-click** adds/removes, **Shift-click** adds a range;
+  *Select all matching* and *Show only selected* help with larger selections.
+- **Apply** to the selected tokens (several images are spread randomly — no repeats until
+  each was used once), the prototype token and/or the actor portrait.
+- **Wildcard:** with the prototype option and at least two images, the selection is stored
+  on the actor and every newly placed token of it gets a random image from it (never the same
+  one twice in a row). Tokens placed with a different image (e.g. copy & paste) keep it.
+  Reopening the picker for that actor shows the stored images; applying without *Wildcard*
+  removes them.
+- **Old Too Many Tokens wildcards** (prototype path `tmtopptmtopptmtopp_…`) are recognised:
+  their images are preselected, and applying with *Wildcard* converts them so they no longer
+  need the Too Many Tokens module to be active.
+- Only tokens and actors you own are changed.
+
+| Setting / control | Default | Effect |
+|---|---|---|
+| **Enable Token Art Picker** | off | World switch (GM): the picker (sidebar entry, keybinding, macro API, HUD button) and the wildcard on token placement. |
+| **Token Art Picker: Token HUD Button** | off | Per user: adds an image button to the Token HUD (right column) for the selected tokens. |
+| **Open Token Art Picker** (keybinding) | unbound | Opens the picker for the selected tokens. Assign it under **Configure Controls → Darkviruzz Tweaks & QoL**. |
+
+> Differences from the Too Many Tokens macro: it showed no images at all; its checkbox
+> columns assumed the attribute words stand at fixed positions in the file names (they
+> don't, so variants were missed); and its wildcard is resolved by a `createToken` hook that
+> runs on every connected client, changes the token after it was created and — in v2.0.1 —
+> throws a console error for every other token placed. Here the image is chosen before the
+> token is created, on the placing client only. Tokens already on your scenes are plain image
+> links and keep working with Too Many Tokens deactivated; actors with an old Too Many Tokens
+> wildcard need converting once (see above).
+
 ---
 
 ## Already built in (no tweak needed)

@@ -77,8 +77,10 @@ scripts/
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
+    token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
+    too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -278,6 +280,34 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   moved to `system.changes` in v14.
 - **Users:** `game.users.activeGM` and `User#isActiveGM` both exist; use
   `game.users.activeGM?.isSelf` to pick the one client that writes.
+- **Context menus (v14):** `ContextMenuEntry` is `{label, icon, visible, onClick, group,
+  classes}` — `label` is localised by the menu, `visible: boolean | (target: HTMLElement) =>
+  boolean`, `onClick(event: PointerEvent, target: HTMLElement)`. (The v13 keys
+  `name`/`condition`/`callback` are what older modules use.) Document directories fire
+  `get<DocumentName>ContextOptions(application, menuItems)`, e.g. `getActorContextOptions`;
+  mutate `menuItems`. Sidebar entries carry `data-entry-id` (v13; v14 impl unverified — we
+  also fall back to `data-document-id`).
+- **`preCreate<Document>` hooks** `(document, data, options, userId)` fire **only on the
+  client that initiates the creation**, may modify the pending document with
+  `document.updateSource(...)` and cancel with `return false` — the right place to change a
+  token's image before it exists (no second update, no other client involved).
+  `TokenDocument#baseActor` = the world-level actor a token represents.
+- **Token HUD (v13/v14):** `renderTokenHUD(hud, html)` — `html` is an HTMLElement with
+  `.col.left` / `.col.right` columns of `<button type="button" class="control-icon">`;
+  `hud.object` is the Token placeable. Add buttons with your own click listener and **no**
+  `data-action` (the HUD is ApplicationV2 and would try to dispatch it). Source: module
+  token-border 1.0 (verified v14) and Token Variant Art 6.1 (v13); TokenHUD is replaceable via
+  `CONFIG.Token.hudClass`.
+- **ApplicationV2 without Handlebars:** implement `_renderHTML(context, options)` (return an
+  element) and `_replaceHTML(result, content, options)` (`content.replaceChildren(result)`);
+  `_prepareContext` may be async (load data there). Actions: `DEFAULT_OPTIONS.actions` map
+  `data-action` → static handler `(event, target)` with `this` = the app (left click only
+  unless `{buttons, handler}`). We override `get title()` to localise the window title
+  ourselves. A feature file must not `extend foundry.applications.api.ApplicationV2` at
+  import time (Foundry global) — build the class lazily inside a function (see
+  `token-art-picker.js` `pickerClass()`).
+- **CSS gotcha:** an element with the `hidden` attribute is still shown if one of our rules
+  sets `display` on it — scope a `[hidden] { display: none !important; }` rule.
 
 ### dnd5e default actor sheet (verified against dnd5e 6.0.6; same structure in 5.3.3)
 
@@ -446,6 +476,37 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
 
+### Too Many Tokens – Online (feature *Token Art Picker*, verified 2026-10-25 against v2.0.1)
+
+- Module id `too-many-tokens-online` (IsThisMyRealName/Jojop, MIT, compatibility verified 12,
+  last release 2.0.1 in 2024-09; one later commit 2025-12 without release). It ships **only
+  text lists**; images live in the GitHub repos `too-many-tokens-dnd` (folder per creature)
+  and `too-many-tokens-pf` (`Tokens/<creature>/`) and are loaded from
+  `raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-<sys>/main/…` (CORS `*`,
+  `max-age=300`, ~40 KB WebP, 256 px).
+- Lists: `<sys>/names.txt` (dnd 374, pf 234 creatures, no trailing newline) and
+  `<sys>/links/<creature>.txt` (one file name per line, plus `Prompts.txt`-like lines that
+  must be skipped). dnd: 16 022 entries, **identical to the GitHub tree**; pf: 7 737, of which
+  60 (`Xulgath Leader/_<uuid>_cleanup.jpg`) don't exist on GitHub → handle broken images.
+- File names: `<CreatureNoSpaces><Words…> (n).webp` with CamelCase attribute words in **no
+  fixed order** (race, gender, environment, weapon…), compounds `HalfOrc`/`HalfElf`, `NSFW`,
+  typos (`Costal`, `Halfing`, `Kight`, `Dessert`, `Femorian`…), a few without counter or with
+  `_cleanup`, some with spaces (`Giant Crawling Hand (1).webp`).
+- The macros in its pack (`DND -`/`PF - Get Too Many Tokens For Selected Tokens`, LevelDB
+  pack `packs/too-many-tokens-online-macros`) are byte-identical to the shipped
+  `too-many-tokens-online-show-dialogue-<sys>.js`: V1 `Dialog`, datalist of names, then
+  checkbox columns by word POSITION → regex `.*(A|B).*(C).*` (case-insensitive, so `Male`
+  also matches `Female`); no image preview. Its wildcard writes
+  `prototypeToken.texture.src = "tmtopptmtopptmtopp_<sys>_<Creature[/Creature]>_<regex>.webp"`
+  + `randomImg: true`, resolved by `scripts/index.js`'s `createToken` hook: runs on **every**
+  client, no GM/owner guard, updates the token after creation, and for every token whose
+  prototype is NOT such a path it throws (`links.length` of `undefined`; also
+  `baseActor.prototypeToken` for actorless tokens) — console errors on each token creation.
+- Token URLs in worlds appear both `%20`-encoded and with raw spaces → compare decoded.
+- Assumption (not verified in a running v14 world yet): files of an installed but
+  **deactivated** module are still served under `modules/<id>/…` (Foundry serves the Data
+  folder statically) — the picker relies on it when TMT is deactivated.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -456,3 +517,4 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
+| Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |

@@ -19,7 +19,8 @@
   "styles": [
     "styles/settings.css",
     "styles/ability-score-prominence.css",
-    "styles/spell-effect-autoapply.css"
+    "styles/spell-effect-autoapply.css",
+    "styles/token-art-picker.css"
   ],
   "languages": [
     {
