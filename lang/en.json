@@ -128,5 +128,20 @@
   "DT.TokenArt.NothingToApply": "Choose where to apply the image: tokens, prototype token or portrait.",
   "DT.TokenArt.Applied": "Token art applied: {tokens} token(s), {actors} actor(s).",
 
+  "DT.Categories.SavageAttacker.Label": "Savage Attacker (D&D 5e)",
+  "DT.Categories.SavageAttacker.Hint": "Automates the 2024 feat Savage Attacker: once per turn, roll a weapon's damage dice twice and keep the higher result. World-level (set by the GM).",
+  "DT.Settings.SavageAttackerMode.Name": "Savage Attacker",
+  "DT.Settings.SavageAttackerMode.Hint": "Automatic: the first weapon damage roll of each turn (also on other creatures' turns, e.g. opportunity attacks) that wasn't a known miss rolls the weapon dice twice and keeps the higher total; all other weapon damage cards get a button. Button only: a button on every weapon damage card of creatures with the feat. The button stays usable after the turn's use — the GM decides which hit was the first.",
+  "DT.Settings.SavageAttackerMode.Off": "Off",
+  "DT.Settings.SavageAttackerMode.Auto": "Automatic (first hit per turn) + button",
+  "DT.Settings.SavageAttackerMode.Button": "Button only",
+  "DT.SavageAttacker.Button": "Savage Attacker",
+  "DT.SavageAttacker.ButtonHint": "Roll the weapon's damage dice again and keep the higher result.",
+  "DT.SavageAttacker.UsedThisTurn": "already used this turn",
+  "DT.SavageAttacker.Result": "Savage Attacker: {first} / {second} → {kept}",
+  "DT.SavageAttacker.Applied": "Savage Attacker applied",
+  "DT.SavageAttacker.NoPermission": "Savage Attacker: only the GM or the author of this message can change its damage roll.",
+  "DT.SavageAttacker.NotAdditive": "Savage Attacker: the weapon dice of this roll are multiplied or subtracted — please re-roll by hand.",
+
   "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }

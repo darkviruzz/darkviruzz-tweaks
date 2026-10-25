@@ -87,6 +87,7 @@ scripts/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
     token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
+    savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
@@ -496,6 +497,33 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
 
+### Damage rolls (feature *Savage Attacker*, verified 2026-10-25 against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6)
+
+- **Roll workflow** (`BasicRoll.build` → `buildConfigure` / `buildEvaluate` / `buildPost`, same in
+  both versions): `dnd5e.preRoll<Name>` / `…V2` (config, dialog, message) → rolls built (dialog or
+  `fromConfig`) → `dnd5e.post<Name>RollConfiguration(rolls, config, dialog, message)` with the
+  **constructed but unevaluated** rolls → evaluate → chat message. For damage `hookNames` is
+  `["damage"]`, i.e. `dnd5e.postDamageRollConfiguration`. `Activity#rollDamage` sets
+  `rollConfig.subject = this` (the activity) and fires `dnd5e.rollDamage(rolls, {subject})`
+  only AFTER the message exists — too late to change the roll.
+- **Criticals are applied before that hook:** `DamageRoll`'s constructor calls
+  `configureDamage()` (6.0: guarded by `options.configured`, applied exactly once; 5.3: also
+  re-run by the damage dialog when "Critical" is chosen). Plain dice are doubled with
+  `term.alter()`; dice WITH modifiers (e.g. Great Weapon Fighting `min3`) are duplicated as extra
+  terms — Savage Attacker then only pools the first copy (known limitation).
+- **Weapon base damage:** `AttackActivity#_processDamagePart` marks the weapon's own part
+  `base: true` on the roll CONFIG (`config.rolls[i].base`, not on the roll's options) and appends
+  `@mod` / `@magicalBonus` as further parts of the same roll. Roll order = `config.rolls` order.
+- **Attack hit:** `dnd5e.rollAttack(rolls, {subject, ammoUpdate})` fires after evaluation;
+  `roll.options.target` is the AC only when exactly ONE target was selected
+  (`targets.length === 1 ? targets[0].ac : undefined`). `D20Roll#isSuccess` ignores nat 20/1 —
+  use `isCritical` / `isFumble` first.
+- **`chunkTerms`** (damage application by type) rebuilds every non-operator term with
+  `RollTerm.fromData(term.toJSON())`, so a `PoolTerm` in a damage roll is fine.
+- Marks that must survive other modules' cards go into `roll.options` (serialised with the
+  roll); `message.update({rolls: rolls.map(r => JSON.stringify(r))})` replaces a card's rolls
+  (author or GM only — `message.canUserModify(user, "update")`).
+
 ### Token drag, animation & module socket (feature *Live Token Drag*, v1.8.0)
 
 Verified 2026-10-25 against the real v14 source (local install, build 14.364:
@@ -674,4 +702,5 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
+| Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |

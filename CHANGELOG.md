@@ -46,6 +46,12 @@ and GMs, not for developers.
   recognised and can be converted. Open it from the actor's context menu in the Actors
   sidebar, an optional Token HUD button, a keybinding or a macro. *Too Many Tokens – Online*
   must stay installed (it may be deactivated). Off by default.
+- **Savage Attacker** (D&D 5e, GM): automates the 2024 feat. *Automatic*: the first weapon
+  damage roll of each turn — also on other creatures' turns, so opportunity attacks count —
+  rolls the weapon dice twice and keeps the higher result (Dice So Nice shows both, a note on
+  the card shows both totals); a known miss doesn't use up the turn. Every other weapon damage
+  card gets a **Savage Attacker** button for the GM and the owners, so the GM can decide which
+  hit was the first. *Button only* mode is available too. Off by default.
 
 ## [1.7.0] — 2026-10-13
 

@@ -128,5 +128,20 @@
   "DT.TokenArt.NothingToApply": "Wähle, wohin das Bild soll: Tokens, Prototyp-Token oder Porträt.",
   "DT.TokenArt.Applied": "Token-Bild gesetzt: {tokens} Token(s), {actors} Akteur(e).",
 
+  "DT.Categories.SavageAttacker.Label": "Savage Attacker (D&D 5e)",
+  "DT.Categories.SavageAttacker.Hint": "Automatisiert das 2024-Talent Savage Attacker: einmal pro Zug die Schadenswürfel einer Waffe zweimal würfeln und das höhere Ergebnis nehmen. Welt-Einstellung (Spielleitung).",
+  "DT.Settings.SavageAttackerMode.Name": "Savage Attacker",
+  "DT.Settings.SavageAttackerMode.Hint": "Automatisch: Der erste Waffenschaden jedes Zuges (auch in Zügen anderer, z. B. bei Gelegenheitsangriffen), der kein bekannter Fehlschlag war, würfelt die Waffenwürfel doppelt und nimmt das höhere Ergebnis; alle anderen Waffen-Schadenskarten bekommen einen Knopf. Nur Knopf: ein Knopf auf jeder Waffen-Schadenskarte von Kreaturen mit dem Talent. Der Knopf bleibt auch nach der Nutzung im Zug verfügbar — welcher Treffer der erste war, entscheidet die Spielleitung.",
+  "DT.Settings.SavageAttackerMode.Off": "Aus",
+  "DT.Settings.SavageAttackerMode.Auto": "Automatisch (erster Treffer pro Zug) + Knopf",
+  "DT.Settings.SavageAttackerMode.Button": "Nur Knopf",
+  "DT.SavageAttacker.Button": "Savage Attacker",
+  "DT.SavageAttacker.ButtonHint": "Die Schadenswürfel der Waffe noch einmal würfeln und das höhere Ergebnis nehmen.",
+  "DT.SavageAttacker.UsedThisTurn": "in diesem Zug schon genutzt",
+  "DT.SavageAttacker.Result": "Savage Attacker: {first} / {second} → {kept}",
+  "DT.SavageAttacker.Applied": "Savage Attacker angewendet",
+  "DT.SavageAttacker.NoPermission": "Savage Attacker: Nur die Spielleitung oder der Autor dieser Nachricht kann ihren Schadenswurf ändern.",
+  "DT.SavageAttacker.NotAdditive": "Savage Attacker: Die Waffenwürfel dieses Wurfs werden multipliziert oder abgezogen — bitte von Hand nachwürfeln.",
+
   "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
 }

@@ -19,6 +19,7 @@ import pauseControl from "./pause-control.js";
 import liveTokenDrag from "./live-token-drag.js";
 import filePickerPreview from "./file-picker-preview.js";
 import tokenArtPicker from "./token-art-picker.js";
+import savageAttacker from "./savage-attacker.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -29,5 +30,6 @@ export const FEATURES = [
   pauseControl,
   liveTokenDrag,
   filePickerPreview,
-  tokenArtPicker
+  tokenArtPicker,
+  savageAttacker
 ];

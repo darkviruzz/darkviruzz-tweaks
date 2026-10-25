@@ -23,7 +23,8 @@
     "styles/ability-score-prominence.css",
     "styles/spell-effect-autoapply.css",
     "styles/file-picker-preview.css",
-    "styles/token-art-picker.css"
+    "styles/token-art-picker.css",
+    "styles/savage-attacker.css"
   ],
   "languages": [
     {

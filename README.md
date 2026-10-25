@@ -339,6 +339,36 @@ are loaded from GitHub exactly as before.
 
 ---
 
+### 10. Savage Attacker  ·  *dnd5e · world (GM)*
+
+Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
+roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
+dnd5e 6's new rule effects can't express it (they cover d20 rolls and attack/check/save bonuses,
+not damage).
+
+**How it works** (for every creature that has the feat — player characters, sidekicks, NPCs):
+
+- *Automatic* — the **first weapon damage roll of a turn** rolls the weapon dice twice and keeps
+  the higher total. Dice So Nice shows both sets; the card shows "Savage Attacker: 4 / 7 → 7".
+  "Once per turn" counts every creature's turn of the running combat: an **opportunity attack**
+  on someone else's turn qualifies again, the second attack of your own turn (Extra Attack) does
+  not. If the attack was a **known miss** (exactly one target with a known AC), the chance is not
+  used up and the next hit gets it; with several or no targets the hit is unknown and the roll
+  counts. Outside combat every weapon damage roll qualifies. On a critical hit the doubled
+  weapon dice are rolled twice, as the rules say.
+- *Button* — every other weapon damage card of a creature with the feat gets a **Savage Attacker**
+  button (for the GM and the creature's owners). It rolls the weapon dice of that card again and
+  keeps the higher result; the card's damage — and dnd5e's damage tray — then uses the new total.
+  The button stays usable after the turn's use and only notes "already used this turn": which hit
+  was really the first is the GM's call. Changing a card needs the GM or the card's author.
+- Only real weapons count — not an Unarmed Strike (not a weapon in the 2024 rules), not spells.
+  Extra damage dice (Hex, Sneak Attack, a second damage part) are not re-rolled, only the
+  weapon's own dice.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Savage Attacker** | Off | *Automatic (first hit per turn) + button*, *Button only* or *Off*. World setting (GM). |
+
 ## Already built in (no tweak needed)
 
 - **GM: move tokens through walls and other tokens** — the GM's *unconstrained movement*

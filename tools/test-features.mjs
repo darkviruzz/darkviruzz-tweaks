@@ -830,4 +830,162 @@ await test("token art: Token HUD button only with both options on and an owned t
   delete globalThis.document; delete globalThis.HTMLElement;
 });
 
+/* ---------- Savage Attacker ---------- */
+// Minimal dice: DiceTerm/PoolTerm/OperatorTerm/NumericTerm and a Roll that parses "XdY", "{XdY,XdY}kh", "+", numbers.
+class SaTerm { constructor(o = {}) { Object.assign(this, o); this.options ??= {}; } toJSON() { return { ...this }; } }
+class SaDice extends SaTerm { get formula() { return `${this.number}d${this.faces}${this.modifiers?.join("") ?? ""}`; } }
+class SaPool extends SaTerm { get formula() { return `{${this.terms.join(",")}}${this.modifiers.join("")}`; } }
+class SaOp extends SaTerm {}
+class SaNum extends SaTerm {}
+let saNextResults = [];
+class SaRoll {
+  constructor(formula = "", data = {}, options = {}) {
+    this.data = data;
+    this.options = options;
+    this.terms = String(formula).split(" ").filter(Boolean).map(part => {
+      if (["+", "-", "*", "/"].includes(part)) return new SaOp({ operator: part });
+      const pool = /^\{(.+)\}(kh)$/.exec(part);
+      if (pool) return new SaPool({ terms: pool[1].split(","), modifiers: [pool[2]], rolls: [] });
+      const dice = /^(\d+)d(\d+)$/.exec(part);
+      if (dice) return new SaDice({ number: Number(dice[1]), faces: Number(dice[2]), modifiers: [] });
+      return new SaNum({ number: Number(part) });
+    });
+    this.resetFormula();
+  }
+  resetFormula() { this.formula = this.terms.map(x => x.formula ?? x.operator ?? x.number).join(" "); }
+  async evaluate() {
+    for (const x of this.terms) if (x instanceof SaDice) x.total = saNextResults.shift();
+    this.total = this.terms.reduce((s, x) => s + (x.total ?? x.number ?? 0), 0);
+    return this;
+  }
+  toJSON() { return { options: { ...this.options }, terms: this.terms.map(x => x.toJSON()), total: this.total }; }
+  static fromData(data) {
+    const r = new SaRoll();
+    r.options = data.options;
+    r.total = data.total;
+    r.terms = data.terms.map(j => new (j.operator ? SaOp : (j.faces ? SaDice : SaNum))(j));
+    return r;
+  }
+}
+foundry.dice = { Roll: SaRoll, terms: { DiceTerm: SaDice, PoolTerm: SaPool } };
+const saModule = await import(pathToFileURL(join(ROOT, "scripts/features/savage-attacker.js")).href);
+const sa = saModule.internals;
+saModule.default.init();
+const saActors = {};
+globalThis.fromUuidSync = uuid => saActors[uuid] ?? null;
+const saActor = (id, { feat = true, owner = true } = {}) => {
+  const flags = {};
+  return saActors[`Actor.${id}`] = {
+    id, uuid: `Actor.${id}`, isOwner: owner,
+    items: feat ? [{ type: "feat", name: "Savage Attacker", system: { identifier: "savage-attacker" } }] : [],
+    getFlag: (ns, k) => flags[`${ns}.${k}`],
+    setFlag: async (ns, k, v) => { flags[`${ns}.${k}`] = v; }
+  };
+};
+const saActivity = (actor, { type = "attack", item = "weapon", identifier = "longsword", id = "atk1" } = {}) =>
+  ({ id, type, actor, item: { type: item, system: { identifier } } });
+const saDamage = async (activity, formula = "1d8 + 3", { rolls = 1, base = 0 } = {}) => {
+  const built = Array.from({ length: rolls }, () => new SaRoll(formula));
+  const config = { subject: activity, rolls: built.map((_, i) => ({ base: i === base })) };
+  await fire("dnd5e.postDamageRollConfiguration", built, config, {}, {});
+  return built;
+};
+const saAttack = (activity, { total = 15, target = 14, isCritical = false, isFumble = false } = {}) =>
+  fire("dnd5e.rollAttack", [{ total, options: { target }, isCritical, isFumble }], { subject: activity });
+const saCombat = { id: "c1", started: true, round: 1, turn: 0 };
+
+await test("savage attacker: off → nothing changes", async () => {
+  sa.reset(); settings.savageAttackerMode = "off"; game.combat = saCombat;
+  const [roll] = await saDamage(saActivity(saActor("a1")));
+  assert.equal(roll.formula, "1d8 + 3");
+  assert.equal(roll.options[MODULE_ID], undefined);
+});
+await test("savage attacker (auto): first weapon damage of the turn becomes {XdY,XdY}kh on the BASE roll", async () => {
+  sa.reset(); settings.savageAttackerMode = "auto"; Object.assign(saCombat, { round: 1, turn: 0 });
+  const actor = saActor("a2");
+  const rolls = await saDamage(saActivity(actor), "1d8 + 3", { rolls: 2, base: 1 });
+  assert.equal(rolls[0].formula, "1d8 + 3", "only the weapon's own (base) part");
+  assert.equal(rolls[1].formula, "{1d8,1d8}kh + 3");
+  assert.equal(rolls[1].options[MODULE_ID].savage, "auto");
+  assert.equal(actor.getFlag(MODULE_ID, "savageAttackerTurn"), "c1:1:0");
+});
+await test("savage attacker (auto): crit-doubled dice are pooled as rolled ({2d8,2d8}kh)", async () => {
+  sa.reset();
+  const [roll] = await saDamage(saActivity(saActor("a3")), "2d8 + 3");
+  assert.equal(roll.formula, "{2d8,2d8}kh + 3");
+});
+await test("savage attacker (auto): 2nd attack of the turn → button; opportunity attack on another turn → automatic again", async () => {
+  sa.reset(); Object.assign(saCombat, { round: 2, turn: 1 });
+  const actor = saActor("a4");
+  const activity = saActivity(actor);
+  const [first] = await saDamage(activity);
+  const [second] = await saDamage(activity);
+  assert.equal(first.options[MODULE_ID].savage, "auto");
+  assert.equal(second.formula, "1d8 + 3");
+  assert.equal(second.options[MODULE_ID].savage, "available");
+  saCombat.turn = 2; // another creature's turn: opportunity attack
+  const [reaction] = await saDamage(activity);
+  assert.equal(reaction.options[MODULE_ID].savage, "auto");
+});
+await test("savage attacker (auto): a known miss doesn't use the turn; the following hit does; unknown counts", async () => {
+  sa.reset(); Object.assign(saCombat, { round: 3, turn: 0 });
+  const actor = saActor("a5");
+  const activity = saActivity(actor);
+  await saAttack(activity, { total: 10, target: 14 });
+  const [miss] = await saDamage(activity);
+  assert.equal(miss.options[MODULE_ID].savage, "available");
+  await saAttack(activity, { total: 9, target: 14, isCritical: true });
+  const [hit] = await saDamage(activity);
+  assert.equal(hit.options[MODULE_ID].savage, "auto", "a crit hits regardless of AC");
+  assert.equal(sa.attackHit({ total: 20, options: {} }), null, "no single target → unknown");
+  assert.equal(sa.attackHit({ total: 25, options: { target: 14 }, isFumble: true }), false);
+});
+await test("savage attacker: no feat, Unarmed Strike, non-attack activity, button mode → no automatic pool", async () => {
+  sa.reset(); Object.assign(saCombat, { round: 4, turn: 0 });
+  const [noFeat] = await saDamage(saActivity(saActor("a6", { feat: false })));
+  assert.equal(noFeat.options[MODULE_ID], undefined);
+  const [unarmed] = await saDamage(saActivity(saActor("a7"), { identifier: "unarmed-strike" }));
+  assert.equal(unarmed.options[MODULE_ID], undefined);
+  const [other] = await saDamage(saActivity(saActor("a8"), { type: "damage" }));
+  assert.equal(other.options[MODULE_ID], undefined);
+  settings.savageAttackerMode = "button";
+  const [manual] = await saDamage(saActivity(saActor("a9")));
+  assert.equal(manual.formula, "1d8 + 3");
+  assert.equal(manual.options[MODULE_ID].savage, "available");
+  game.combat = { started: false };
+  assert.equal(sa.turnKey(), null, "outside combat there is no turn to use up");
+  game.combat = saCombat;
+});
+await test("savage attacker (button): re-roll keeps the higher result, updates the total, marks the turn", async () => {
+  sa.reset(); settings.savageAttackerMode = "auto"; Object.assign(saCombat, { round: 5, turn: 0 });
+  const actor = saActor("b1");
+  const roll = new SaRoll("1d8 + 3"); saNextResults = [2]; await roll.evaluate();
+  roll.options[MODULE_ID] = { savage: "available", actor: actor.uuid };
+  let updated = null;
+  const message = { rolls: [roll], canUserModify: () => true, update: async d => { updated = d; } };
+  saNextResults = [7];
+  assert.deepEqual(await sa.rerollOnMessage(message, 0), { before: 2, after: 7 });
+  const stored = JSON.parse(updated.rolls[0]);
+  assert.equal(stored.total, 10);
+  assert.equal(stored.terms[0].total, 7);
+  assert.equal(stored.options[MODULE_ID].savage, "rerolled");
+  assert.ok(sa.usedThisTurn(actor));
+  // lower second result: the original stays
+  const low = new SaRoll("1d8 + 3"); saNextResults = [6]; await low.evaluate();
+  low.options[MODULE_ID] = { savage: "available", actor: actor.uuid };
+  saNextResults = [1];
+  await sa.rerollOnMessage({ rolls: [low], canUserModify: () => true, update: async d => { updated = d; } }, 0);
+  assert.equal(JSON.parse(updated.rolls[0]).total, 9);
+});
+await test("savage attacker (button): refused without permission or for multiplied dice", async () => {
+  sa.reset(); notes.length = 0;
+  const roll = new SaRoll("1d8 + 3"); saNextResults = [4]; await roll.evaluate();
+  roll.options[MODULE_ID] = { savage: "available", actor: "Actor.b1" };
+  assert.equal(await sa.rerollOnMessage({ rolls: [roll], canUserModify: () => false }, 0), null);
+  const multiplied = new SaRoll("2 * 1d8"); saNextResults = [4]; await multiplied.evaluate();
+  multiplied.options[MODULE_ID] = { savage: "available", actor: "Actor.b1" };
+  assert.equal(await sa.rerollOnMessage({ rolls: [multiplied], canUserModify: () => true }, 0), null);
+  assert.deepEqual(notes, ["DT.SavageAttacker.NoPermission", "DT.SavageAttacker.NotAdditive"]);
+});
+
 console.log(`\ntest-features: ${passed} passed`);

@@ -1,0 +1,24 @@
+/* Savage Attacker (scripts/features/savage-attacker.js): button / result note on damage cards. */
+
+.dt-savage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: var(--font-size-12, 12px);
+}
+
+.dt-savage__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  padding: 2px 8px;
+  line-height: 1.6;
+}
+
+.dt-savage__used {
+  font-style: italic;
+  opacity: 0.7;
+}
