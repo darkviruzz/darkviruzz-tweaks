@@ -53,15 +53,18 @@ and GMs, not for developers.
   card gets a **Savage Attacker** button for the GM and the owners, so the GM can decide which
   hit was the first. *Button only* mode is available too. Off by default.
 - **Weapon Mastery** (D&D 5e, GM): makes the 2024 weapon masteries usable from the attack card.
-  Every attack with a mastery gets a panel with the rule, each target's hit or miss and a button
-  for what the mastery does: **Graze** damage on a miss; on a hit **Topple** (Constitution save
-  rolled by the GM for monsters and by the players for their own characters, Prone on a
-  failure), **Push** 10 ft away from the attacker (grid and walls respected), and **Sap**,
-  **Slow** and **Vex** as effects that end on their own at the right turn and are used up by the
-  next attack. **Cleave** and **Nick** show their rule. When the hit isn't known (no target, no
-  AC) all buttons are shown and the GM decides; the GM can also switch a target between hit and
-  miss. Optionally every mastery can run a **macro** of your choice. Works with RSReforged
-  one-click attacks. Off by default.
+  Every attack card with a mastery gets one line — "Weapon Mastery:", the mastery's rule link and
+  a button that **carries it out on click** (masteries are optional, nothing happens by itself):
+  **Graze** damage on a miss; on a hit **Topple** (Constitution save rolled by the GM for
+  monsters and by the players for their own characters, Prone on a failure), **Push** 10 ft away
+  from the attacker (grid and walls respected), and **Sap**, **Slow** and **Vex** as effects that
+  end on their own at the right turn and are used up by the next attack. **Cleave** and **Nick**
+  only show their rule. Players see just that line; their click is applied by the GM's client
+  (Vex, on their own character, directly), and targets whose hit is unknown are left to the GM.
+  The GM also gets a tray like dnd5e's damage and effect trays: each target's hit or miss (click
+  to correct it), the targets of the attack or the selected tokens, Apply per target — and it
+  folds up after applying. Optionally every mastery can run a **macro** of your choice. Works
+  with RSReforged one-click attacks. Off by default.
 
 ## [1.7.0] — 2026-10-13
 

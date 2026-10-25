@@ -5,9 +5,20 @@
  *
  * dnd5e lets a character pick a weapon mastery for an attack and remembers it on the attack
  * roll (`rolls[0].options.mastery`, also `message.system.mastery` in 6.x and
- * `flags.dnd5e.roll.mastery` in 5.x), but automates none of them. This feature adds a panel
- * to every attack card that carries a mastery: the mastery with its rule link, the targets
- * with their hit/miss and one button per target for what the mastery does:
+ * `flags.dnd5e.roll.mastery` in 5.x), but automates none of them. This feature adds one line
+ * to every ATTACK card that carries a mastery — "Weapon Mastery: <rule link> [<Mastery>]" — and
+ * for the GM a dnd5e-style tray below it:
+ *   - The mastery button carries out the mastery on every target it applies to. Masteries are
+ *     optional, so nothing ever happens without a click. A player who may change the affected
+ *     documents (Vex: their own actor) runs it directly; otherwise the click asks the active GM
+ *     over the module socket, whose client applies it to the targets with a known matching
+ *     hit/miss and tells the GM about targets whose hit is unknown.
+ *   - The GM tray (markup of dnd5e's own `.card-tray.collapsible`, so dnd5e's CSS and chat
+ *     listener fold it) lists the recorded targets — or, switched like dnd5e's
+ *     "Targeted / Selected" control, the selected tokens — with hit/miss (clickable to correct
+ *     it, e.g. after a Shield spell) and an Apply button per target. After applying, it folds up
+ *     like dnd5e's damage and effect trays (unless dnd5e's "Collapse Chat Card Trays" is Manual).
+ * What each mastery does:
  *   - Graze (miss): damage = the attack's ability modifier, weapon damage type (applyDamage).
  *   - Topple (hit): Constitution save DC 8 + ability mod + proficiency, Prone on a failure. The
  *     GM rolls for creatures without a player owner; player-owned targets get a chat card
@@ -19,16 +30,12 @@
  *     Sap: disadvantage on its next attack roll; Slow: speed −10 ft, doesn't stack.
  *   - Vex (hit): an effect on the attacker — advantage on the next attack roll against that
  *     creature before the end of its next turn.
- *   - Cleave / Nick: rule reminder only.
+ *   - Cleave / Nick: nothing to automate — only the line with the rule link.
  * Plus an optional macro per mastery (world setting) that gets
  * `{actor, token, item, activity, mastery, targets, message, hit}`.
  *
  * Hit or miss comes from dnd5e's own data: the AC snapshot of each recorded target (see
- * lib/attack-roll.js). Without a known AC every button is shown and the GM decides; the GM
- * can also flip a target between hit and miss on the card (e.g. after a Shield spell).
- *
- * Rights: a button is only shown to users who may change the documents it touches — the GM,
- * or the owner (attacker for Vex, target for the rest). Everyone else sees a hint.
+ * lib/attack-roll.js); unknown (no AC, selected tokens) = the GM decides.
  *
  * Effects: dnd5e 6 has pseudo expiries "sourceStart"/"sourceEnd" (start/end of the ORIGIN
  * actor's turn) and rule-type changes (`{key: "attack", type: "dnd5e.advantage", value: "-1"}`
@@ -40,13 +47,16 @@
  *
  * RSReforged 6 (dnd5e 6) shows dnd5e's attack message inside the usage card
  * (`.rsr-section-attack[data-message-id]`, added asynchronously) and hides the attack card
- * itself, so the panel is also placed into those sections.
+ * itself, so the panel goes into that section and never onto the hidden child card (whose
+ * copies otherwise surfaced, e.g. in chat notifications) nor the usage or damage card.
  */
 
 import { MODULE_ID } from "../constants.js";
 import { hitAgainst } from "../lib/attack-roll.js";
 import { watchRsrSections } from "../lib/rsr-sections.js";
+import { emitSocketMessage, onSocketMessage } from "../lib/socket.js";
 
+const FEATURE_ID = "weaponMastery";
 const KEY_ENABLED = "weaponMasteryEnabled";
 const MACRO_SETTINGS = {
   cleave: "weaponMasteryMacroCleave",
@@ -69,16 +79,14 @@ const MACRO_NAMES = {
   vex: "DT.Settings.WeaponMasteryMacroVex.Name"
 };
 
-/** When each mastery applies ("hit"/"miss"; null = reminder only) and its rule hint. */
+/** When each mastery applies ("hit"/"miss"); Cleave and Nick have nothing to automate. */
 const RULES = {
-  cleave: { on: null, hint: "DT.WeaponMastery.Hint.Cleave" },
-  graze: { on: "miss", hint: "DT.WeaponMastery.Hint.Graze", icon: "fa-solid fa-droplet" },
-  nick: { on: null, hint: "DT.WeaponMastery.Hint.Nick" },
-  push: { on: "hit", hint: "DT.WeaponMastery.Hint.Push", icon: "fa-solid fa-angles-right" },
-  sap: { on: "hit", hint: "DT.WeaponMastery.Hint.Sap", icon: "fa-solid fa-arrow-trend-down" },
-  slow: { on: "hit", hint: "DT.WeaponMastery.Hint.Slow", icon: "fa-solid fa-person-walking" },
-  topple: { on: "hit", hint: "DT.WeaponMastery.Hint.Topple", icon: "fa-solid fa-person-falling" },
-  vex: { on: "hit", hint: "DT.WeaponMastery.Hint.Vex", icon: "fa-solid fa-crosshairs" }
+  graze: { on: "miss", icon: "fa-solid fa-droplet" },
+  push: { on: "hit", icon: "fa-solid fa-angles-right" },
+  sap: { on: "hit", icon: "fa-solid fa-arrow-trend-down" },
+  slow: { on: "hit", icon: "fa-solid fa-person-walking" },
+  topple: { on: "hit", icon: "fa-solid fa-person-falling" },
+  vex: { on: "hit", icon: "fa-solid fa-crosshairs" }
 };
 
 /** effect.flags[MODULE_ID].weaponMastery = { mastery, source, message, target? } */
@@ -101,9 +109,28 @@ const hasSourceExpiry = () => !!CONFIG.DND5E?.pseudoExpiryEvents?.sourceStart;
 /** dnd5e 6: rule-type changes (advantage/disadvantage). */
 const hasRules = () => !!CONFIG.ActiveEffect?.changeTypes?.["dnd5e.advantage"];
 
+/** dnd5e's "Collapse Chat Card Trays" (manual / never / older / always; default older). */
+function trayCollapseSetting() {
+  try {
+    return game.settings.get("dnd5e", "autoCollapseChatTrays") ?? "older";
+  } catch {
+    return "older";
+  }
+}
+
 /* -------------------------------------------- */
 /*  Reading the attack                          */
 /* -------------------------------------------- */
+
+/** dnd5e 6 types the message, 5.x (and RSReforged's legacy cards) flag the roll type. */
+function isAttackMessage(message) {
+  return (message?.type === "attack") || (message?.flags?.dnd5e?.roll?.type === "attack");
+}
+
+/** RSReforged 6 shows this attack message as a section of its usage card and hides the card. */
+function shownByRsr(message) {
+  return !!message?.flags?.rsreforged?.parentId && !!game.modules?.get("rsreforged")?.active;
+}
 
 function masteryOf(message) {
   const roll = message?.rolls?.[0];
@@ -119,12 +146,13 @@ function targetDescriptors(message) {
 }
 
 /**
- * Everything the panel needs from an attack message, or null if it carries no mastery.
- * dnd5e records a mastery only when the attacker has the weapon's mastery (characters; NPCs
- * have no weapon masteries in dnd5e) — no mastery, no panel.
+ * Everything the panel needs from an attack message, or null if it isn't an attack or carries
+ * no mastery. dnd5e records a mastery only when the attacker has the weapon's mastery
+ * (characters; NPCs have no weapon masteries in dnd5e) — no mastery, no panel.
  * @returns {{message, mastery, roll, actor, item, activity, ability, targets: object[]}|null}
  */
 function attackContext(message) {
+  if (!isAttackMessage(message)) return null;
   const mastery = masteryOf(message);
   if (!mastery) return null;
   const roll = message.rolls?.[0] ?? null;
@@ -143,13 +171,15 @@ function attackContext(message) {
   return { message, mastery, roll, actor, item, activity, ability, targets };
 }
 
-/** Rows for the user's current targets — used when the attack recorded none. */
-function currentTargetRows() {
-  return Array.from(game.user?.targets ?? []).filter(t => t.actor).map(t => ({
-    key: null, name: t.name ?? t.document?.name ?? "", ac: null,
-    actorUuid: t.actor.uuid, tokenUuid: t.document?.uuid ?? null, hit: null
-  }));
-}
+const tokenRow = (prefix, token) => ({
+  key: `${prefix}:${token.document?.uuid ?? token.actor.uuid}`, name: token.name ?? token.document?.name ?? "",
+  ac: null, actorUuid: token.actor.uuid, tokenUuid: token.document?.uuid ?? null, hit: null
+});
+
+/** The GM's selected tokens (dnd5e's "Selected" mode). */
+const selectedRows = () => (canvas?.tokens?.controlled ?? []).filter(t => t.actor).map(t => tokenRow("s", t));
+/** The user's current targets — for a player's Vex when the attack recorded none. */
+const currentTargetRows = () => Array.from(game.user?.targets ?? []).filter(t => t.actor).map(t => tokenRow("c", t));
 
 function targetActor(row) {
   return resolve(row.actorUuid) ?? resolve(row.tokenUuid)?.actor ?? null;
@@ -198,20 +228,25 @@ function tooLargeToPush(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Hit / miss shown on the card                */
+/*  Hit / miss                                  */
 /* -------------------------------------------- */
 
 /** "<message id>:<row key>" → true/false, the GM's correction for this session. */
 const overrides = new Map();
 
-function rowState(ctx, row) {
+/** "hit" / "miss" / "unknown" including the GM's correction. */
+function trueState(ctx, row) {
   const override = overrides.get(`${ctx.message.id}:${row.key}`);
   const hit = (override !== undefined) ? override : row.hit;
-  if ((hit === null) || (hit === undefined) || !resultsVisible()) return "unknown";
+  if ((hit === null) || (hit === undefined)) return "unknown";
   return hit ? "hit" : "miss";
 }
 
-/** dnd5e's "Attack Roll Visibility": players may not be allowed to see hits and misses. */
+/** What the current user may see: dnd5e's "Attack Roll Visibility" can hide results from players. */
+function rowState(ctx, row) {
+  return resultsVisible() ? trueState(ctx, row) : "unknown";
+}
+
 function resultsVisible() {
   if (game.user.isGM) return true;
   try {
@@ -230,14 +265,13 @@ function applies(mastery, state) {
 /*  Rights                                      */
 /* -------------------------------------------- */
 
-/** May the current user use this mastery on this row? (current-targets rows: checked on click) */
-function mayAct(ctx, row) {
+/** May the current user change every document this mastery touches for these rows? */
+function mayApplyLocally(ctx, rows) {
   if (game.user.isGM) return true;
   if (ctx.mastery === "vex") return !!ctx.actor?.isOwner;
-  if (row.key === null) return false;
-  if (ctx.mastery === "push") return !!targetToken(row)?.document?.isOwner;
-  if (ctx.mastery === "topple") return !!targetActor(row)?.isOwner;
-  return !!targetActor(row)?.isOwner;
+  if (!rows.length) return false;
+  if (ctx.mastery === "push") return rows.every(row => targetToken(row)?.document?.isOwner);
+  return rows.every(row => targetActor(row)?.isOwner);
 }
 
 function warn(key, data) {
@@ -295,7 +329,7 @@ function sapEffect(ctx) {
   return effectData(ctx, "sap", {
     name: format("DT.WeaponMastery.Effect.Sap", { attacker: ctx.actor?.name ?? "" }),
     img: "icons/svg/downgrade.svg",
-    description: localize("DT.WeaponMastery.Hint.Sap"),
+    description: localize("DT.WeaponMastery.Effect.SapText"),
     changes: hasRules() ? [{ key: "attack", type: "dnd5e.advantage", value: "-1" }] : [],
     edge: "start"
   });
@@ -306,7 +340,7 @@ function slowEffect(ctx, actor) {
   return effectData(ctx, "slow", {
     name: format("DT.WeaponMastery.Effect.Slow", { attacker: ctx.actor?.name ?? "" }),
     img: "icons/svg/net.svg",
-    description: localize("DT.WeaponMastery.Hint.Slow"),
+    description: localize("DT.WeaponMastery.Effect.SlowText"),
     changes: [{ key: "system.attributes.movement.bonus", type: "add", value: `-${reduction}` }],
     edge: "start"
   });
@@ -316,7 +350,7 @@ function vexEffect(ctx, row, target) {
   return effectData(ctx, "vex", {
     name: format("DT.WeaponMastery.Effect.Vex", { target: row.name || target?.name || "" }),
     img: "icons/svg/target.svg",
-    description: localize("DT.WeaponMastery.Hint.Vex"),
+    description: localize("DT.WeaponMastery.Effect.VexText"),
     edge: "end",
     target: target?.uuid ?? row.actorUuid
   });
@@ -346,8 +380,8 @@ async function applyGraze(ctx, row) {
 }
 
 /** Roll a Topple save for an actor the current user owns; Prone on a failure. */
-async function rollToppleSave(actor, dc, event) {
-  const rolls = await actor.rollSavingThrow({ ability: "con", target: dc, event });
+async function rollToppleSave(actor, dc, { event, fastForward = false } = {}) {
+  const rolls = await actor.rollSavingThrow({ ability: "con", target: dc, event }, fastForward ? { configure: false } : {});
   const roll = rolls?.[0];
   if (!roll) return false;
   const saved = (typeof roll.isSuccess === "boolean") ? roll.isSuccess : (roll.total >= dc);
@@ -355,7 +389,7 @@ async function rollToppleSave(actor, dc, event) {
   return true;
 }
 
-async function applyTopple(ctx, row, event) {
+async function applyTopple(ctx, row, { event, fastForward } = {}) {
   const actor = targetActor(row);
   if (!actor) return warn("DT.WeaponMastery.NoActor");
   const dc = toppleDC(ctx);
@@ -371,7 +405,7 @@ async function applyTopple(ctx, row, event) {
     return "requested";
   }
   if (!(game.user.isGM || actor.isOwner)) return warn("DT.WeaponMastery.NoPermission");
-  return rollToppleSave(actor, dc, event);
+  return rollToppleSave(actor, dc, { event, fastForward });
 }
 
 /** Feet → scene units: dnd5e's metric convention is 1.5 m per 5 ft. */
@@ -450,16 +484,117 @@ async function applyVex(ctx, row) {
 
 const ACTIONS = { graze: applyGraze, topple: applyTopple, push: applyPush, sap: applySap, slow: applySlow, vex: applyVex };
 
-/** Run the mastery on a row (or on the user's current targets) and remember it on the card. */
-async function runAction(ctx, row, event) {
-  const rows = (row.key === null) ? currentTargetRows() : [row];
-  if (!rows.length) return warn("DT.WeaponMastery.NoTargets");
-  let result = false;
-  for (const r of rows) result = (await ACTIONS[ctx.mastery](ctx, r, event)) || result;
-  if (result && (row.key !== null) && ctx.message.canUserModify?.(game.user, "update")) {
-    await ctx.message.setFlag(MODULE_ID, `${FLAG_DONE}.done.${row.key}.${ctx.mastery}`, result);
+/* -------------------------------------------- */
+/*  Tray state                                  */
+/* -------------------------------------------- */
+
+/** "<message id>" → { mode: "targeted" | "selected", open: boolean }, for this session. */
+const trays = new Map();
+
+function doneMap(ctx) {
+  return ctx.message.flags?.[MODULE_ID]?.[FLAG_DONE]?.done ?? {};
+}
+
+function isDone(ctx, row) {
+  return !!doneMap(ctx)[row.key]?.[ctx.mastery];
+}
+
+const anyDone = ctx => Object.values(doneMap(ctx)).some(entry => entry?.[ctx.mastery]);
+
+function trayState(ctx) {
+  let state = trays.get(ctx.message.id);
+  if (!state) {
+    // Like dnd5e's trays: folded once used, or per its "Collapse Chat Card Trays" setting.
+    const setting = trayCollapseSetting();
+    const old = (ctx.message.timestamp ?? Date.now()) < (Date.now() - (5 * 60 * 1000));
+    const collapsed = anyDone(ctx) || (setting === "always") || ((setting === "older") && old);
+    state = { mode: ctx.targets.length ? "targeted" : "selected", open: !collapsed };
+    trays.set(ctx.message.id, state);
   }
-  return result;
+  if (!ctx.targets.length) state.mode = "selected";
+  return state;
+}
+
+function trayRows(ctx) {
+  return (trayState(ctx).mode === "selected") ? selectedRows() : ctx.targets;
+}
+
+/**
+ * Apply the mastery to the rows, record it on the card and fold the GM tray.
+ * @returns {Promise<boolean>} whether anything was applied
+ */
+async function applyRows(ctx, rows, options = {}) {
+  const updates = {};
+  let applied = false;
+  for (const row of rows) {
+    const result = await ACTIONS[ctx.mastery](ctx, row, options);
+    if (!result) continue;
+    applied = true;
+    if (/^t\d+$/.test(row.key)) updates[`flags.${MODULE_ID}.${FLAG_DONE}.done.${row.key}.${ctx.mastery}`] = result;
+  }
+  if (!applied) return false;
+  if (!options.keepOpen && (trayCollapseSetting() !== "manual")) trayState(ctx).open = false;
+  if (Object.keys(updates).length && ctx.message.canUserModify?.(game.user, "update")) await ctx.message.update(updates);
+  return true;
+}
+
+/* -------------------------------------------- */
+/*  Using the mastery                           */
+/* -------------------------------------------- */
+
+/**
+ * The mastery button. The GM applies it to every row of the tray it applies to; a player
+ * applies it directly when allowed (Vex), otherwise asks the active GM.
+ */
+async function useMastery(ctx, event) {
+  const rule = RULES[ctx.mastery];
+  if (!rule) return false;
+  const label = masteryLabel(ctx.mastery);
+  if (game.user.isGM) {
+    const rows = trayRows(ctx);
+    if (!rows.length) return warn("DT.WeaponMastery.NoTokens");
+    const eligible = rows.filter(row => applies(ctx.mastery, trueState(ctx, row)));
+    if (!eligible.length) return warn("DT.WeaponMastery.NothingApplies", { mastery: label });
+    return applyRows(ctx, eligible, { event });
+  }
+  const rows = (!ctx.targets.length && (ctx.mastery === "vex")) ? currentTargetRows() : ctx.targets;
+  if (!mayApplyLocally(ctx, rows)) return requestFromGM(ctx);
+  if (!rows.length) return warn("DT.WeaponMastery.NoTargets");
+  const eligible = rows.filter(row => applies(ctx.mastery, trueState(ctx, row)));
+  if (!eligible.length) return warn("DT.WeaponMastery.NothingApplies", { mastery: label });
+  return applyRows(ctx, eligible, { event });
+}
+
+/** Ask the active GM's client to apply the mastery of this attack card. */
+function requestFromGM(ctx) {
+  const gm = game.users.activeGM;
+  const mastery = masteryLabel(ctx.mastery);
+  if (!gm) return warn("DT.WeaponMastery.NoGM", { mastery });
+  emitSocketMessage(FEATURE_ID, { action: "use", messageId: ctx.message.id }, { recipients: [gm.id] });
+  ui.notifications.info(format("DT.WeaponMastery.Requested", { mastery }));
+  return true;
+}
+
+/**
+ * On the active GM's client: a player used the mastery button. Apply it to the targets with a
+ * known matching result; targets whose hit is unknown are left to the GM, who gets a note.
+ */
+async function onSocketRequest(request, senderId) {
+  if ((request?.action !== "use") || !game.users.activeGM?.isSelf || !enabled()) return;
+  const message = game.messages?.get(request.messageId);
+  const ctx = message ? attackContext(message) : null;
+  const sender = game.users.get?.(senderId) ?? Array.from(game.users).find(u => u.id === senderId);
+  if (!ctx || !sender || !RULES[ctx.mastery]) return;
+  // Only the attacker's side may ask for its mastery.
+  if (!(ctx.actor?.testUserPermission?.(sender, "OWNER") || (message.author?.id === senderId))) return;
+  const known = ctx.targets.filter(row => trueState(ctx, row) === RULES[ctx.mastery].on);
+  const unknown = ctx.targets.filter(row => trueState(ctx, row) === "unknown");
+  const data = { user: sender.name, mastery: masteryLabel(ctx.mastery), attacker: ctx.actor?.name ?? "" };
+  // Targets left for the GM keep the tray open.
+  if (known.length) await applyRows(ctx, known, { fastForward: true, keepOpen: unknown.length > 0 });
+  if (!ctx.targets.length) ui.notifications.info(format("DT.WeaponMastery.RequestNoTargets", data));
+  else if (unknown.length) ui.notifications.info(format("DT.WeaponMastery.RequestUnknown", { ...data, targets: unknown.map(r => r.name).join(", ") }));
+  else if (!known.length) ui.notifications.info(format("DT.WeaponMastery.RequestNothing", data));
 }
 
 /* -------------------------------------------- */
@@ -514,8 +649,8 @@ function icon(classes) {
   return node;
 }
 
-function button(label, iconClass, { tooltip, disabled = false, done = false } = {}, onClick) {
-  const node = el("button", "dt-wm__btn");
+function button(label, iconClass, { tooltip, disabled = false, done = false, className } = {}, onClick) {
+  const node = el("button", className ? `dt-wm__btn ${className}` : "dt-wm__btn");
   node.type = "button";
   node.append(icon(done ? "fa-solid fa-check" : iconClass), el("span", null, label));
   if (done) node.classList.add("dt-wm__btn--done");
@@ -540,6 +675,7 @@ function masteryLabel(mastery) {
   return CONFIG.DND5E?.weaponMasteries?.[mastery]?.label ?? mastery;
 }
 
+/** dnd5e's rule link: the rule as tooltip on hover, the journal page on click. */
 function ruleLink(mastery) {
   const label = masteryLabel(mastery);
   const reference = CONFIG.DND5E?.weaponMasteries?.[mastery]?.reference;
@@ -550,32 +686,30 @@ function ruleLink(mastery) {
   return link;
 }
 
-function hintText(ctx) {
-  const key = RULES[ctx.mastery]?.hint;
-  if (!key) return "";
+/** What one click does (Graze damage, Topple DC) — shown in tooltips and the tray header. */
+function actionDetail(ctx) {
   if (ctx.mastery === "graze") {
     const { value, type } = grazeDamage(ctx);
-    const damageType = CONFIG.DND5E?.damageTypes?.[type]?.label ?? type ?? "";
-    const ability = CONFIG.DND5E?.abilities?.[ctx.ability]?.label ?? ctx.ability ?? "";
-    return format("DT.WeaponMastery.Hint.GrazeAmount", { damage: value, type: damageType, ability });
+    return format("DT.WeaponMastery.Detail.Graze", { damage: value, type: CONFIG.DND5E?.damageTypes?.[type]?.label ?? type ?? "" });
   }
-  if (ctx.mastery === "topple") return format("DT.WeaponMastery.Hint.ToppleDC", { dc: toppleDC(ctx) });
-  return localize(key);
+  if (ctx.mastery === "topple") return format("DT.WeaponMastery.Detail.Topple", { dc: toppleDC(ctx) });
+  return "";
 }
 
-function actionLabel(ctx) {
-  switch (ctx.mastery) {
-    case "graze": {
-      const { value, type } = grazeDamage(ctx);
-      return format("DT.WeaponMastery.Button.Graze", { damage: value, type: CONFIG.DND5E?.damageTypes?.[type]?.label ?? type ?? "" });
-    }
-    case "topple": return format("DT.WeaponMastery.Button.Topple", { dc: toppleDC(ctx) });
-    case "push": return localize("DT.WeaponMastery.Button.Push");
-    case "sap": return localize("DT.WeaponMastery.Button.Sap");
-    case "slow": return localize("DT.WeaponMastery.Button.Slow");
-    case "vex": return localize("DT.WeaponMastery.Button.Vex");
-    default: return masteryLabel(ctx.mastery);
-  }
+function useButton(ctx, refresh) {
+  const rule = RULES[ctx.mastery];
+  const label = masteryLabel(ctx.mastery);
+  const detail = actionDetail(ctx);
+  let tooltip;
+  if (game.user.isGM) tooltip = format("DT.WeaponMastery.Use.GM", { mastery: label });
+  else if (mayApplyLocally(ctx, ctx.targets)) tooltip = format("DT.WeaponMastery.Use.Self", { mastery: label });
+  else tooltip = format("DT.WeaponMastery.Use.Request", { mastery: label });
+  if (detail) tooltip = `${tooltip} (${detail})`;
+  const done = anyDone(ctx);
+  if (done) tooltip = `${localize("DT.WeaponMastery.AlreadyApplied")} ${tooltip}`;
+  return button(label, rule.icon, { tooltip, done, className: "dt-wm__use" }, async event => {
+    if ((await useMastery(ctx, event)) && game.user.isGM) refresh();
+  });
 }
 
 const STATE_ICONS = { hit: "fa-solid fa-check", miss: "fa-solid fa-xmark", unknown: "fa-solid fa-question" };
@@ -583,103 +717,132 @@ const STATE_TOOLTIPS = {
   hit: "DT.WeaponMastery.State.Hit", miss: "DT.WeaponMastery.State.Miss", unknown: "DT.WeaponMastery.State.Unknown"
 };
 
-function isDone(ctx, row) {
-  if (row.key === null) return false;
-  return !!ctx.message.flags?.[MODULE_ID]?.[FLAG_DONE]?.done?.[row.key]?.[ctx.mastery];
-}
-
-function targetRow(ctx, row, rerender) {
-  const state = (row.key === null) ? "unknown" : rowState(ctx, row);
-  const li = el("li", "dt-wm__target");
+function targetRow(ctx, row, refresh) {
+  const state = rowState(ctx, row);
+  const li = el("li", `target dt-wm__target ${state}`);
   li.dataset.state = state;
 
-  // Status: the GM may switch a target between hit and miss.
-  const tooltip = localize(STATE_TOOLTIPS[state]);
-  if (game.user.isGM && (row.key !== null)) {
-    const toggle = el("button", "dt-wm__state");
-    toggle.type = "button";
-    toggle.append(icon(STATE_ICONS[state]));
-    toggle.dataset.tooltip = `${tooltip} — ${localize("DT.WeaponMastery.State.Toggle")}`;
-    toggle.ariaLabel = toggle.dataset.tooltip;
-    toggle.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      overrides.set(`${ctx.message.id}:${row.key}`, state !== "hit");
-      rerender();
-    });
-    li.append(toggle);
-  } else {
-    const status = el("span", "dt-wm__state");
-    status.append(icon(STATE_ICONS[state]));
-    status.dataset.tooltip = tooltip;
-    li.append(status);
-  }
-  li.append(el("span", "dt-wm__name", row.name || localize("DT.WeaponMastery.CurrentTargets")));
+  const toggle = el("button", "dt-wm__state");
+  toggle.type = "button";
+  toggle.append(icon(STATE_ICONS[state]));
+  toggle.dataset.tooltip = `${localize(STATE_TOOLTIPS[state])} — ${localize("DT.WeaponMastery.State.Toggle")}`;
+  toggle.ariaLabel = toggle.dataset.tooltip;
+  toggle.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    overrides.set(`${ctx.message.id}:${row.key}`, state !== "hit");
+    refresh();
+  });
+  li.append(toggle, el("span", "name dt-wm__name", row.name));
 
   if (!applies(ctx.mastery, state)) {
     li.append(el("span", "dt-wm__na", localize((state === "hit") ? "DT.WeaponMastery.NotOn.Hit" : "DT.WeaponMastery.NotOn.Miss")));
-    return { li, acted: false };
+    return li;
   }
-  if (!mayAct(ctx, row)) return { li, acted: false };
-
   let disabled = false;
-  let hint = localize(RULES[ctx.mastery].hint);
+  let tooltip = actionDetail(ctx) || format("DT.WeaponMastery.Use.GM", { mastery: masteryLabel(ctx.mastery) });
   if ((ctx.mastery === "graze") && (grazeDamage(ctx).value <= 0)) {
     disabled = true;
-    hint = localize("DT.WeaponMastery.GrazeNoDamage");
+    tooltip = localize("DT.WeaponMastery.GrazeNoDamage");
   }
-  if ((ctx.mastery === "push") && (row.key !== null) && tooLargeToPush(targetActor(row))) {
+  if ((ctx.mastery === "push") && tooLargeToPush(targetActor(row))) {
     disabled = true;
-    hint = format("DT.WeaponMastery.PushTooLarge", { target: row.name });
+    tooltip = format("DT.WeaponMastery.PushTooLarge", { target: row.name });
   }
   const done = isDone(ctx, row);
-  if (done) hint = `${localize("DT.WeaponMastery.AlreadyApplied")} ${hint}`;
-  li.append(button(actionLabel(ctx), RULES[ctx.mastery].icon, { tooltip: hint, disabled, done },
-    event => runAction(ctx, row, event)));
-  return { li, acted: true };
+  if (done) tooltip = `${localize("DT.WeaponMastery.AlreadyApplied")} ${tooltip}`;
+  li.append(button(localize("DT.WeaponMastery.Apply"), RULES[ctx.mastery].icon, { tooltip, disabled, done },
+    async event => {
+      if (await applyRows(ctx, [row], { event })) refresh();
+    }));
+  return li;
 }
 
-/** Open the mastery's rule page (dnd5e's journal reference). */
-async function openRule(mastery) {
-  const reference = CONFIG.DND5E?.weaponMasteries?.[mastery]?.reference;
-  const page = reference ? await fromUuid(reference) : null;
-  if (page?.parent?.sheet) return page.parent.sheet.render(true, { pageId: page.id });
-  return page?.sheet?.render(true);
+/** The GM's tray, in dnd5e's own `.card-tray.collapsible` markup so it looks and folds natively. */
+function buildTray(ctx, refresh) {
+  const state = trayState(ctx);
+  const tray = el("div", "card-tray dt-wm__tray collapsible");
+  if (!state.open) tray.classList.add("collapsed");
+  // dnd5e's chat listener toggles `.collapsed` on header clicks; doing it here keeps our state.
+  tray.addEventListener("click", event => {
+    if (event.target.closest?.(".collapsible-content")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    tray.classList.toggle("collapsed");
+    state.open = !tray.classList.contains("collapsed");
+  });
+  const detail = actionDetail(ctx);
+  const label = el("label", "roboto-upper");
+  label.append(icon("fa-solid fa-medal"),
+    el("span", null, format("DT.WeaponMastery.Tray", { mastery: detail ? `${masteryLabel(ctx.mastery)} · ${detail}` : masteryLabel(ctx.mastery) })),
+    icon("fa-solid fa-caret-down"));
+
+  const content = el("div", "collapsible-content");
+  const wrapper = el("div", "wrapper");
+  const source = el("section", "icon-row dt-wm__source-row");
+  const selected = state.mode === "selected";
+  const toggle = el("button", "dt-wm__source");
+  toggle.type = "button";
+  toggle.dataset.mode = state.mode;
+  toggle.append(icon(selected ? "fa-solid fa-expand" : "fa-solid fa-bullseye"));
+  toggle.dataset.tooltip = localize(selected ? "DT.WeaponMastery.Mode.Selected" : "DT.WeaponMastery.Mode.Targeted");
+  toggle.ariaLabel = toggle.dataset.tooltip;
+  toggle.disabled = !ctx.targets.length;
+  toggle.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    state.mode = selected ? "targeted" : "selected";
+    refresh();
+  });
+  const list = el("ul", "unlist evaluation dt-wm__targets");
+  const rows = trayRows(ctx);
+  for (const row of rows) list.append(targetRow(ctx, row, refresh));
+  if (!rows.length) list.append(el("li", "dt-wm__none", localize(selected ? "DT.WeaponMastery.NoTokens" : "DT.WeaponMastery.NoTargets")));
+  source.append(toggle, el("span", "dt-wm__source-label",
+    localize(selected ? "DT.WeaponMastery.Mode.SelectedShort" : "DT.WeaponMastery.Mode.TargetedShort")));
+  wrapper.append(source, list);
+  content.append(wrapper);
+  tray.append(label, content);
+  return tray;
+}
+
+/** Panels showing selected tokens → their refresh, re-run when the selection changes. */
+const selectedPanels = new Map();
+let selectionTimer = null;
+
+function onControlToken() {
+  if (!selectedPanels.size) return;
+  clearTimeout(selectionTimer);
+  selectionTimer = setTimeout(() => {
+    for (const [box, refresh] of [...selectedPanels]) {
+      selectedPanels.delete(box);
+      if (box.isConnected !== false) refresh();
+    }
+  }, 50);
 }
 
 function buildPanel(ctx) {
   const box = el("div", "dt-wm");
   box.dataset.mastery = ctx.mastery;
-  const rerender = () => box.replaceWith(buildPanel(ctx));
+  const refresh = () => {
+    selectedPanels.delete(box);
+    box.replaceWith(buildPanel(ctx));
+  };
 
-  const header = el("div", "dt-wm__header");
-  header.append(icon("fa-solid fa-medal"), el("span", "dt-wm__title", localize("DT.WeaponMastery.Title")), ruleLink(ctx.mastery));
-  // Every mastery — also Cleave and Nick, which nothing automates — gets its rule as a button.
-  const rule = button(localize("DT.WeaponMastery.HintButton"), "fa-solid fa-circle-info",
-    { tooltip: localize(RULES[ctx.mastery]?.hint ?? "") }, () => openRule(ctx.mastery));
-  rule.classList.add("dt-wm__rule");
-  header.append(rule);
+  // One line: "Weapon Mastery:" + rule link + the mastery button (+ macro).
+  const line = el("div", "dt-wm__line");
+  line.append(el("strong", "dt-wm__title", localize("DT.WeaponMastery.Title")), ruleLink(ctx.mastery));
+  if (RULES[ctx.mastery]) line.append(useButton(ctx, refresh));
   if (macroRef(ctx.mastery) && (game.user.isGM || ctx.actor?.isOwner)) {
-    header.append(button(localize("DT.WeaponMastery.Macro"), "fa-solid fa-code",
-      { tooltip: format("DT.WeaponMastery.MacroHint", { macro: macroRef(ctx.mastery) }) }, () => runMacro(ctx)));
+    line.append(button(localize("DT.WeaponMastery.Macro"), "fa-solid fa-code",
+      { tooltip: format("DT.WeaponMastery.MacroHint", { macro: macroRef(ctx.mastery) }), className: "dt-wm__macro" },
+      () => runMacro(ctx)));
   }
-  box.append(header);
+  box.append(line);
 
-  const hint = hintText(ctx);
-  if (hint) box.append(el("p", "dt-wm__hint", hint));
-
-  if (RULES[ctx.mastery]?.on) {
-    const list = el("ul", "dt-wm__targets");
-    let acted = false;
-    const rows = ctx.targets.length ? ctx.targets
-      : [{ key: null, name: localize("DT.WeaponMastery.CurrentTargets"), ac: null, actorUuid: null, tokenUuid: null, hit: null }];
-    for (const row of rows) {
-      const result = targetRow(ctx, row, rerender);
-      acted ||= result.acted;
-      list.append(result.li);
-    }
-    box.append(list);
-    if (!acted && !game.user.isGM) box.append(el("p", "dt-wm__note", localize("DT.WeaponMastery.GMDecides")));
+  if (game.user.isGM && RULES[ctx.mastery]) {
+    box.append(buildTray(ctx, refresh));
+    if (trayState(ctx).mode === "selected") selectedPanels.set(box, refresh);
   }
   return box;
 }
@@ -705,7 +868,7 @@ function decorateSaveRequest(message, root) {
   const box = el("div", "dt-wm dt-wm-save");
   const ability = CONFIG.DND5E?.abilities?.[request.ability]?.label ?? request.ability;
   box.append(button(format("DT.WeaponMastery.SaveButton", { ability, dc: request.dc }), "fa-solid fa-shield-halved",
-    { tooltip: localize("DT.WeaponMastery.Hint.Topple") }, event => rollToppleSave(actor, request.dc, event)));
+    {}, event => rollToppleSave(actor, request.dc, { event })));
   content.append(box);
 }
 
@@ -715,7 +878,8 @@ function onRenderChatMessage(message, html) {
     const root = html instanceof HTMLElement ? html : html?.[0];
     if (!root) return;
     if (message?.flags?.[MODULE_ID]?.[FLAG_SAVE]) return decorateSaveRequest(message, root);
-    insertPanel(root.querySelector(".message-content") ?? root, message);
+    // RSReforged's hidden child card is represented by its section in the usage card.
+    if (!shownByRsr(message)) insertPanel(root.querySelector(".message-content") ?? root, message);
     watchRsrSections(root, RSR_SECTION, insertPanel);
   } catch (err) {
     console.error(`${MODULE_ID} | weapon mastery (chat card) failed`, err);
@@ -776,9 +940,9 @@ function onUpdateActiveEffect(effect, changed) {
 
 /** For tools/test-features.mjs only. */
 export const internals = {
-  attackContext, rowState, applies, mayAct, toppleDC, grazeDamage, tooLargeToPush, untilAttackersTurn,
-  sapEffect, slowEffect, vexEffect, runAction, runMacro, rollToppleSave, pushDestination, pushDistance,
-  buildPanel, overrides
+  attackContext, isAttackMessage, rowState, trueState, applies, mayApplyLocally, toppleDC, grazeDamage,
+  tooLargeToPush, untilAttackersTurn, sapEffect, slowEffect, vexEffect, applyRows, useMastery, runMacro,
+  rollToppleSave, pushDestination, pushDistance, buildPanel, overrides, trays
 };
 
 const macroSetting = mastery => ({
@@ -794,7 +958,7 @@ const macroSetting = mastery => ({
 });
 
 export default {
-  id: "weaponMastery",
+  id: FEATURE_ID,
   requiresSystem: "dnd5e",
   category: {
     label: "DT.Categories.WeaponMastery.Label",
@@ -819,5 +983,7 @@ export default {
     Hooks.on("dnd5e.preRollAttackV2", onPreRollAttack);
     Hooks.on("dnd5e.rollAttack", onRollAttack);
     Hooks.on("updateActiveEffect", onUpdateActiveEffect);
+    Hooks.on("controlToken", onControlToken);
+    onSocketMessage(FEATURE_ID, onSocketRequest);
   }
 };

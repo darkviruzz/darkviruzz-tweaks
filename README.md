@@ -374,28 +374,41 @@ not damage).
 
 ### 11. Weapon Mastery  ·  *dnd5e · world (GM)*
 
-Every panel has a **Rule** button next to the mastery's name (the rule as tooltip, a click opens
-the rule page) — also for Cleave and Nick, which nothing automates. The panel only appears when
-dnd5e recorded a mastery for the attack, i.e. the attacker has that weapon's mastery (characters;
-NPCs have no weapon masteries in dnd5e).
-
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this
-feature every attack card that carries a mastery gets a small panel: the mastery with a link to
-its rule, the targets with **hit ✓ / miss ✗ / unknown ?**, and one button per target for what the
-mastery does.
+feature every **attack card** that carries a mastery gets one line:
+
+> **Weapon Mastery:** *Sap* &nbsp; `[Sap]`
+
+The mastery's name is dnd5e's rule link (hover: the rule, click: the rule page). The button
+**carries the mastery out**. Masteries are optional, so nothing ever happens without a click —
+the button is a reminder that you may use it. Cleave and Nick have nothing to automate and show
+only the line with the link. The line appears only on attack cards (never on the usage or damage
+card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon's mastery
+(characters; NPCs have no weapon masteries in dnd5e).
 
 **How it works**
 
+- **Players see only the line.** Clicking the button:
+  - runs the mastery right away if the player may change everything it touches — in practice
+    **Vex**, which goes on their own character;
+  - otherwise **asks the GM**: the GM's client applies it to every target that was **hit** (Graze:
+    missed) according to the card, and tells the GM about targets whose hit is unknown, so the GM
+    decides those on the card. A GM must be connected.
+- **The GM additionally gets a tray** below the line, built like dnd5e's damage and effect trays:
+  the targets of the attack with **hit ✓ / miss ✗ / unknown ?** and an **Apply** button per target.
+  Click a ✓/✗ to correct it (e.g. after a *Shield* spell). Like dnd5e's *Targeted / Selected*
+  switch, a button switches the list to the **selected tokens** (automatically when the attack
+  recorded no target). The GM's mastery button applies it to every target in the list it applies
+  to. After applying, the tray **folds up** like dnd5e's trays (unless dnd5e's *Collapse Chat Card
+  Trays* is set to *Manual*; with *Always* it starts folded). A mastery that was used shows a ✓;
+  it can still be used again.
 - **Hit or miss** comes from dnd5e's own data: the attack total against each target's AC as it
-  was when you attacked (a natural 20 always hits, a natural 1 always misses). If the attack had
-  **no target** or a target has **no AC**, the hit is unknown: every button is shown and **the GM
-  decides** (with no recorded target, the buttons act on the GM's current targets). The GM can
-  also **click the ✓/✗** of a target to switch it between hit and miss — e.g. after a *Shield*
-  spell. Players only see hits and misses if dnd5e's *Attack Roll Visibility* allows it.
+  was when you attacked (a natural 20 always hits, a natural 1 always misses). No AC (or a
+  selected token) means unknown.
 - What each mastery does:
 
-  | Mastery | When | Button |
+  | Mastery | When | Effect |
   |---|---|---|
   | **Graze** | miss | Damage equal to the attack's ability modifier, of the weapon's damage type, applied to the target (resistances count). Nothing if the modifier is 0 or less. |
   | **Topple** | hit | Constitution save, DC 8 + ability modifier + proficiency bonus; **Prone** on a failure. The GM rolls for creatures without a player owner. For a player's creature a chat card asks its player to roll (save button for the owners); Prone follows automatically on a failure. |
@@ -403,31 +416,25 @@ mastery does.
   | **Sap** | hit | Effect on the target: **Disadvantage on its next attack roll**, until the start of the attacker's next turn. Removed once the target has made that attack. |
   | **Slow** | hit (with damage) | Effect on the target: **Speed −10 ft** (all speeds) until the start of the attacker's next turn. Doesn't stack: a new Slow replaces the old one. |
   | **Vex** | hit (with damage) | Effect on the attacker: **Advantage on the next attack roll against that creature**, until the end of the attacker's next turn. Applies when that creature is the only target of the attack, then it's removed. |
-  | **Cleave**, **Nick** | — | Rule reminder only (Cleave: the extra attack against a second creature within 5 ft; Nick: the Light extra attack as part of the Attack action). |
+  | **Cleave**, **Nick** | — | Nothing to automate — only the line with the rule link. |
 
-- **Who sees the buttons:** only users allowed to change the creatures involved — normally the
-  GM. **Vex** also for the attacker's owner (it changes their own character). Everyone else sees
-  "The GM decides and applies the mastery." A button that was used shows a ✓; the GM can use it
-  again.
 - **Effects end on their own** at the start (Sap, Slow) or end (Vex) of the attacker's next turn,
   also when the attack was an opportunity attack on someone else's turn. On dnd5e 6 they use
   dnd5e's "start/end of the source's next turn" durations and Sap uses dnd5e's own
   *disadvantage* rule; on dnd5e 5.3 Foundry's turn durations and this module apply them. Outside
   combat they end as soon as game time advances.
-- **Macros (optional):** for each mastery the GM can name a macro (name or UUID). The panel then
+- **Macros (optional):** for each mastery the GM can name a macro (name or UUID). The line then
   shows a **Macro** button (for the GM and the attacker's owner). A script macro receives
   `actor`, `token` (attacker), `item`, `activity`, `mastery`, `targets` (list of `{actor, token,
   name, ac, hit}`), `message` (the attack message) and `hit` (`true` if every target was hit,
   `false` if every one was missed, otherwise `null`). Use it for anything the built-in buttons
   don't do — e.g. rolling Cleave's extra attack.
-- Works with **RSReforged** one-click attacks: the panel appears in RSReforged's combined card
-  (RSReforged 6 doesn't show dnd5e's own mastery line there).
-- dnd5e only offers masteries to **characters** with mastery of the weapon type (character sheet
-  → weapon proficiencies); NPC attacks carry none.
+- Works with **RSReforged** one-click attacks: the line appears in the attack section of
+  RSReforged's combined card (RSReforged 6 doesn't show dnd5e's own mastery line there).
 
 | Setting | Default | Effect |
 |---|---|---|
-| **Weapon Mastery Panel on Attack Cards** | Off | Shows the panel and enables the buttons, effects and macros. World setting (GM). |
+| **Weapon Mastery Panel on Attack Cards** | Off | Shows the line and the GM's tray and enables the buttons, effects and macros. World setting (GM). |
 | **Weapon Mastery Macro: Cleave** | *(empty)* | Optional macro (name or UUID) for Cleave. Empty = no macro button. |
 | **Weapon Mastery Macro: Graze** | *(empty)* | … for Graze. |
 | **Weapon Mastery Macro: Nick** | *(empty)* | … for Nick. |

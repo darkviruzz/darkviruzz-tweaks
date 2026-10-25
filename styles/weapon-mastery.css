@@ -1,41 +1,78 @@
-/* Weapon Mastery (scripts/features/weapon-mastery.js): panel on attack cards + Topple save request. */
+/* Weapon Mastery (scripts/features/weapon-mastery.js): one line on attack cards, the GM's tray
+   (dnd5e's own `.card-tray.collapsible` markup — dnd5e styles and folds it) and the Topple
+   save request. */
 
 .dt-wm {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
-  padding: 4px 6px;
-  border: 1px solid var(--color-border-light-2, rgba(0, 0, 0, 0.25));
-  border-radius: 4px;
+  margin-top: 4px;
   font-size: var(--font-size-12, 12px);
 }
 
-.dt-wm__header {
+/* "Weapon Mastery: <rule link> [Mastery] [Macro]" */
+.dt-wm__line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 6px;
 }
 
-.dt-wm__title {
-  font-weight: bold;
+.dt-wm__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 8px;
+  line-height: 1.6;
 }
 
-.dt-wm__header .dt-wm__btn {
+.dt-wm__line .dt-wm__use {
   margin-left: auto;
 }
 
-.dt-wm__hint,
-.dt-wm__note {
-  margin: 0;
-  line-height: 1.35;
+.dt-wm__btn--done {
+  opacity: 0.75;
 }
 
-.dt-wm__note,
-.dt-wm__na {
-  font-style: italic;
-  opacity: 0.7;
+/* The tray sits inside the card content, not at its bottom edge like dnd5e's. */
+.dt-wm .card-tray.dt-wm__tray {
+  margin: 4px 0 0;
+}
+
+/* Fold also where dnd5e's `.dnd5e2` scope (and so its collapsible CSS) is missing. */
+.dt-wm__tray > .collapsible-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 250ms ease;
+}
+.dt-wm__tray > .collapsible-content > .wrapper {
+  overflow: hidden;
+}
+.dt-wm__tray.collapsed > .collapsible-content {
+  grid-template-rows: 0fr;
+}
+.dt-wm__tray.collapsed > .collapsible-content > .wrapper {
+  padding-block: 0;
+}
+.dt-wm__tray > label {
+  cursor: var(--cursor-pointer, pointer);
+}
+
+.dt-wm__source-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dt-wm__source {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--dnd5e-color-gold, inherit);
+}
+
+.dt-wm__source-label {
+  opacity: 0.8;
 }
 
 .dt-wm__targets {
@@ -73,20 +110,12 @@
   line-height: 1;
 }
 
-.dt-wm__target[data-state="hit"] .dt-wm__state { color: var(--color-level-success, #18520b); }
-.dt-wm__target[data-state="miss"] .dt-wm__state { color: var(--color-level-error, #82000c); }
+.dt-wm__target[data-state="hit"] .dt-wm__state { color: var(--dnd5e-color-success, #18520b); }
+.dt-wm__target[data-state="miss"] .dt-wm__state { color: var(--dnd5e-color-failure, #82000c); }
 .dt-wm__target[data-state="unknown"] .dt-wm__state { opacity: 0.7; }
 
-.dt-wm__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  width: auto;
-  padding: 2px 8px;
-  line-height: 1.6;
-}
-
-.dt-wm__btn--done {
-  opacity: 0.75;
+.dt-wm__na,
+.dt-wm__none {
+  font-style: italic;
+  opacity: 0.7;
 }

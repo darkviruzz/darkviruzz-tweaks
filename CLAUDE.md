@@ -85,7 +85,7 @@ scripts/
     file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
     token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
     savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
-    weapon-mastery.js           dnd5e: weapon mastery panel on attack cards — buttons, effects, macros (world/GM)
+    weapon-mastery.js           dnd5e: weapon mastery line + GM tray on attack cards — effects, macros (world/GM; module socket)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
@@ -616,7 +616,37 @@ RSReforged 6.0.2 (`src/utils/native-*.js`, `hooks.js`).
   after an `await` inside its `dnd5e.renderChatMessage` handler, so other hook listeners run
   first (watch with a MutationObserver). The child cards are hidden and emptied; updating a child
   re-renders the parent. It copies none of dnd5e's attack-card extras (no mastery line —
-  RSReforged issue #47). The 5.3 (legacy) path merges damage into the attack message instead.
+  RSReforged issue #47). The 5.3 (legacy) path merges damage into the attack message instead
+  (the usage card then gets the rolls and `flags.dnd5e.roll = {type: "attack", mastery}`).
+  RSReforged's children carry `flags.rsreforged.parentId` (+ `workflowVersion: 2`); a child is
+  only hidden by RSReforged's reconcile pass (class `rsr-native-combined-original` on
+  `.message[data-message-id]`, content emptied) if a registered section represents it.
+- **GOTCHA — decorate only the attack message, and never RSReforged's child card** (found
+  2026-10-25 from the user's screenshots: the panel showed twice — in the attack section and again
+  below the card / as a separate small card). Gate on 6.x `message.type === "attack"` or 5.x
+  `flags.dnd5e.roll.type === "attack"` instead of "has a mastery", and skip messages with
+  `flags.rsreforged.parentId` while RSReforged is active (decorate their section instead). Which
+  path showed the extra copy was not reproduced; chat notifications (`#chat-notifications`, which
+  dnd5e's `ChatTrayElement#visible` also checks) render messages a second time and are a
+  suspect (unverified).
+- **dnd5e trays (5.3 and 6.0):** `.card-tray.<kind>-tray.collapsible(.collapsed) > label.roboto-upper
+  (i.icon + span + i.fa-caret-down) + .collapsible-content > .wrapper`. `Item5e.chatListeners`
+  toggles `.collapsed` on any click inside a `.collapsible` outside `.collapsible-content`;
+  dnd5e's CSS (`.dnd5e2 .collapsible .collapsible-content` grid rows 1fr ↔ 0fr, scoped `@scope`)
+  animates it — so the same markup folds natively without a custom element. The custom trays
+  (`damage-application`, `effect-application`, base `ChatTrayElement`) reflect it as an `open`
+  attribute; after Apply `DamageApplicationElement` sets `open = false` unless the dnd5e setting
+  `autoCollapseChatTrays` (manual / never / older (default, > 5 min) / always) is `manual`;
+  `ChatMessage5e#_collapseTrays` applies the setting at render time (before
+  `dnd5e.renderChatMessage`, so trays added in that hook must apply it themselves). 6.0's
+  Targeted / Selected switch is `<recorded-targets>` (`button.target-source-toggle[data-mode]`,
+  `targeted` = `message.system.targets` resolved via `TargetsField.resolve`, `selected` =
+  `canvas.tokens.controlled`, forced to `selected` without recorded targets, rebuilt on
+  `controlToken`) — it renders `target-pill` groups, not suited for per-target buttons.
+- dnd5e 6 setting `chatCardSummary`: a usage card that `rendersSummaries` shows its child rolls
+  as `.card-summary[data-message-id]` (`message.system.render({summary: true})`, no
+  `dnd5e.renderChatMessage`) and the child card itself renders with `hidden` — a panel on it is
+  invisible.
 
 ### Token drag, animation & module socket (feature *Live Token Drag*, v1.8.0)
 
@@ -797,5 +827,5 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
-| Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<t#>.<mastery>`; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume` |
+| Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<t#>.<mastery>`; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
