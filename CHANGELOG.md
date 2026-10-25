@@ -52,6 +52,16 @@ and GMs, not for developers.
   the card shows both totals); a known miss doesn't use up the turn. Every other weapon damage
   card gets a **Savage Attacker** button for the GM and the owners, so the GM can decide which
   hit was the first. *Button only* mode is available too. Off by default.
+- **Weapon Mastery** (D&D 5e, GM): makes the 2024 weapon masteries usable from the attack card.
+  Every attack with a mastery gets a panel with the rule, each target's hit or miss and a button
+  for what the mastery does: **Graze** damage on a miss; on a hit **Topple** (Constitution save
+  rolled by the GM for monsters and by the players for their own characters, Prone on a
+  failure), **Push** 10 ft away from the attacker (grid and walls respected), and **Sap**,
+  **Slow** and **Vex** as effects that end on their own at the right turn and are used up by the
+  next attack. **Cleave** and **Nick** show their rule. When the hit isn't known (no target, no
+  AC) all buttons are shown and the GM decides; the GM can also switch a target between hit and
+  miss. Optionally every mastery can run a **macro** of your choice. Works with RSReforged
+  one-click attacks. Off by default.
 
 ## [1.7.0] — 2026-10-13
 

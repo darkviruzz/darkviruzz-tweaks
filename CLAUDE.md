@@ -83,14 +83,14 @@ scripts/
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
     live-token-drag.js          everyone sees token drags live (world/GM; module socket)
     file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
+    token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
+    savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
+    weapon-mastery.js           dnd5e: weapon mastery panel on attack cards — buttons, effects, macros (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
-    token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
-    savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
-  lib/
-    settings-categories.js      renderSettingsConfig -> per-feature category headers
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
+    attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -524,6 +524,94 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   roll); `message.update({rolls: rolls.map(r => JSON.stringify(r))})` replaces a card's rolls
   (author or GM only — `message.canUserModify(user, "update")`).
 
+### Weapon masteries, rule effects & expiry (feature *Weapon Mastery*, verified 2026-10-25)
+
+Against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6, the local v14 install (14.364:
+`common/documents/active-effect.mjs`, `client/documents/{active-effect,combat,token,macro}.mjs`,
+`client/helpers/active-effect-registry.mjs`, `client/canvas/placeables/token.mjs`) and
+RSReforged 6.0.2 (`src/utils/native-*.js`, `hooks.js`).
+
+- **Where the mastery lives:** `AttackActivity#rollAttack` takes `rollConfig.mastery` from the
+  item flag `last.<activityId>.mastery`, else `item.system.masteryOptions[0]`; it ends up in
+  `rolls[0].options.mastery` (both versions), in the message — 6.0 `system.mastery` (next to
+  `system.ability/ammunition/mode`), 5.3 `flags.dnd5e.roll.mastery` (+ `ammunition`,
+  `attackMode`) — and back in the item flag. 6.0 lets you choose the attack ability
+  (`rolls[0].options.ability`, `system.ability`); 5.3 has no choice → `AttackActivity#ability`
+  (attack.ability, else the best of `availableAbilities`).
+- `WeaponData#masteryOptions` is null unless `actor.system.traits.weaponProf.mastery.value` has
+  the weapon's `type.baseItem` and the item has `system.mastery`; extra options come from
+  `weaponProf.mastery.bonus`. `weaponProf.mastery` exists only on characters → **NPC attacks
+  never carry a mastery**. `CONFIG.DND5E.weaponMasteries` = cleave, graze, nick, push, sap, slow,
+  topple, vex with `label` (pre-localised) and `reference` (journal page UUID in `content24`),
+  identical in both versions.
+- **Per-target hit:** dnd5e itself evaluates every recorded target: 6.0
+  `AttackMessageData#evaluatedTargets` / 5.3 `_enrichAttackTargets`: miss = `ac === null ||
+  (!isCritical && (total < ac || isFumble))`. Descriptor `ac` is null for total cover or no AC
+  (we treat that as unknown). 5.3 descriptors `{name, img, uuid, ac}` (uuid = token's actor),
+  6.0 `{actor, ac, img, name, token}`.
+- `Actor5e#applyDamage(damages, options)` is identical in both: `damages` = a number (then
+  `options.ignore = true` — resistances ignored!) or `[{value, type, properties: Set}]`. Weapon
+  damage `properties` = item properties with `CONFIG.DND5E.itemProperties[p].isPhysical`.
+- `Actor5e#rollSavingThrow(config, dialog, message)` → `D20Roll[] | null` (both); `config.target`
+  becomes `roll.options.target` (`BasicRoll.fromConfig`: `options.target ??= process.target`),
+  `isSuccess` = `total >= target`.
+- **Advantage from a hook:** `BasicRoll.buildConfigure` fires `dnd5e.preRoll<Hook>` / `…V2`
+  (config, dialog, message) BEFORE `applyKeybindings`, which uses `roll.options.advantage ||
+  config.advantage || key` (same for disadvantage; both → normal). So setting
+  `config.advantage` / `config.disadvantage` in `dnd5e.preRollAttackV2` works in 5.3 and 6.0;
+  `config.subject` is the activity, and keys put into `config.rolls[0].options` reach the final
+  roll's options (seen again in `dnd5e.rollAttack`).
+- **dnd5e 6 rule-type changes:** `CONFIG.ActiveEffect.changeTypes` gains `dnd5e.advantage`,
+  `dnd5e.bonus`, `dnd5e.maximum`, `dnd5e.minimum` (handler `_applyChangeRule` →
+  `actor.appliedRules`). The change `key` is the roll category — `attack`, `check`, `save` or
+  `d20` (`attack:advantage` also collects `d20:advantage`); advantage values `"1"` / `"-1"`
+  (counted) or `"=1"` / `"=-1"` (forced). Conditions (`FiltersField` on the change or
+  `system.conditions`) only see roll data; attack roll data has `roll.ability`,
+  `roll.attack.{classification,mode,type}`, `roll.type` — **no target**, so "against that
+  creature" (Vex) can't be expressed. Rules are never consumed by a roll (`filterWith`'s
+  `consumed` set only avoids double counting across damage parts). dnd5e 5.3 has none of this.
+- **dnd5e 6 pseudo expiries:** `duration.expiry` ∈ `sourceStart`/`sourceEnd`/`targetStart`/
+  `targetEnd` (`ActiveEffect5e.PSEUDO_EXPIRIES`, labels `CONFIG.DND5E.pseudoExpiryEvents`).
+  `isExpiryEvent` checks only that actor's turn start/end in the combat the effect started in
+  and skips the turn it was created in; source = `getSourceActor()` (`system.origin.actor ??
+  item ?? activity ?? origin`); out of combat any world-time advance expires them; `_preCreate`
+  forces `duration.value = null`. `system.origin` = `{activity, actor, behavior, effect, item,
+  message, profile}`.
+- **Core v14 effects:** `start {combat, combatant, initiative, round, turn, time}` (client
+  `_preCreate` fills it from `getEffectStart()` for actor effects but keeps keys you pass),
+  `duration {value, units, expiry, expired}`, changes in `system.changes` `{key, type, value,
+  phase, priority}` with `type` "add"/"multiply"/"override"/"upgrade"/"downgrade"/"custom" or a
+  system type (old `changes` + numeric `mode` are migrated). Expiry events
+  `combatStart|roundStart|turnStart|combatEnd|roundEnd|turnEnd` refer to the combatant in
+  `start.combatant` (in the start combat) — pass it to make "turnStart" mean the attacker's turn.
+  `value: null` → remaining Infinity → expires at the first matching event; `units: "rounds"` →
+  remaining `value - (round - start.round)`, not recomputed on turnEnd/roundEnd. Turn events run
+  only on the active GM (`Combat#onStartTurn/#onEndTurn` → `ActiveEffect.registry.refresh`;
+  turnEnd's context is the turn that ended). `CONFIG.ActiveEffect.expiryAction` defaults to
+  `"update"`: expired effects stay on the actor with `duration.expired: true` (suppressed); dnd5e
+  6 doesn't change that.
+- **Speed:** `system.attributes.movement.bonus` (FormulaField, both versions) is added to every
+  speed > 0, never below 0. dnd5e 6 FormulaField "add": `"" + "-10"` → `"-10"`, else
+  `"<v> - 10"`. 6.0 moved the speeds to `movement.speeds.<type>` (shims for the old keys).
+- **Moving a token (v14):** `TokenDocument#move(waypoint | waypoints, options)`; waypoint
+  `action: "displace"` = teleport, ignores walls, recorded with cost 0. `Token#checkCollision(
+  destination, {origin, type: "move", mode: "any"})` takes movement origins
+  (`TokenDocument#getMovementOrigin({x, y})` = centre + half depth);
+  `TokenDocument#getSnappedPosition({x, y})`; `canvas.grid.measurePath([a, b]).distance` uses the
+  scene's diagonal rule; `canvas.dimensions.distancePixels`.
+- `Macro#execute(scope)`: needs LIMITED (`canExecute`); a script macro gets the scope keys as
+  variables.
+- **RSReforged 6.0.2 on dnd5e 6** ("native workflow"): runs from `dnd5e.postUseActivity`, calls
+  `activity.rollAttack(config, {configure: false}, seed)` and `rollDamage` (all dnd5e hooks
+  fire; `dnd5e.rollAttack` before the attack message exists), creates dnd5e's own attack and
+  damage messages (`system.origin` = usage card, `system.targets` = copy of the card's targets,
+  `flags.rsreforged.parentId`) and shows them as sections
+  `div.rsr-section-attack[data-message-id=<attack message id>]` in the usage card — appended
+  after an `await` inside its `dnd5e.renderChatMessage` handler, so other hook listeners run
+  first (watch with a MutationObserver). The child cards are hidden and emptied; updating a child
+  re-renders the parent. It copies none of dnd5e's attack-card extras (no mastery line —
+  RSReforged issue #47). The 5.3 (legacy) path merges damage into the attack message instead.
+
 ### Token drag, animation & module socket (feature *Live Token Drag*, v1.8.0)
 
 Verified 2026-10-25 against the real v14 source (local install, build 14.364:
@@ -703,4 +791,5 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
+| Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<t#>.<mastery>`; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume` |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |

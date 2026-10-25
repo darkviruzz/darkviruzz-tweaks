@@ -24,7 +24,8 @@
     "styles/spell-effect-autoapply.css",
     "styles/file-picker-preview.css",
     "styles/token-art-picker.css",
-    "styles/savage-attacker.css"
+    "styles/savage-attacker.css",
+    "styles/weapon-mastery.css"
   ],
   "languages": [
     {

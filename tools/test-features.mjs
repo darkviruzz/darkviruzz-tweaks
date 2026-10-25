@@ -988,4 +988,341 @@ await test("savage attacker (button): refused without permission or for multipli
   assert.deepEqual(notes, ["DT.SavageAttacker.NoPermission", "DT.SavageAttacker.NotAdditive"]);
 });
 
+/* ---------- Weapon Mastery ---------- */
+// Minimal DOM: elements with classes, dataset, children, listeners and a tiny selector engine
+// (".a.b", "[data-x]", ":scope > .a").
+class WmEl {
+  constructor(tag) { Object.assign(this, { tag, className: "", dataset: {}, children: [], listeners: {}, parent: null, disabled: false, _text: "" }); }
+  get classList() { return { add: c => { this.className = `${this.className} ${c}`.trim(); }, contains: c => this.className.split(" ").includes(c) }; }
+  set textContent(v) { this._text = String(v); }
+  get textContent() { return this._text + this.children.map(c => c.textContent).join(" "); }
+  get outerHTML() { return `<${this.tag}>${this._text}</${this.tag}>`; }
+  append(...nodes) { for (const n of nodes) { n.parent = this; this.children.push(n); } }
+  replaceWith(n) { this.parent.children[this.parent.children.indexOf(this)] = n; n.parent = this.parent; }
+  addEventListener(type, fn) { this.listeners[type] = fn; }
+  matches(sel) {
+    const classes = [...sel.matchAll(/\.([\w-]+)/g)].map(m => m[1]);
+    const attrs = [...sel.matchAll(/\[data-([\w-]+)\]/g)].map(m => m[1].replace(/-(\w)/g, (_, c) => c.toUpperCase()));
+    return classes.every(c => this.classList.contains(c)) && attrs.every(a => a in this.dataset);
+  }
+  *walk() { for (const c of this.children) { yield c; yield* c.walk(); } }
+  querySelectorAll(sel) {
+    if (sel.startsWith(":scope > ")) return this.children.filter(c => c.matches(sel.slice(9)));
+    return [...this.walk()].filter(e => e.matches(sel));
+  }
+  querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; }
+  click() { return this.listeners.click?.({ preventDefault() {}, stopPropagation() {} }); }
+}
+globalThis.HTMLElement = WmEl;
+globalThis.document = { createElement: tag => new WmEl(tag) };
+const wmCard = () => { const root = new WmEl("li"); const content = new WmEl("div"); content.className = "message-content"; root.append(content); return { root, content }; };
+const buttonsOf = node => node.querySelectorAll(".dt-wm__btn");
+
+const wmDocs = {};
+let wmSeq = 0;
+const wmActor = (id, { owner = true, playerOwner = false, mod = 3, prof = 2, size = "med", units = "ft" } = {}) => {
+  const effects = new Map();
+  effects.filter = f => [...effects.values()].filter(f);
+  const actor = {
+    id, uuid: `Actor.${id}`, name: id, isOwner: owner, hasPlayerOwner: playerOwner,
+    system: { abilities: { str: { mod }, dex: { mod: 1 } }, attributes: { prof, movement: { units } }, traits: { size } },
+    effects, created: [], deleted: [], damage: [], saves: [], statuses: [], nextSave: 5, tokens: [],
+    async createEmbeddedDocuments(type, data) { for (const d of data) { const e = { id: `wmE${++wmSeq}`, active: true, ...d }; effects.set(e.id, e); actor.created.push(e); } },
+    async deleteEmbeddedDocuments(type, ids) { for (const i of ids) effects.delete(i); actor.deleted.push(...ids); },
+    async applyDamage(d) { actor.damage.push(d); },
+    async rollSavingThrow(config) { actor.saves.push(config); return [{ total: actor.nextSave, isSuccess: actor.nextSave >= config.target }]; },
+    async toggleStatusEffect(status, options) { actor.statuses.push([status, options]); },
+    getActiveTokens: () => actor.tokens
+  };
+  wmDocs[actor.uuid] = actor;
+  return actor;
+};
+globalThis.fromUuidSync = uuid => wmDocs[uuid] ?? null;
+globalThis.fromUuid = async uuid => wmDocs[uuid] ?? null;
+globalThis.CONST = { ACTIVE_EFFECT_SHOW_ICON: { ALWAYS: 2 } };
+const wmChats = [];
+globalThis.ChatMessage = { implementation: { create: async d => { wmChats.push(d); return d; }, getSpeaker: ({ actor }) => ({ actor: actor?.id }) } };
+Object.assign(CONFIG.DND5E, {
+  weaponMasteries: Object.fromEntries(["cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex"].map(k => [k, { label: k.toUpperCase(), reference: `Compendium.dnd5e.rule.${k}` }])),
+  damageTypes: { slashing: { label: "Slashing" } },
+  abilities: { str: { label: "Strength" }, con: { label: "Constitution" } },
+  actorSizes: { tiny: {}, sm: {}, med: {}, lg: {}, huge: {}, grg: {} },
+  itemProperties: { mgc: { isPhysical: true }, fin: {} }
+});
+CONFIG.ActiveEffect = { changeTypes: {} };
+const asV6 = () => { CONFIG.DND5E.pseudoExpiryEvents = { sourceStart: "x", sourceEnd: "y" }; CONFIG.ActiveEffect.changeTypes["dnd5e.advantage"] = {}; };
+const asV5 = () => { delete CONFIG.DND5E.pseudoExpiryEvents; delete CONFIG.ActiveEffect.changeTypes["dnd5e.advantage"]; };
+
+const wmModule = await import(pathToFileURL(join(ROOT, "scripts/features/weapon-mastery.js")).href);
+const wm = wmModule.internals;
+wmModule.default.init();
+const wmAttacker = wmActor("fighter", { mod: 3, prof: 2 });
+const wmWeapon = { uuid: "Actor.fighter.Item.sword", system: { damage: { base: { types: new Set(["slashing"]) } }, properties: new Set(["mgc", "fin"]) } };
+/** dnd5e 6 attack message (system.targets/system.ability); `v5: true` gives the 5.x flag shape instead. */
+const wmMessage = ({ mastery = "sap", targets = [], total = 15, crit = false, fumble = false, v5 = false, id = "wm1" } = {}) => {
+  const roll = { total, isCritical: crit, isFumble: fumble, options: { mastery, ...(v5 ? {} : { ability: "str" }) } };
+  const msg = {
+    id, uuid: `ChatMessage.${id}`, isContentVisible: true, speaker: {}, rolls: [roll], flags: {}, updates: 0,
+    getAssociatedActor: () => wmAttacker, getAssociatedItem: () => wmWeapon,
+    getAssociatedActivity: () => ({ ability: "str", damage: { parts: [] } }),
+    canUserModify: () => true,
+    async setFlag(ns, path, value) { setProperty(msg.flags, `${ns}.${path}`, value); msg.updates++; }
+  };
+  if (v5) Object.assign(msg, { system: {}, flags: { dnd5e: { roll: { mastery }, targets: targets.map(t => ({ uuid: t.actor, ac: t.ac, name: t.name })) } } });
+  else msg.system = { mastery, ability: "str", targets };
+  return msg;
+};
+const goblin = wmActor("goblin", { owner: false });
+const ogre = wmActor("ogre", { owner: false });
+const t = (actor, ac) => ({ actor: actor.uuid, token: null, ac, name: actor.name });
+settings.weaponMasteryEnabled = true;
+
+await test("weapon mastery: reads dnd5e 6 and 5.x attack messages, hit/miss per target AC", () => {
+  const v6 = wm.attackContext(wmMessage({ mastery: "topple", targets: [t(goblin, 13), t(ogre, 17), { actor: "Actor.x", ac: null, name: "cover" }] }));
+  assert.equal(v6.mastery, "topple"); assert.equal(v6.ability, "str"); assert.equal(v6.actor, wmAttacker);
+  assert.deepEqual(v6.targets.map(r => [r.key, r.hit]), [["t0", true], ["t1", false], ["t2", null]]);
+  const v5 = wm.attackContext(wmMessage({ mastery: "graze", v5: true, targets: [t(goblin, 13)] }));
+  assert.equal(v5.mastery, "graze"); assert.equal(v5.ability, "str", "5.x: the activity's ability");
+  assert.equal(v5.targets[0].actorUuid, "Actor.goblin");
+  const crit = wm.attackContext(wmMessage({ total: 9, crit: true, targets: [t(ogre, 17)] }));
+  assert.equal(crit.targets[0].hit, true, "a natural 20 hits regardless of AC");
+  const noMastery = wmMessage(); noMastery.rolls[0].options.mastery = undefined; noMastery.system.mastery = null;
+  assert.equal(wm.attackContext(noMastery), null);
+});
+await test("weapon mastery: GM override, hidden results for players, which outcome a mastery needs", () => {
+  const ctx = wm.attackContext(wmMessage({ id: "ov", targets: [t(goblin, 13)] }));
+  game.user.isGM = true;
+  assert.equal(wm.rowState(ctx, ctx.targets[0]), "hit");
+  wm.overrides.set("ov:t0", false); assert.equal(wm.rowState(ctx, ctx.targets[0]), "miss");
+  game.user.isGM = false; settings.attackRollVisibility = "none";
+  assert.equal(wm.rowState(ctx, ctx.targets[0]), "unknown", "players don't learn the result");
+  settings.attackRollVisibility = "all";
+  assert.equal(wm.applies("graze", "miss"), true); assert.equal(wm.applies("graze", "hit"), false);
+  assert.equal(wm.applies("sap", "unknown"), true); assert.equal(wm.applies("cleave", "hit"), false);
+});
+await test("weapon mastery: Topple DC, Graze damage (type, physical properties, never negative), Push size limit", () => {
+  const ctx = wm.attackContext(wmMessage({ mastery: "topple" }));
+  assert.equal(wm.toppleDC(ctx), 13);
+  assert.deepEqual(wm.grazeDamage(ctx), { value: 3, type: "slashing", properties: ["mgc"] });
+  wmAttacker.system.abilities.str.mod = -1;
+  assert.equal(wm.grazeDamage(ctx).value, 0);
+  wmAttacker.system.abilities.str.mod = 3;
+  assert.equal(wm.tooLargeToPush({ system: { traits: { size: "lg" } } }), false);
+  assert.equal(wm.tooLargeToPush({ system: { traits: { size: "huge" } } }), true);
+  assert.equal(wm.tooLargeToPush({ system: { traits: {} } }), false, "unknown size: the GM decides");
+});
+await test("weapon mastery: durations — dnd5e 6 source expiries, core turnStart/turnEnd of the attacker's combatant on 5.x", () => {
+  const combatant = { id: "cFighter" };
+  const combat = { started: true, combatant, getCombatantsByActor: () => [combatant] };
+  asV6();
+  assert.deepEqual(wm.untilAttackersTurn("start", wmAttacker, combat), { duration: { expiry: "sourceStart", value: null } });
+  assert.deepEqual(wm.untilAttackersTurn("end", wmAttacker, combat), { duration: { expiry: "sourceEnd", value: null } });
+  asV5();
+  assert.deepEqual(wm.untilAttackersTurn("start", wmAttacker, combat), { duration: { expiry: "turnStart", value: null }, start: { combatant: "cFighter" } });
+  assert.deepEqual(wm.untilAttackersTurn("end", wmAttacker, combat), { duration: { expiry: "turnEnd", value: 1, units: "rounds" }, start: { combatant: "cFighter" } },
+    "own turn: the end of the NEXT turn is a round later");
+  combat.combatant = { id: "someoneElse" };   // opportunity attack
+  assert.deepEqual(wm.untilAttackersTurn("end", wmAttacker, combat), { duration: { expiry: "turnEnd", value: null }, start: { combatant: "cFighter" } });
+  assert.deepEqual(wm.untilAttackersTurn("start", wmAttacker, { started: false }), { duration: { expiry: "turnStart", value: null } });
+});
+await test("weapon mastery: effect data — Sap rule change only on dnd5e 6, Slow −10 ft (−3 m), Vex remembers its target", () => {
+  game.combat = { started: false };
+  const ctx = wm.attackContext(wmMessage({ targets: [t(goblin, 13)] }));
+  asV6();
+  let sap = wm.sapEffect(ctx);
+  assert.deepEqual(sap.system.changes, [{ key: "attack", type: "dnd5e.advantage", value: "-1" }]);
+  assert.deepEqual(sap.system.origin, { actor: "Actor.fighter", item: "Actor.fighter.Item.sword", message: "ChatMessage.wm1" });
+  assert.deepEqual(sap.flags[MODULE_ID].weaponMastery, { mastery: "sap", source: "Actor.fighter", message: "wm1" });
+  assert.equal(sap.origin, "Actor.fighter.Item.sword"); assert.equal(sap.showIcon, 2);
+  asV5();
+  sap = wm.sapEffect(ctx);
+  assert.deepEqual(sap.system.changes, []); assert.equal(sap.system.origin, undefined);
+  assert.deepEqual(wm.slowEffect(ctx, goblin).system.changes, [{ key: "system.attributes.movement.bonus", type: "add", value: "-10" }]);
+  assert.equal(wm.slowEffect(ctx, wmActor("metric", { units: "m" })).system.changes[0].value, "-3");
+  assert.equal(wm.vexEffect(ctx, ctx.targets[0], goblin).flags[MODULE_ID].weaponMastery.target, "Actor.goblin");
+});
+await test("weapon mastery: Graze applies the modifier as weapon damage and marks the card", async () => {
+  game.user.isGM = true;
+  const msg = wmMessage({ mastery: "graze", total: 5, targets: [t(goblin, 13)] });
+  const ctx = wm.attackContext(msg);
+  assert.equal(await wm.runAction(ctx, ctx.targets[0]), true);
+  assert.equal(goblin.damage.length, 1);
+  const [[damage]] = goblin.damage;
+  assert.deepEqual({ ...damage, properties: [...damage.properties] }, { value: 3, type: "slashing", properties: ["mgc"] });
+  assert.equal(msg.flags[MODULE_ID].weaponMastery.done.t0.graze, true);
+  game.user.isGM = false; notes.length = 0;
+  assert.equal(await wm.runAction(ctx, ctx.targets[0]), false, "a player who doesn't own the target can't");
+  assert.deepEqual(notes, ["DT.WeaponMastery.NoPermission"]); assert.equal(goblin.damage.length, 1);
+});
+await test("weapon mastery: Topple — GM rolls for NPCs (Prone on a failure), player-owned targets get a save request", async () => {
+  game.user.isGM = true;
+  const ctx = wm.attackContext(wmMessage({ mastery: "topple", targets: [t(goblin, 13)] }));
+  goblin.nextSave = 12; await wm.runAction(ctx, ctx.targets[0]);
+  assert.deepEqual(goblin.saves.at(-1), { ability: "con", target: 13, event: undefined });
+  assert.deepEqual(goblin.statuses, [["prone", { active: true }]]);
+  goblin.nextSave = 13; await wm.runAction(ctx, ctx.targets[0]);
+  assert.equal(goblin.statuses.length, 1, "saved: not prone");
+  const pc = wmActor("rogue", { playerOwner: true });
+  const msg = wmMessage({ mastery: "topple", targets: [t(pc, 12)] });
+  const pcCtx = wm.attackContext(msg);
+  wmChats.length = 0;
+  assert.equal(await wm.runAction(pcCtx, pcCtx.targets[0]), "requested");
+  assert.equal(pc.saves.length, 0, "the GM doesn't roll the player's save");
+  assert.deepEqual(wmChats[0].flags[MODULE_ID].weaponMasterySave, { actor: "Actor.rogue", dc: 13, ability: "con", status: "prone", mastery: "topple" });
+  assert.equal(msg.flags[MODULE_ID].weaponMastery.done.t0.topple, "requested");
+  // the owner's button on that request
+  pc.nextSave = 4;
+  await wm.rollToppleSave(pc, 13);
+  assert.deepEqual(pc.statuses, [["prone", { active: true }]]);
+  game.user.isGM = false;
+});
+await test("weapon mastery: Sap and Slow replace older effects (no stacking), Vex once per target on the attacker", async () => {
+  game.user.isGM = true; asV6();
+  const sapCtx = wm.attackContext(wmMessage({ mastery: "sap", targets: [t(ogre, 10)] }));
+  await wm.runAction(sapCtx, sapCtx.targets[0]);
+  await wm.runAction(sapCtx, sapCtx.targets[0]);
+  assert.equal(ogre.effects.size, 1); assert.equal(ogre.deleted.length, 1);
+  const slowCtx = wm.attackContext(wmMessage({ mastery: "slow", targets: [t(ogre, 10)] }));
+  await wm.runAction(slowCtx, slowCtx.targets[0]); await wm.runAction(slowCtx, slowCtx.targets[0]);
+  assert.equal(ogre.effects.filter(e => e.flags[MODULE_ID].weaponMastery.mastery === "slow").length, 1);
+  assert.equal(ogre.effects.size, 2, "Slow doesn't remove Sap");
+  game.user.isGM = false;   // the attacker's owner may apply Vex to their own actor
+  const vexCtx = wm.attackContext(wmMessage({ mastery: "vex", targets: [t(ogre, 10), t(goblin, 10)] }));
+  await wm.runAction(vexCtx, vexCtx.targets[0]); await wm.runAction(vexCtx, vexCtx.targets[1]); await wm.runAction(vexCtx, vexCtx.targets[0]);
+  assert.deepEqual(wmAttacker.effects.filter(() => true).map(e => e.flags[MODULE_ID].weaponMastery.target).sort(), ["Actor.goblin", "Actor.ogre"]);
+});
+await test("weapon mastery: next attack — Sap gives disadvantage (5.x hook / 6.x rule), Vex advantage vs its target; used effects are removed", async () => {
+  const pre = hooks["dnd5e.preRollAttackV2"][0];
+  const ogreVex = wmAttacker.effects.filter(e => e.flags[MODULE_ID].weaponMastery.target === "Actor.ogre")[0];
+  const attack = () => ({ subject: { actor: wmAttacker }, rolls: [{ options: {} }] });
+  game.user.targets = new Set([{ actor: goblin }, { actor: ogre }]);
+  let config = attack(); pre(config);
+  assert.equal(config.advantage, undefined, "two targets: unclear which one is attacked");
+  game.user.targets = new Set([{ actor: ogre }]);
+  settings.weaponMasteryEnabled = false; config = attack(); pre(config); assert.equal(config.advantage, undefined);
+  settings.weaponMasteryEnabled = true; config = attack(); pre(config);
+  assert.equal(config.advantage, true);
+  assert.deepEqual(config.rolls[0].options[MODULE_ID].weaponMasteryConsume, [ogreVex.id]);
+  // the sapped ogre attacks
+  const ogreSap = ogre.effects.filter(e => e.flags[MODULE_ID].weaponMastery.mastery === "sap")[0];
+  ogre.isOwner = true;
+  asV5(); config = { subject: { actor: ogre }, rolls: [{ options: {} }] }; pre(config);
+  assert.equal(config.disadvantage, true, "5.x: disadvantage from the hook");
+  asV6(); config = { subject: { actor: ogre }, rolls: [{ options: {} }] }; pre(config);
+  assert.equal(config.disadvantage, undefined, "6.x: dnd5e's rule change gives the disadvantage");
+  await fire("dnd5e.rollAttack", config.rolls, { subject: { actor: ogre } });
+  assert.equal(ogre.effects.get(ogreSap.id), undefined, "Sap used up");
+  assert.ok(ogre.effects.size === 1, "Slow stays");
+  ogre.isOwner = false;
+  const before = wmAttacker.deleted.length;
+  await fire("dnd5e.rollAttack", [{ options: { [MODULE_ID]: { weaponMasteryConsume: [ogreVex.id] } } }], { subject: { actor: { ...wmAttacker, isOwner: false } } });
+  assert.equal(wmAttacker.deleted.length, before, "only an owner removes effects");
+  game.user.targets = new Set();
+});
+await test("weapon mastery: expired effects are deleted by the active GM only", async () => {
+  let deleted = 0;
+  const effect = { flags: { [MODULE_ID]: { weaponMastery: { mastery: "sap" } } }, delete: async () => { deleted++; } };
+  activeGMSelf = false; await fire("updateActiveEffect", effect, { duration: { expired: true } });
+  activeGMSelf = true; await fire("updateActiveEffect", effect, { duration: { expired: true } });
+  await fire("updateActiveEffect", { flags: {}, delete: async () => { deleted += 10; } }, { duration: { expired: true } });
+  await fire("updateActiveEffect", effect, { name: "x" });
+  assert.equal(deleted, 1);
+});
+await test("weapon mastery: Push — farthest free grid position up to 10 ft straight away, stops before walls", () => {
+  // 5 ft squares of 100 px, distance = squares (equidistant diagonals); tokens are 1×1.
+  canvas.scene = { grid: { units: "ft" } };
+  canvas.dimensions = { distancePixels: 20 };
+  canvas.grid = { isGridless: false, size: 100,
+    measurePath: ([a, b]) => ({ distance: Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 20 }) };
+  let wallX = Infinity;
+  const pushed = (x, y) => ({
+    center: { x: x + 50, y: y + 50 }, name: "goblin",
+    document: { x, y, getSnappedPosition: p => ({ x: Math.round(p.x / 100) * 100, y: Math.round(p.y / 100) * 100 }),
+      getMovementOrigin: p => ({ x: p.x + 50, y: p.y + 50, elevation: 0 }) },
+    checkCollision: (dest, { origin }) => (origin.x < wallX) && (dest.x > wallX)
+  });
+  const attacker = { center: { x: 50, y: 50 } };
+  assert.deepEqual(wm.pushDestination(attacker, pushed(100, 0)), { x: 300, y: 0 });
+  assert.deepEqual(wm.pushDestination(attacker, pushed(100, 100)), { x: 300, y: 300 }, "diagonal");
+  wallX = 290; assert.deepEqual(wm.pushDestination(attacker, pushed(100, 0)), { x: 200, y: 0 });
+  wallX = 160; assert.equal(wm.pushDestination(attacker, pushed(100, 0)), null);
+  assert.equal(wm.pushDestination(attacker, { ...pushed(0, 0), center: { x: 50, y: 50 } }), null, "same spot: no direction");
+  canvas.scene = { grid: { units: "m" } }; assert.equal(wm.pushDistance(), 3);
+});
+await test("weapon mastery: macro gets actor, item, mastery, targets with hit and the message", async () => {
+  game.user.isGM = true;
+  const calls = [];
+  const macro = { documentName: "Macro", execute: async scope => calls.push(scope) };
+  wmDocs["Macro.abc"] = macro;
+  game.macros = { getName: n => (n === "Cleave helper" ? macro : null), get: () => null };
+  settings.weaponMasteryMacroCleave = "Cleave helper";
+  const msg = wmMessage({ mastery: "cleave", targets: [t(goblin, 13), t(ogre, 17)] });
+  await wm.runMacro(wm.attackContext(msg));
+  const [scope] = calls;
+  assert.equal(scope.actor, wmAttacker); assert.equal(scope.item, wmWeapon); assert.equal(scope.mastery, "cleave"); assert.equal(scope.message, msg);
+  assert.deepEqual(scope.targets.map(x => [x.actor, x.hit]), [[goblin, true], [ogre, false]]);
+  assert.equal(scope.hit, null, "mixed results");
+  settings.weaponMasteryMacroCleave = "Macro.abc";
+  await wm.runMacro(wm.attackContext(wmMessage({ mastery: "cleave", targets: [t(goblin, 13)] })));
+  assert.equal(calls[1].hit, true);
+  notes.length = 0; settings.weaponMasteryMacroCleave = "missing";
+  assert.equal(await wm.runMacro(wm.attackContext(msg)), false);
+  assert.deepEqual(notes, ['DT.WeaponMastery.MacroNotFound:{"macro":"missing"}']);
+  settings.weaponMasteryMacroCleave = "";
+  game.user.isGM = false;
+});
+await test("weapon mastery: card panel — off by default, GM buttons per target, players only a hint (Vex: the attacker's owner)", async () => {
+  const render = hooks["dnd5e.renderChatMessage"].at(-1);   // [0] is Savage Attacker's
+  const msg = wmMessage({ mastery: "sap", targets: [t(goblin, 13), t(ogre, 30)], id: "panel" });
+  settings.weaponMasteryEnabled = false;
+  let card = wmCard(); render(msg, card.root);
+  assert.equal(card.root.querySelector(".dt-wm"), null);
+  settings.weaponMasteryEnabled = true; game.user.isGM = true;
+  card = wmCard(); render(msg, card.root); render(msg, card.root);
+  assert.equal(card.content.querySelectorAll(".dt-wm").length, 1, "inserted once");
+  const rows = card.content.querySelectorAll(".dt-wm__target");
+  assert.deepEqual(rows.map(r => r.dataset.state), ["hit", "miss"]);
+  assert.equal(buttonsOf(rows[0]).length, 1); assert.equal(buttonsOf(rows[1]).length, 0, "Sap on a miss: no button");
+  assert.match(card.content.querySelector(".dt-wm__mastery").dataset.uuid, /rule\.sap/);
+  // the GM flips the miss to a hit → the panel re-renders with a button
+  rows[1].querySelector(".dt-wm__state").click();
+  assert.equal(buttonsOf(card.content.querySelectorAll(".dt-wm__target")[1]).length, 1);
+  wm.overrides.clear();
+  game.user.isGM = false;
+  card = wmCard(); render(msg, card.root);
+  assert.equal(buttonsOf(card.content).length, 0);
+  assert.ok(card.content.querySelector(".dt-wm__note"), "players see that the GM decides");
+  const vex = wmMessage({ mastery: "vex", targets: [t(goblin, 13)], id: "vexpanel" });
+  card = wmCard(); render(vex, card.root);
+  assert.equal(buttonsOf(card.content).length, 1, "Vex changes the attacker's own actor");
+  const noTargets = wmMessage({ mastery: "graze", id: "nt" });
+  game.user.isGM = true; card = wmCard(); render(noTargets, card.root);
+  const [row] = card.content.querySelectorAll(".dt-wm__target");
+  assert.equal(row.dataset.state, "unknown"); assert.equal(buttonsOf(row).length, 1, "no recorded target: acts on current targets");
+  game.user.isGM = false;
+});
+await test("weapon mastery: RSReforged sections and Topple save requests get decorated", () => {
+  const render = hooks["dnd5e.renderChatMessage"].at(-1);   // [0] is Savage Attacker's
+  const child = wmMessage({ mastery: "topple", targets: [t(goblin, 13)], id: "rsrChild" });
+  game.messages = { get: id => (id === "rsrChild" ? child : null) };
+  game.modules = { get: id => (id === "rsreforged" ? { active: true } : undefined) };
+  game.user.isGM = true;
+  const { root } = wmCard();
+  const section = new WmEl("div"); section.className = "rsr-card rsr-section-attack"; section.dataset.messageId = "rsrChild";
+  root.append(section);
+  render({ id: "usage", rolls: [], system: {}, flags: { rsreforged: { workflowVersion: 2 } } }, root);
+  assert.equal(section.querySelectorAll(".dt-wm").length, 1);
+  assert.match(section.textContent, /DT\.WeaponMastery\.Button\.Topple/);
+  const pc = wmDocs["Actor.rogue"];
+  const request = { id: "req", rolls: [], flags: { [MODULE_ID]: { weaponMasterySave: { actor: pc.uuid, dc: 13, ability: "con" } } } };
+  game.user.isGM = false;
+  let card = wmCard(); render(request, card.root);
+  assert.equal(buttonsOf(card.content).length, 1, "the target's owner gets the save button");
+  pc.isOwner = false; card = wmCard(); render(request, card.root);
+  assert.equal(buttonsOf(card.content).length, 0);
+  pc.isOwner = true;
+  game.modules = { get: () => undefined };
+  delete globalThis.document; delete globalThis.HTMLElement;
+});
+
 console.log(`\ntest-features: ${passed} passed`);

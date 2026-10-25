@@ -38,6 +38,7 @@
  */
 
 import { MODULE_ID } from "../constants.js";
+import { hitAgainst } from "../lib/attack-roll.js";
 
 const KEY_MODE = "savageAttackerMode";
 
@@ -104,11 +105,7 @@ const attacks = new Map();
 
 /** true/false when the attack had exactly one target with a known AC, else null. */
 function attackHit(roll) {
-  const target = roll?.options?.target;
-  if ((target === undefined) || (target === null) || (target === "") || !Number.isFinite(Number(target))) return null;
-  if (roll.isCritical) return true;
-  if (roll.isFumble) return false;
-  return roll.total >= Number(target);
+  return hitAgainst(roll, roll?.options?.target);
 }
 
 function onRollAttack(rolls, { subject } = {}) {
