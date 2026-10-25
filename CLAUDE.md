@@ -546,7 +546,7 @@ RSReforged 6.0.2 (`src/utils/native-*.js`, `hooks.js`).
   (attack.ability, else the best of `availableAbilities`).
 - `WeaponData#masteryOptions` is null unless `actor.system.traits.weaponProf.mastery.value` has
   the weapon's `type.baseItem` and the item has `system.mastery`; extra options come from
-  `weaponProf.mastery.bonus`. `weaponProf.mastery` exists only on characters → **NPC attacks
+  `weaponProf.mastery.bonus`. `weaponProf.mastery` exists only on characters (verified again 2026-10-25: `NPCData` traits have no `weaponProf`) → **NPC attacks
   never carry a mastery**. `CONFIG.DND5E.weaponMasteries` = cleave, graze, nick, push, sap, slow,
   topple, vex with `label` (pre-localised) and `reference` (journal page UUID in `content24`),
   identical in both versions.

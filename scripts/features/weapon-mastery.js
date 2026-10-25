@@ -120,6 +120,8 @@ function targetDescriptors(message) {
 
 /**
  * Everything the panel needs from an attack message, or null if it carries no mastery.
+ * dnd5e records a mastery only when the attacker has the weapon's mastery (characters; NPCs
+ * have no weapon masteries in dnd5e) — no mastery, no panel.
  * @returns {{message, mastery, roll, actor, item, activity, ability, targets: object[]}|null}
  */
 function attackContext(message) {
@@ -637,6 +639,14 @@ function targetRow(ctx, row, rerender) {
   return { li, acted: true };
 }
 
+/** Open the mastery's rule page (dnd5e's journal reference). */
+async function openRule(mastery) {
+  const reference = CONFIG.DND5E?.weaponMasteries?.[mastery]?.reference;
+  const page = reference ? await fromUuid(reference) : null;
+  if (page?.parent?.sheet) return page.parent.sheet.render(true, { pageId: page.id });
+  return page?.sheet?.render(true);
+}
+
 function buildPanel(ctx) {
   const box = el("div", "dt-wm");
   box.dataset.mastery = ctx.mastery;
@@ -644,6 +654,11 @@ function buildPanel(ctx) {
 
   const header = el("div", "dt-wm__header");
   header.append(icon("fa-solid fa-medal"), el("span", "dt-wm__title", localize("DT.WeaponMastery.Title")), ruleLink(ctx.mastery));
+  // Every mastery — also Cleave and Nick, which nothing automates — gets its rule as a button.
+  const rule = button(localize("DT.WeaponMastery.HintButton"), "fa-solid fa-circle-info",
+    { tooltip: localize(RULES[ctx.mastery]?.hint ?? "") }, () => openRule(ctx.mastery));
+  rule.classList.add("dt-wm__rule");
+  header.append(rule);
   if (macroRef(ctx.mastery) && (game.user.isGM || ctx.actor?.isOwner)) {
     header.append(button(localize("DT.WeaponMastery.Macro"), "fa-solid fa-code",
       { tooltip: format("DT.WeaponMastery.MacroHint", { macro: macroRef(ctx.mastery) }) }, () => runMacro(ctx)));

@@ -349,7 +349,8 @@ not damage).
 **How it works** (for every creature that has the feat — player characters, sidekicks, NPCs):
 
 - *Automatic* — the **first weapon damage roll of a turn** rolls the weapon dice twice and keeps
-  the higher total. Dice So Nice shows both sets; the card shows "Savage Attacker: 4 / 7 → 7".
+  the higher total. Dice So Nice shows both sets; the card shows "Savage Attacker: 4 / 7 → 7" — hover a
+  total to see its dice (e.g. "8 + 6" on a critical hit or a two-dice weapon).
   "Once per turn" counts every creature's turn of the running combat: an **opportunity attack**
   on someone else's turn qualifies again, the second attack of your own turn (Extra Attack) does
   not. If the attack was a **known miss** (exactly one target with a known AC), the chance is not
@@ -372,6 +373,11 @@ not damage).
 ---
 
 ### 11. Weapon Mastery  ·  *dnd5e · world (GM)*
+
+Every panel has a **Rule** button next to the mastery's name (the rule as tooltip, a click opens
+the rule page) — also for Cleave and Nick, which nothing automates. The panel only appears when
+dnd5e recorded a mastery for the attack, i.e. the attacker has that weapon's mastery (characters;
+NPCs have no weapon masteries in dnd5e).
 
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this

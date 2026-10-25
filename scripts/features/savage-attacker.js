@@ -153,10 +153,13 @@ function applyPool(roll) {
   return true;
 }
 
-/** Totals of a pool made by applyPool: [first, second]. */
-function poolTotals(roll) {
+/** The kept results of a dice term, e.g. [8, 6]. */
+const diceOf = term => (term?.results ?? []).filter(r => r.active !== false).map(r => r.result);
+
+/** Both throws of a pool made by applyPool: [{total, dice}, {total, dice}]. */
+function poolThrows(roll) {
   const pool = roll.terms.find(isPool);
-  return pool?.rolls?.map(r => r.total) ?? [];
+  return pool?.rolls?.map(r => ({ total: r.total, dice: (r.dice ?? []).flatMap(diceOf) })) ?? [];
 }
 
 /* -------------------------------------------- */
@@ -222,7 +225,9 @@ async function rerollOnMessage(message, index) {
     data.terms[ti] = { ...again.terms[0].toJSON(), options: { ...term.options } };
     data.total = roll.total - before + after;
   }
-  data.options = { ...data.options, [ROLL_OPTION]: { ...info, savage: "rerolled", before, after } };
+  data.options = { ...data.options, [ROLL_OPTION]: {
+    ...info, savage: "rerolled", before, after, beforeDice: diceOf(term), afterDice: diceOf(again.terms[0])
+  } };
   rolls[index] = roll.constructor.fromData(data);
   await message.update({ rolls: rolls.map(r => JSON.stringify(r)) });
 
@@ -243,10 +248,30 @@ function refreshParent(message) {
   }
 }
 
-function resultText(roll, info) {
-  const [first, second] = (info.savage === "auto") ? poolTotals(roll) : [info.before, info.after];
-  if (!Number.isFinite(first) || !Number.isFinite(second)) return localize("DT.SavageAttacker.Applied");
-  return game.i18n.format("DT.SavageAttacker.Result", { first, second, kept: Math.max(first, second) });
+/** "Savage Attacker: 14 / 16 → 16" — hovering a total shows its dice ("8 + 6"). */
+function resultNodes(roll, info) {
+  const throws = (info.savage === "auto") ? poolThrows(roll)
+    : [{ total: info.before, dice: info.beforeDice ?? [] }, { total: info.after, dice: info.afterDice ?? [] }];
+  const [first, second] = throws;
+  if (!Number.isFinite(first?.total) || !Number.isFinite(second?.total)) {
+    const text = document.createElement("span");
+    text.textContent = localize("DT.SavageAttacker.Applied");
+    return [text];
+  }
+  const total = ({ total: value, dice }) => {
+    const node = document.createElement("span");
+    node.classList.add("dt-savage__total");
+    node.textContent = String(value);
+    if (dice.length) node.dataset.tooltip = dice.join(" + ");
+    return node;
+  };
+  const text = (value) => {
+    const node = document.createElement("span");
+    node.textContent = value;
+    return node;
+  };
+  return [text(`${localize("DT.SavageAttacker.Label")} `), total(first), text(" / "), total(second),
+    text(` → ${Math.max(first.total, second.total)}`)];
 }
 
 /** Button or result note for a damage message, appended to `container` (idempotent). */
@@ -290,9 +315,7 @@ function decorateCard(container, message) {
       const icon = document.createElement("i");
       icon.classList.add("fa-solid", "fa-dice");
       icon.inert = true;
-      const text = document.createElement("span");
-      text.textContent = resultText(roll, info);
-      box.append(icon, text);
+      box.append(icon, ...resultNodes(roll, info));
     }
     container.append(box);
   } catch (err) {

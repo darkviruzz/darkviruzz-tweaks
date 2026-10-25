@@ -1016,7 +1016,8 @@ class WmEl {
 globalThis.HTMLElement = WmEl;
 globalThis.document = { createElement: tag => new WmEl(tag) };
 const wmCard = () => { const root = new WmEl("li"); const content = new WmEl("div"); content.className = "message-content"; root.append(content); return { root, content }; };
-const buttonsOf = node => node.querySelectorAll(".dt-wm__btn");
+// Action buttons only — every panel also has a rule button (.dt-wm__rule).
+const buttonsOf = node => node.querySelectorAll(".dt-wm__btn").filter(b => !b.classList.contains("dt-wm__rule"));
 
 const wmDocs = {};
 let wmSeq = 0;
@@ -1345,6 +1346,46 @@ await test("savage attacker: button/note also land in RSReforged's damage sectio
   assert.equal(section.querySelectorAll(".dt-savage").length, 1, "idempotent on re-render");
   game.user.isGM = false;
   game.modules = { get: () => undefined };
+  delete globalThis.document; delete globalThis.HTMLElement;
+});
+
+await test("weapon mastery: every mastery gets a rule button (also Cleave/Nick); no recorded mastery → no panel", async () => {
+  globalThis.HTMLElement = WmEl;
+  globalThis.document = { createElement: tag => new WmEl(tag) };
+  game.user.isGM = true;
+  for (const mastery of ["cleave", "nick", "topple"]) {
+    const card = wmCard();
+    await fire("dnd5e.renderChatMessage", wmMessage({ mastery, targets: [t(goblin, 13)], id: `rule-${mastery}` }), card.root);
+    const panel = card.content.querySelector(".dt-wm");
+    assert.equal(panel.querySelectorAll(".dt-wm__rule").length, 1, `${mastery}: rule button`);
+  }
+  const none = wmCard();
+  const plain = wmMessage({ mastery: null, id: "noMastery" });
+  await fire("dnd5e.renderChatMessage", plain, none.root);
+  assert.equal(none.content.querySelectorAll(".dt-wm").length, 0);
+  game.user.isGM = false;
+  delete globalThis.document; delete globalThis.HTMLElement;
+});
+await test("savage attacker: the note shows both totals, each with its dice as tooltip", async () => {
+  globalThis.HTMLElement = WmEl;
+  globalThis.document = { createElement: tag => new WmEl(tag) };
+  settings.savageAttackerMode = "auto";
+  const rerolled = { id: "dmgR", rolls: [{ terms: [], options: { [MODULE_ID]: {
+    savage: "rerolled", actor: "Actor.none", before: 14, after: 16, beforeDice: [8, 6], afterDice: [9, 7] } } }] };
+  let card = wmCard();
+  await fire("dnd5e.renderChatMessage", rerolled, card.root);
+  assert.deepEqual(card.content.querySelectorAll(".dt-savage__total").map(n => [n.textContent, n.dataset.tooltip]),
+    [["14", "8 + 6"], ["16", "9 + 7"]]);
+  const pool = new SaPool({ terms: ["2d6", "2d6"], modifiers: ["kh"], rolls: [
+    { total: 5, dice: [{ results: [{ result: 2 }, { result: 3 }] }] },
+    { total: 9, dice: [{ results: [{ result: 4 }, { result: 5 }, { result: 1, active: false }] }] }
+  ] });
+  const auto = { id: "dmgA", rolls: [{ terms: [pool], options: { [MODULE_ID]: { savage: "auto", actor: "Actor.none" } } }] };
+  card = wmCard();
+  await fire("dnd5e.renderChatMessage", auto, card.root);
+  assert.deepEqual(card.content.querySelectorAll(".dt-savage__total").map(n => n.dataset.tooltip), ["2 + 3", "4 + 5"],
+    "discarded dice (e.g. rerolls) are left out");
+  assert.match(card.content.textContent, /→ 9/);
   delete globalThis.document; delete globalThis.HTMLElement;
 });
 

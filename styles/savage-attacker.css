@@ -22,3 +22,9 @@
   font-style: italic;
   opacity: 0.7;
 }
+
+/* A total with its dice in the tooltip ("8 + 6"). */
+.dt-savage__total[data-tooltip] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
