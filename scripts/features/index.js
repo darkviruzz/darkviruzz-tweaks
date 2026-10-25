@@ -16,6 +16,7 @@ import findMyToken from "./find-my-token.js";
 import movementHistoryReset from "./movement-history-reset.js";
 import defeatedTokens from "./defeated-tokens.js";
 import pauseControl from "./pause-control.js";
+import filePickerPreview from "./file-picker-preview.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -23,5 +24,6 @@ export const FEATURES = [
   findMyToken,
   movementHistoryReset,
   defeatedTokens,
-  pauseControl
+  pauseControl,
+  filePickerPreview
 ];
