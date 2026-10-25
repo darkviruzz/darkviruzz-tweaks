@@ -54,17 +54,21 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
    keys (same keys, same `{placeholders}` in both). Never hard-code display strings in JS;
    build DOM with `textContent`, not `innerHTML` with translated strings.
 8. **Verify APIs against real source before using them.** Don't guess Foundry/dnd5e APIs.
-   dnd5e: clone `foundryvtt/dnd5e` at the `release-x.y.z` tag. Foundry has no public source:
-   use the v14 API docs (https://foundryvtt.com/api/), release notes, the League
-   `foundry-vtt-types` repo, a v13 client-source mirror for implementation details (mark
-   those "v14 impl unverified"), and modules verified on v14. Record confirmed facts in
+   dnd5e: clone `foundryvtt/dnd5e` at the `release-x.y.z` tag. Foundry has no public source
+   repo, but **an installed Foundry ships its real source**: readable client code in
+   `<install>/client/**/*.mjs` and the (minified) server in `<install>/dist/`. On the dev
+   machine a v14 install (build 14.364) lives in `Documents/foundryuserdata/foundry` — grep it
+   first; it beats every other source. Otherwise use the v14 API docs
+   (https://foundryvtt.com/api/), release notes, the League `foundry-vtt-types` repo, a v13
+   client-source mirror for implementation details (mark those "v14 impl unverified"), and
+   modules verified on v14. Record confirmed facts in
    *Verified facts & gotchas* below. Prefer reusing the system's own code paths over
    re-implementing them (see *Spell Effect Auto-Apply*).
 
 ## Architecture
 
 ```
-module.json                     manifest (id, compatibility v14+, esmodule = scripts/main.js)
+module.json                     manifest (id, compatibility v14+, esmodule = scripts/main.js, socket: true)
 CHANGELOG.md                    one "## [x.y.z]" section per release = the release notes
 scripts/
   constants.js                  exports MODULE_ID (must match module.json id)
@@ -77,8 +81,10 @@ scripts/
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
+    live-token-drag.js          everyone sees token drags live (world/GM; module socket)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
+    socket.js                   the module socket channel, messages routed per feature id
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -160,6 +166,12 @@ effect (e.g. ones read by `getSceneControlButtons`) use `requiresReload: true`.
 World-level features that write documents (tokens, effects of other actors…) must run on
 exactly one client: guard with `game.users.activeGM?.isSelf`.
 
+Features that need to talk to other clients without writing documents use the shared module
+socket in `scripts/lib/socket.js`: `onSocketMessage(featureId, handler)` in `init()` and
+`emitSocketMessage(featureId, payload, {recipients, volatile})`. No socketlib, no globals.
+`module.json` has `"socket": true` (the validator checks it whenever a script listens on
+`game.socket`).
+
 ## Tooling
 
 `npm run validate` (= `node tools/validate.mjs`, Node 20+, no dependencies) fails on:
@@ -171,7 +183,8 @@ from en.json; en/de key or `{placeholder}` mismatch; feature-contract violations
 duplicate keys/actions, missing i18n keys, Boolean default ≠ false, bound keybindings, init()
 throwing against stubbed globals, a feature touching Foundry globals at import time); README
 not mentioning a setting/keybinding name; a feature id missing from this file; no CHANGELOG
-section for the current version. It warns about en.json keys that look unused.
+section for the current version; a script listening on `game.socket` without
+`"socket": true` in module.json. It warns about en.json keys that look unused.
 
 `npm test` (= `node tools/test-features.mjs`) loads the real feature files, captures the
 hooks/keybindings they register and drives them with stubbed Foundry/dnd5e objects (both
@@ -446,6 +459,100 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
 
+### Token drag, animation & module socket (feature *Live Token Drag*, v1.8.0)
+
+Verified 2026-10-25 against the real v14 source (local install, build 14.364:
+`client/canvas/placeables/{placeable-object,token}.mjs`, `client/canvas/layers/…`,
+`dist/server/sockets.mjs`, `dist/packages/{package,world}.mjs`).
+
+- **Drag workflow:** `PlaceableObject#_initializeDragLeft` clones every draggable controlled
+  object (`clone()`, then `_previewType = "dragging"`; `_original` points back), adds the clone
+  to `layer.preview` and draws it async → `drawToken(preview)` then `refreshToken(preview,
+  flags)`. Token drags move the preview via `Token.#updateDragPreview` (sets
+  `preview.document.x/y/elevation/…` + `refreshPosition`) → `refreshToken(preview)`. EVERY
+  end goes through `layer.clearPreviewContainer()` (`_onDragEnd()` + `destroy()` →
+  `destroyToken(preview)`): on drop in the `finally` after the update promise (also for an
+  empty update = dropped on the same spot, and for errors/rejections), on cancel via
+  `_finalizeDragLeft`. So `refreshToken`/`destroyToken` filtered by
+  `token.previewType === "dragging"` cover the whole drag — no wrapping needed.
+- `PlaceableObject#previewType` (public getter): `"dragging"|"controls"|"wheel"|"creation"|
+  "config"|"api"|null`; `isPreview`, `hasPreview` (`!!_preview`), `_original`. While dragging,
+  core shows the original at alpha 0.4 and the preview at 0.8 (`_getTargetAlpha`).
+- Drag input: Shift = no grid snapping (`_onDragLeftMove` → `_updateDragDestination(point,
+  {snap: !event.shiftKey})`), Ctrl+click adds a waypoint, right-click removes the last
+  waypoint or cancels (`_onDragClickRight` → `_triggerDragLeftCancel`), Ctrl+wheel changes
+  elevation, pausing cancels (`interactionData.cancelOnPause`). **Esc does NOT cancel a
+  token drag** (`TokenLayer#_onDismissKey` only cancels placement / movement planning; the
+  base layer's handler does nothing while a preview exists). Drop → `_prepareDragLeftDropUpdates` → `updateEmbeddedDocuments("Token",
+  [{_id}], {method: "dragging", movement: {[id]: {waypoints, …}}})`; contexts whose
+  `foundPath.length <= 1` produce no update.
+- **MouseInteractionManager callbacks are captured when a placeable's MIM is created**
+  (`_createInteractionManager` stores `this._onDragLeftMove` etc.) — patching a prototype
+  after tokens are drawn would not reach existing tokens. Another reason to prefer hooks.
+- **Core already shares the planned path, not the token:** `Token.#updatePlannedMovement` →
+  throttled (100 ms) `game.user.broadcastActivity({plannedMovements: {[id]: …}})`, only with
+  the `SHOW_RULER` permission. `hidden` = Alt held at drag start (`token._plannedMovement
+  [userId].hidden`, protected field) — other clients then don't show that ruler.
+- **Token animation:** `Token#animate(to, {name, duration, easing, chain, action, …})`
+  animates the private `#animationData` and merges it into `token.document` every frame
+  (derived data — `_source` is untouched) → `_onAnimationUpdate` refreshes
+  position/visibility/HUD/occlusion and, with `core.visionAnimation` (default on),
+  `initializeSources()`. An explicit `duration` wins over the movement action's defaults; no
+  `easing` = linear (string easings are `CanvasAnimation[name]`). CanvasAnimation names are
+  GLOBAL — an animation with the same name is terminated, so include the token id.
+  `Token#stopAnimation({reset = true})` terminates every animation of the token and
+  `document.reset()`s it (jumps to the source state); `Token#_destroy` calls it.
+  `movementAnimationPromise` is non-null while a movement animation runs.
+- **GOTCHA — `Token#animate` moves vision and light too.** The vision source is built from
+  the derived document position (`_getVisionSourceData` → `document.getVisionOrigin()`), and
+  for a player with OBSERVER on the token and no controlled sighted token, that token IS a
+  vision source (`_isVisionSource`) — so "showing" a position with `animate()` lets them see,
+  and explore fog, wherever it is shown. For a display-only move, move `token.position` (the
+  container: border, bars, nameplate, tooltip, effects, target pips, turn marker) and
+  `token.mesh.position` (= center, lives in the primary group) instead. The token ruler's path
+  is in `layer._rulerPaths` and its labels are HTML, so neither moves with the container.
+  Core resets both positions in `_refreshPosition` and `visible`/`mesh.visible` in
+  `_refreshVisibility` (`mesh.visible = visible && renderable`); re-apply after core.
+- **Ticker priorities** (`Canvas.#activateTicker`, set on `PIXI.UPDATE_PRIORITY`): token
+  animations OBJECTS+1 (24), render flags OBJECTS = HIGH−2 (23), INTERFACE 22, primary group
+  update PRIMARY = NORMAL+3 (3), perception PERCEPTION = NORMAL+2 (2); PIXI's own render
+  callback runs after these (PIXI v7 Application uses LOW = −25 — not re-checked in Foundry's
+  minified vendor bundle). A ticker at PRIMARY+1 runs after the render flags.
+  `VisibilityGroup#restrictVisibility` only sets `refreshVisibility` render flags (applied in
+  the next frame's OBJECTS pass).
+- **Visibility:** `Token#isVisible` (getter; resets/sets `detectionFilter`): preview → true;
+  controlled → true; hidden → GM only; no token vision → not culled; own active vision source
+  → true; GM without active vision sources → true; else `canvas.visibility.testVisibility(
+  document.getVisibilityTestPoints(), {tolerance: 0, object})`.
+  `TokenDocument#getVisibilityTestPoints(data)` takes a partial position (`{x, y}`; defaults
+  to the prepared document), constrained by walls from that position's center.
+- **Update animation:** `Token#_onUpdate` → `#onUpdateAnimation`: `options.animate === false`
+  → `stopAnimation({reset: false})`; otherwise the movement animates from the CURRENT rendered
+  state through `options._movement[id].passed.waypoints`. The client backend calls
+  `doc._onUpdate()` and then, synchronously, `Hooks.callAll("updateToken")` — stopping the
+  animation in the hook means no frame of it is ever drawn (CanvasAnimation's first frame runs
+  synchronously at t = 0, i.e. at the start position; terminating before the next microtask
+  keeps it off the ticker).
+- **Module socket:** manifest `"socket": true`, channel `module.<id>`. Server
+  `handleCustomSocket(event, data, {recipients} = {}, ack)`: a `recipients` array of user ids →
+  emitted to exactly those users' sockets, otherwise `socket.broadcast` (everyone but the
+  sender); listeners get `(data, senderUserId)`. The server registers these listeners per client
+  connection for `game.world.modules`, whose manifests are read at world launch — a changed
+  manifest needs a relaunch, not just F5. `game.socket` exists before `init` (Game
+  constructor). `game.socket.volatile.emit(…)` is what core uses for frequent activity data.
+  For a document update the server acks the requester BEFORE broadcasting to the others, so a
+  message the requester sends after its update resolved arrives after that update everywhere.
+- Hooks: `userConnected(user, connected)`; `canvasTearDown(canvas)` fires after the layers
+  were deactivated (the token layer's preview container is already cleared).
+  `game.keyboard.isModifierActive("SHIFT")`. Core world setting `core.tokenDragPreview`
+  ("Token Drag Vision", default false) previews vision/light for the person dragging only.
+- **Original *Live Drag* 1.0.4 (Anyndol/Anyndel, MIT, Foundry 11–12; libWrapper + socketlib):**
+  wraps `Token.prototype._onDragLeftStart`, sets the original's `document.alpha` etc. to 0 and
+  restores it ONLY in `updateToken` → invisible after drop-on-same-spot/cancel/rejection; sends
+  every `refreshToken` of the preview unthrottled via socketlib and moves receivers'
+  `token.x/y`/`mesh` directly; no end signal; `animate: false` for the drop; leftover
+  `console.log` and an undeclared global `pressedKey`.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -456,3 +563,4 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
+| Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |

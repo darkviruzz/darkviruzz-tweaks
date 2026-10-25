@@ -53,5 +53,12 @@
   "DT.Settings.PauseRestoreAfterCombat.Name": "Restore Pause State After Combat",
   "DT.Settings.PauseRestoreAfterCombat.Hint": "Remember whether the game was paused when a combat was created and restore that state when the combat ends.",
 
+  "DT.Categories.LiveTokenDrag.Label": "Live Token Drag",
+  "DT.Categories.LiveTokenDrag.Hint": "While a token is being dragged, everyone sees it follow the mouse in real time — not just the planned path. Replaces the unmaintained \"Live Drag\" module by Anyndel (disable that one when using this). World-level (set by the GM).",
+  "DT.Settings.LiveDragEnabled.Name": "Show Token Drags Live",
+  "DT.Settings.LiveDragEnabled.Hint": "Everyone sees a dragged token move in real time; a cancelled drag glides back. Hidden tokens are only shown to GMs. Hold Alt when you start dragging to keep that drag private, just like Foundry's own ruler.",
+  "DT.Settings.LiveDragShiftOnly.Name": "Live Drag Only With Shift",
+  "DT.Settings.LiveDragShiftOnly.Hint": "Show a drag live only once Shift is pressed during it; it then stays live until you drop the token, so you can let go of Shift again. Note: while Shift is held, Foundry does not snap the token to the grid.",
+
   "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
 }
