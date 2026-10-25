@@ -14,13 +14,15 @@
     "verified": "14"
   },
   "socket": true,
+  "persistentStorage": true,
   "esmodules": [
     "scripts/main.js"
   ],
   "styles": [
     "styles/settings.css",
     "styles/ability-score-prominence.css",
-    "styles/spell-effect-autoapply.css"
+    "styles/spell-effect-autoapply.css",
+    "styles/file-picker-preview.css"
   ],
   "languages": [
     {

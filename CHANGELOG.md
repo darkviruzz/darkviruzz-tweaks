@@ -21,6 +21,20 @@ and GMs, not for developers.
   - doesn't need *socketlib* or *libWrapper*.
 
   Off by default. If live drags don't show up right after updating, relaunch the world once.
+- **File Browser Preview** (any system): see images in Foundry's File Browser without
+  clicking them — a replacement for the *Asset Preview* module, which only previews on click
+  (**disable Asset Preview** when you switch these on). Three options, all off by default:
+  - **File Browser: Preview on Hover** (per player) — rest the mouse on an image in the List or
+    Thumbnails view to see it beside the browser, with its size in pixels, its file size and,
+    in the Tile Browser, how many grid squares it covers at the Asset Grid Size.
+  - **File Browser: Cache Thumbnails of Large Images** (GM) — the first preview of a large
+    image saves a small thumbnail (max. 256 px) in the module's storage folder; from then on
+    everyone sees that thumbnail instead of downloading the full image again. Made by users
+    who may upload files; adjustable size threshold (**File Browser: Thumbnail Threshold (KB)**,
+    default 250 KB).
+  - **File Browser: File Names in Tiles View** (per player).
+
+  Dragging files from the File Browser onto the canvas works exactly as before.
 
 ## [1.7.0] — 2026-10-13
 

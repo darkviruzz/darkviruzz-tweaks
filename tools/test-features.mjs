@@ -532,4 +532,158 @@ await test("live drag (receiver): the dragging user disconnects → only their t
   assert.equal(ticker.fns.length, 0);
 });
 
+/* ---------- File Browser Preview ---------- */
+const fpModule = await import(pathToFileURL(join(ROOT, "scripts/features/file-picker-preview.js")).href);
+const fp = fpModule.internals;
+fpModule.default.init();
+
+// The "data" source: folders that exist, files in them, and what was created/uploaded/fetched.
+const fpStore = {};
+const fpReset = () => {
+  fp.reset();
+  Object.assign(fpStore, { dirs: new Set([`modules/${MODULE_ID}`]), files: new Map(), created: [], uploads: [], fetches: [] });
+};
+fpReset();
+const fpDefaultOriginal = { bytes: 600 * 1024, width: 4096, height: 2048, headBytes: 600 * 1024 };
+let fpOriginal = { ...fpDefaultOriginal };
+let fpCanUpload = true;
+let fpUploadFails = false;
+globalThis.CONST = { IMAGE_FILE_EXTENSIONS: { png: "image/png", webp: "image/webp", svg: "image/svg+xml" } };
+game.modules = { get: () => ({ persistentStorage: true }) };
+game.user.can = permission => (permission === "FILES_UPLOAD") && fpCanUpload;
+foundry.applications = {
+  instances: new Map(),
+  apps: { FilePicker: { implementation: {
+    browse: async (source, dir) => {
+      if (!fpStore.dirs.has(dir)) throw new Error(`no such folder ${dir}`);
+      return { files: [...fpStore.files.keys()].filter(f => f.startsWith(`${dir}/`)) };
+    },
+    createDirectory: async (source, dir) => { fpStore.created.push(dir); fpStore.dirs.add(dir); return dir; },
+    upload: async (source, dir, file, body, options) => {
+      if (fpUploadFails) return false;
+      const path = `${dir}/${file.name}`;
+      fpStore.uploads.push({ source, dir, name: file.name, type: file.type, notify: options?.notify });
+      fpStore.files.set(path, file);
+      return { status: "success", path };
+    }
+  } } }
+};
+globalThis.fetch = async (url, options = {}) => {
+  fpStore.fetches.push({ url, method: options.method ?? "GET" });
+  return { ok: true, headers: new Map([["content-length", String(fpOriginal.headBytes)]]),
+    blob: async () => new Blob([new Uint8Array(fpOriginal.bytes)], { type: "image/png" }) };
+};
+globalThis.createImageBitmap = async (source, options) => (options
+  ? { width: options.resizeWidth, height: options.resizeHeight, close() {} }
+  : { width: fpOriginal.width, height: fpOriginal.height, close() {} });
+globalThis.document = { createElement: () => ({
+  getContext: () => ({ drawImage() {} }),
+  toBlob: (resolve, type) => resolve(new Blob([new Uint8Array(12 * 1024)], { type }))
+}) };
+settings.filePreviewThumbCache = true;
+settings.filePreviewThumbMinKB = 250;
+const fpApp = { activeSource: "data" };
+const fpMap = "worlds/greyhawk/maps/Big%20Map.png";
+const fpGets = () => fpStore.fetches.filter(f => f.method === "GET").length;
+
+await test("file preview: cache slots are stable, filename-safe, one folder per asset folder", () => {
+  const a = fp.cacheSlot(fpMap);
+  assert.deepEqual(fp.cacheSlot("worlds/greyhawk/maps/Big Map.png"), a); // encoded and decoded agree
+  assert.match(a.dir, new RegExp(`^modules/${MODULE_ID}/storage/thumbs/[0-9a-z]+$`));
+  assert.match(a.key, /^[0-9a-z]+$/);
+  assert.equal(fp.cacheSlot("worlds/greyhawk/maps/Other.png").dir, a.dir);
+  assert.notEqual(fp.cacheSlot("worlds/greyhawk/tokens/Big Map.png").dir, a.dir);
+  const index = fp.indexFiles([`${a.dir}/${a.key}-4096x2048-614400.webp`, `${a.dir}/readme.txt`]);
+  assert.deepEqual([...index], [[a.key, [{ src: `${a.dir}/${a.key}-4096x2048-614400.webp`, width: 4096, height: 2048, bytes: 614400 }]]]);
+});
+await test("file preview: cache off, another source or no persistent storage → the original, nothing fetched", async () => {
+  settings.filePreviewThumbCache = false;
+  assert.deepEqual(await fp.resolvePreview(fpApp, fpMap), { src: fpMap });
+  settings.filePreviewThumbCache = true;
+  assert.deepEqual(await fp.resolvePreview({ activeSource: "public" }, "icons/svg/x.png"), { src: "icons/svg/x.png" });
+  game.modules = { get: () => ({ persistentStorage: false }) };
+  assert.deepEqual(await fp.resolvePreview(fpApp, fpMap), { src: fpMap });
+  game.modules = { get: () => ({ persistentStorage: true }) };
+  assert.equal(fpStore.fetches.length, 0);
+});
+await test("file preview: large image without thumbnail → original shown, thumbnail made in module storage", async () => {
+  fpReset();
+  const preview = await fp.resolvePreview(fpApp, fpMap);
+  assert.equal(preview.objectURL, true); assert.equal(preview.bytes, 600 * 1024);
+  URL.revokeObjectURL(preview.src);
+  await fp.idle();
+  const { dir, key } = fp.cacheSlot(fpMap);
+  assert.deepEqual(fpStore.created, [`modules/${MODULE_ID}/storage`, `modules/${MODULE_ID}/storage/thumbs`, dir]);
+  assert.deepEqual(fpStore.uploads, [{ source: "data", dir, name: `${key}-4096x2048-614400.webp`, type: "image/webp", notify: false }]);
+});
+await test("file preview: next hover shows the thumbnail with the original's size, original not downloaded", async () => {
+  const gets = fpGets();
+  const preview = await fp.resolvePreview(fpApp, fpMap);
+  assert.equal(preview.cached, true); assert.equal(preview.width, 4096); assert.equal(preview.height, 2048);
+  assert.match(preview.src, /-4096x2048-614400\.webp$/);
+  await fp.idle();
+  assert.equal(fpGets(), gets);                        // only a HEAD to compare the size
+  assert.equal(fpStore.uploads.length, 1);
+});
+await test("file preview: a later session finds the thumbnail by browsing its cache folder", async () => {
+  fp.reset();                                          // new session, same files on the server
+  const preview = await fp.resolvePreview(fpApp, fpMap);
+  assert.equal(preview.cached, true); assert.equal(preview.width, 4096);
+});
+await test("file preview: replaced original (HEAD size differs) → thumbnail made again and preferred", async () => {
+  fp.reset();
+  fpOriginal = { bytes: 700 * 1024, width: 3000, height: 3000, headBytes: 700 * 1024 };
+  await fp.resolvePreview(fpApp, fpMap);
+  await fp.idle();
+  assert.equal(fpStore.uploads.length, 2);
+  assert.match(fpStore.uploads[1].name, /-3000x3000-716800\.webp$/);
+  assert.equal((await fp.resolvePreview(fpApp, fpMap)).width, 3000);
+  fpOriginal = { ...fpDefaultOriginal };
+});
+await test("file preview: small file, svg or no upload permission → original, no thumbnail", async () => {
+  fpReset();
+  fpOriginal.bytes = 100 * 1024;
+  await fp.resolvePreview(fpApp, fpMap); await fp.idle();
+  fpOriginal = { ...fpDefaultOriginal };
+  assert.deepEqual(await fp.resolvePreview(fpApp, "worlds/greyhawk/maps/door.svg"), { src: "worlds/greyhawk/maps/door.svg" });
+  fpCanUpload = false;
+  assert.deepEqual(await fp.resolvePreview(fpApp, "worlds/greyhawk/maps/Other.png"), { src: "worlds/greyhawk/maps/Other.png" });
+  fpCanUpload = true;
+  await fp.idle();
+  assert.equal(fpStore.uploads.length, 0);
+});
+await test("file preview: image already thumbnail-sized → no thumbnail, not downloaded again", async () => {
+  fpReset();
+  fpOriginal = { ...fpDefaultOriginal, width: 200, height: 100 };
+  await fp.resolvePreview(fpApp, fpMap); await fp.idle();
+  const gets = fpGets();
+  assert.deepEqual(await fp.resolvePreview(fpApp, fpMap), { src: fpMap });
+  assert.equal(fpGets(), gets); assert.equal(fpStore.uploads.length, 0);
+  fpOriginal = { ...fpDefaultOriginal };
+});
+await test("file preview: a failed upload switches thumbnail creation off for the session (one warning)", async () => {
+  fpReset(); fpUploadFails = true;
+  const warn = console.warn; const warnings = []; console.warn = (...a) => warnings.push(a.join(" "));
+  await fp.resolvePreview(fpApp, fpMap); await fp.idle();
+  assert.deepEqual(await fp.resolvePreview(fpApp, "worlds/greyhawk/maps/Other.png"), { src: "worlds/greyhawk/maps/Other.png" });
+  await fp.idle();
+  console.warn = warn; fpUploadFails = false;
+  assert.equal(warnings.length, 1);
+});
+await test("file preview: render hook toggles tile names per setting and binds its listeners once", () => {
+  globalThis.HTMLElement ??= class {};
+  const classes = new Set(); const listeners = [];
+  const root = Object.assign(new HTMLElement(), {
+    classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) },
+    addEventListener: type => listeners.push(type)
+  });
+  settings.filePreviewTileNames = false;
+  hooks.renderFilePicker[0]({}, root);
+  assert.equal(classes.has("dt-fp-tile-names"), false);
+  settings.filePreviewTileNames = true;
+  hooks.renderFilePicker[0]({}, root);
+  assert.equal(classes.has("dt-fp-tile-names"), true);
+  assert.deepEqual(listeners, ["pointerover", "pointerout", "dragstart", "scroll"]);
+});
+
 console.log(`\ntest-features: ${passed} passed`);

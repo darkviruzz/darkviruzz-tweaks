@@ -1,0 +1,92 @@
+/*
+ * File Browser Preview (scripts/features/file-picker-preview.js).
+ *
+ * Nothing here changes a row's children or size: core's drag start reads the row's own <img>
+ * (Thumbnails/Tiles views), and the Tiles view has a tile-size slider, so the file name is an
+ * overlay drawn by a pseudo-element and the preview is a separate element on <body>.
+ */
+
+/* ---- File names in the Tiles view ---------------------------------------------------------- *
+ * Core's tiles carry the file name in data-name but don't show it. Scoped to the root class the
+ * feature toggles, so switching the option off restores stock rendering immediately. */
+
+.dt-fp-tile-names .tiles li[data-file] {
+  position: relative;
+}
+
+.dt-fp-tile-names .tiles li[data-file]::after {
+  content: attr(data-name);
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 1px 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-10, 10px);
+  line-height: 1.3;
+  text-align: center;
+  color: #eee;
+  background: rgb(0 0 0 / 65%);
+  pointer-events: none; /* never catch a click or a drag meant for the tile */
+}
+
+/* The full name while hovering a tile. */
+.dt-fp-tile-names .tiles li[data-file]:hover::after {
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* ---- Hover preview ------------------------------------------------------------------------- */
+
+.dt-fp-preview {
+  position: fixed;
+  z-index: var(--z-index-tooltip, 10000);
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 272px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+  color: #eee;
+  background: rgb(11 10 19 / 92%);
+  box-shadow: 0 0 12px rgb(0 0 0 / 60%);
+  pointer-events: none;
+}
+
+.dt-fp-preview.is-visible {
+  display: flex;
+}
+
+.dt-fp-preview img {
+  display: block;
+  align-self: center;
+  max-width: 256px;
+  max-height: 256px;
+  border: none;
+  object-fit: contain;
+}
+
+.dt-fp-preview__name {
+  font-size: var(--font-size-12, 12px);
+  font-weight: bold;
+  word-break: break-all;
+}
+
+.dt-fp-preview__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.85;
+}
+
+/* A fractional grid footprint usually means the Asset Grid Size is wrong for this asset pack. */
+.dt-fp-preview__stats .is-fractional {
+  color: #f5a623;
+}
+
+.dt-fp-preview__stats .is-cached {
+  font-style: italic;
+  opacity: 0.7;
+}

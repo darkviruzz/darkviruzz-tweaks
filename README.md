@@ -246,6 +246,44 @@ in Foundry.
 > The feature uses the module's own message channel, which Foundry sets up when a world is
 > launched. If live drags don't show up right after installing or updating the module,
 > return to setup and launch the world again.
+### 8. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
+
+See images in Foundry's File Browser without clicking them — and without downloading big
+maps over and over. Covers what the *Asset Preview* module does (which needs a click), so
+**disable Asset Preview** when you switch these on (both draw file names on the tiles).
+
+**How it works:**
+
+- *Preview on hover* — rest the mouse on an image in the **List** or **Thumbnails** view and a
+  preview appears beside the browser: the picture, its **size in pixels**, its **file size** and,
+  in the Tile Browser, how many **grid squares** it covers at the browser's *Asset Grid Size*
+  (pixel width ÷ Asset Grid Size, the same ratio Foundry uses when you drop the tile; shown in
+  orange when it isn't a whole number — usually a sign that the Asset Grid Size doesn't match
+  the asset pack). Sweeping the mouse over the list loads nothing; only resting on a row does.
+- *Thumbnail cache* — without it, the preview loads the full image, like every other view of
+  the File Browser. With it, the first preview of an image larger than the threshold saves a
+  small thumbnail (max. 256 px, webp, typically 5–20 KB) in
+  `Data/modules/darkviruzz-tweaks/storage/thumbs/`, and every later preview — for everyone,
+  in later sessions too — shows that thumbnail instead of downloading the original again. If
+  the original is replaced by a different file, its thumbnail is made again automatically.
+  Thumbnails are made by users who may upload files (GMs, and players with Foundry's *Upload
+  New Files* permission); everyone else uses the existing thumbnails and otherwise sees the
+  original. The folder survives module updates and can be deleted at any time (thumbnails are
+  simply made again). Only files of the normal user-data source are cached, not Foundry's own
+  core icons or S3.
+- *File names in the Tiles view* — each tile shows its file name (the full name while you
+  hover the tile).
+
+**Drag-and-drop is not affected:** the preview is a separate overlay, nothing in the file list
+is changed, and the Tiles/Thumbnails views keep loading their own images — Foundry sizes a
+dropped tile from that image, so swapping in a 256 px thumbnail would shrink it.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **File Browser: Preview on Hover** | off | Show a preview, pixel size, file size and grid squares when resting the mouse on an image in the List or Thumbnails view. Per user. |
+| **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
+| **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
+| **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 256 px. World setting (GM). |
 
 ---
 

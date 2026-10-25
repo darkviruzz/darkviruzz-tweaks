@@ -82,6 +82,7 @@ scripts/
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
     live-token-drag.js          everyone sees token drags live (world/GM; module socket)
+    file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
@@ -190,7 +191,9 @@ section for the current version; a script listening on `game.socket` without
 hooks/keybindings they register and drives them with stubbed Foundry/dnd5e objects (both
 dnd5e 5.x and 6.x message shapes). It verifies OUR logic and guards against the APIs as
 documented below — it cannot prove Foundry behaves like the stubs, so keep the stubs in sync
-with the verified facts and still test in a real world when possible. Both commands run in
+with the verified facts and still test in a real world when possible. A feature whose logic
+is mostly DOM/network glue may export its pure parts as a named `internals` object for the
+tests (see `file-picker-preview.js`); the loader only uses the default export. Both commands run in
 CI on every PR and before every release.
 
 ## Release process
@@ -199,7 +202,9 @@ CI on every PR and before every release.
 `https://github.com/darkviruzz/darkviruzz-tweaks/releases/latest/download/module.json`.
 
 1. Add a `## [x.y.z] — YYYY-MM-DD` section to CHANGELOG.md (written for players/GMs — it
-   becomes the release notes verbatim).
+   becomes the release notes verbatim). Feature branches that are not tied to a release yet
+   (several run in parallel) put their entries under `## [Unreleased]` and leave `version`
+   alone; move the entries into the version section when that release is cut.
 2. Bump `version` in `module.json` and set `download` to the new `v<version>` zip URL.
 3. `npm run validate`, commit, PR, squash-merge to `main`.
 4. Release: push the matching tag (`git tag vX.Y.Z <merge-commit> && git push origin vX.Y.Z`)
@@ -552,6 +557,48 @@ Verified 2026-10-25 against the real v14 source (local install, build 14.364:
   every `refreshToken` of the preview unthrottled via socketlib and moves receivers'
   `token.x/y`/`mesh` directly; no end signal; `animate: false` for the drop; leftover
   `console.log` and an undeclared global `pressedKey`.
+### File Browser / FilePicker (feature *File Browser Preview*, verified 2026-10-25)
+
+Sources: v14 API docs 14.368 (signatures), the *Asset Preview* module 0.1.2 by
+BufferUnderrunOK (verified on 14.364 — row DOM and drag details), and modules on this table's
+v14.364 world that write to persistent storage (Token Action HUD Core 2.1.1, Dig Down 5.0.0).
+FilePicker implementation details are otherwise **v14 impl unverified** (no public source).
+
+- **Class:** `foundry.applications.apps.FilePicker` (ApplicationV2), active class
+  `FilePicker.implementation` (= `CONFIG.ux.FilePicker`, which modules may subclass). Render
+  hook `renderFilePicker(app, element)` fires for subclasses too and on partial re-renders; the
+  root element survives those, so bind delegated listeners once per root (WeakSet).
+  `app.activeSource` ∈ `data`/`public`/`s3`; `app.displayMode` ∈ `DISPLAY_MODES` =
+  `list`, `thumbs`, `tiles`, `images`.
+- **Rows:** files are `li[data-file]` with `data-path` (the URL as browsed — URL-encoded, e.g.
+  `Big%20Map.png`) and `data-name` (decoded name). The Tiles list is `ul.tiles`; core shows
+  names in the Images view but not in Tiles. The *Asset Grid Size* field
+  `input[name="tileSize"]` exists only when the picker is opened with `tileSize: true` (Tile
+  Browser); a dropped tile covers `naturalWidth / tileSize` grid squares.
+- **DRAG GOTCHA:** core rebinds its DragDrop to `li[data-file]` on every body render, and its
+  drag start reads `li.querySelector("img").naturalWidth` to size the dropped tile. Never put
+  an `<img>` into a row, never replace rows, never swap core's `img.src` for a thumbnail (a
+  256 px thumbnail = a 256 px tile). Keep listeners passive (no preventDefault/stopPropagation).
+- **API:** `browse(source, target, {extensions, wildcard, bucket})` → `{target, dirs, files,
+  gridSize, private, privateDirs}` (no file sizes!); rejects for a missing folder.
+  `createDirectory(source, target, options)` rejects if it exists. `upload(source, path, file,
+  body = {}, {notify = true})` returns the response JSON (`{status, path, message}`) or
+  `false`/`undefined`/`{}` on failure — check `result?.path`; the target folder must exist.
+- **Permissions:** `CONST.USER_PERMISSIONS.FILES_BROWSE` (default role 2 Trusted) and
+  `FILES_UPLOAD` (default role 3 Assistant GM; GMs always). Check with
+  `game.user.can("FILES_UPLOAD")`. TAH Core only creates its storage folders as GM — not
+  verified whether a non-GM with `FILES_UPLOAD` may `createDirectory`; our code handles a
+  refusal by switching thumbnail creation off for the session.
+- **Upload locations (v13+, article "Asset Management"):** uploads are refused at the top
+  level of Data and of `modules/`/`systems/`/`worlds/`, inside (most) installed packages and
+  other worlds; allowed in a top-level `assets` folder, new top-level folders, and the running
+  world. Packages can opt in with `flags.canUpload: true`. A package with
+  `persistentStorage: true` (BasePackage schema field) gets `modules/<id>/storage/`, kept
+  across updates; uploading there works on v14 (TAH Core and Dig Down do it; create the
+  folders with browse → catch → createDirectory, like TAH). `game.modules.get(id).persistentStorage`
+  tells whether the running manifest declares it. The Forge doesn't support persistent storage.
+- **Image types:** `CONST.IMAGE_FILE_EXTENSIONS` = apng avif bmp gif jpeg jpg png svg tiff webp
+  (object ext → MIME; use `Object.hasOwn`).
 
 ## Current features (keep this list current)
 
@@ -564,3 +611,4 @@ Verified 2026-10-25 against the real v14 source (local install, build 14.364:
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
+| File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |

@@ -59,6 +59,22 @@
   "DT.Settings.LiveDragEnabled.Hint": "Alle sehen ein gezogenes Token in Echtzeit wandern; bei einem abgebrochenen Ziehen gleitet es zurück. Versteckte Tokens sehen nur Spielleitungen. Wer beim Beginn des Ziehens Alt hält, zieht dieses eine Mal privat — wie beim Lineal von Foundry.",
   "DT.Settings.LiveDragShiftOnly.Name": "Live nur mit Umschalttaste",
   "DT.Settings.LiveDragShiftOnly.Hint": "Ein Ziehen wird erst live gezeigt, sobald währenddessen die Umschalttaste (Shift) gedrückt wird; danach bleibt es bis zum Ablegen live, die Taste darf also wieder losgelassen werden. Hinweis: Solange Shift gedrückt ist, rastet Foundry das Token nicht am Raster ein.",
+  "DT.Categories.FilePickerPreview.Label": "Dateibrowser-Vorschau",
+  "DT.Categories.FilePickerPreview.Hint": "Bildvorschau im Dateibrowser von Foundry ohne Klick — auf Wunsch aus zwischengespeicherten Vorschaubildern, damit große Karten nicht immer wieder heruntergeladen werden. Vorschau und Dateinamen pro Benutzer; den Vorschaubild-Cache stellt die Spielleitung für die Welt ein. Drag-and-drop bleibt unverändert.",
+  "DT.Settings.FilePreviewHover.Name": "Dateibrowser: Vorschau beim Überfahren",
+  "DT.Settings.FilePreviewHover.Hint": "Bleibt die Maus in der Listen- oder Vorschaubild-Ansicht des Dateibrowsers auf einem Bild, erscheint neben dem Browser eine Vorschau mit Pixelmaß, Dateigröße und — im Tile-Browser — der Anzahl der Rasterfelder bei der eingestellten Asset-Rastergröße.",
+  "DT.Settings.FilePreviewTileNames.Name": "Dateibrowser: Dateinamen in der Kachelansicht",
+  "DT.Settings.FilePreviewTileNames.Hint": "Zeigt in der Kachelansicht (Tiles) des Dateibrowsers den Dateinamen auf jeder Kachel (Foundry zeigt dort nur das Bild).",
+  "DT.Settings.FilePreviewThumbCache.Name": "Dateibrowser: Vorschaubilder großer Bilder zwischenspeichern",
+  "DT.Settings.FilePreviewThumbCache.Hint": "Beim ersten Anzeigen eines großen Bildes wird ein kleines Vorschaubild (max. 256 px) im Speicherordner dieses Moduls abgelegt (Data/modules/darkviruzz-tweaks/storage/thumbs) und für jede weitere Vorschau verwendet — das Originalbild wird nur geladen, solange es kein Vorschaubild gibt. Vorschaubilder erstellen Benutzer, die Dateien hochladen dürfen (Spielleitung und Spieler mit der Berechtigung \"Neue Dateien hochladen\"); alle anderen nutzen die vorhandenen.",
+  "DT.Settings.FilePreviewThumbMinKB.Name": "Dateibrowser: Schwelle für Vorschaubilder (KB)",
+  "DT.Settings.FilePreviewThumbMinKB.Hint": "Bilder bis zu dieser Dateigröße werden direkt angezeigt, größere bekommen ein zwischengespeichertes Vorschaubild. 0 = jedes Bild über 256 px.",
+  "DT.FilePickerPreview.Pixels": "{width} × {height} px",
+  "DT.FilePickerPreview.Grid": "{across} × {down} Felder",
+  "DT.FilePickerPreview.Kilobytes": "{size} KB",
+  "DT.FilePickerPreview.Megabytes": "{size} MB",
+  "DT.FilePickerPreview.Cached": "Vorschaubild aus dem Cache",
+  "DT.FilePickerPreview.LoadFailed": "Keine Vorschau verfügbar.",
 
   "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
 }
