@@ -35,6 +35,16 @@ and GMs, not for developers.
   - **File Browser: File Names in Tiles View** (per player).
 
   Dragging files from the File Browser onto the canvas works exactly as before.
+- **Token Art Picker (Too Many Tokens)** (any system): pick token images from the
+  *Too Many Tokens – Online* collection in a gallery with a large preview — a replacement for
+  that module's "Get Too Many Tokens For Selected Tokens" macro. The creature is guessed from
+  the token/actor, variants can be filtered by attributes (Human, Female, Melee, Forest …),
+  and the chosen images go to the selected tokens (several images are spread randomly), the
+  prototype token and/or the actor portrait. Optional **wildcard**: every newly placed token
+  of the actor gets a random image from your selection. Old Too Many Tokens wildcards are
+  recognised and can be converted. Open it from the actor's context menu in the Actors
+  sidebar, an optional Token HUD button, a keybinding or a macro. *Too Many Tokens – Online*
+  must stay installed (it may be deactivated). Off by default.
 
 ## [1.7.0] — 2026-10-13
 

@@ -18,6 +18,7 @@ import defeatedTokens from "./defeated-tokens.js";
 import pauseControl from "./pause-control.js";
 import liveTokenDrag from "./live-token-drag.js";
 import filePickerPreview from "./file-picker-preview.js";
+import tokenArtPicker from "./token-art-picker.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -27,5 +28,6 @@ export const FEATURES = [
   defeatedTokens,
   pauseControl,
   liveTokenDrag,
-  filePickerPreview
+  filePickerPreview,
+  tokenArtPicker
 ];

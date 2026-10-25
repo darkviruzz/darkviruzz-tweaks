@@ -22,7 +22,8 @@
     "styles/settings.css",
     "styles/ability-score-prominence.css",
     "styles/spell-effect-autoapply.css",
-    "styles/file-picker-preview.css"
+    "styles/file-picker-preview.css",
+    "styles/token-art-picker.css"
   ],
   "languages": [
     {
