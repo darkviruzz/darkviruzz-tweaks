@@ -1325,4 +1325,27 @@ await test("weapon mastery: RSReforged sections and Topple save requests get dec
   delete globalThis.document; delete globalThis.HTMLElement;
 });
 
+await test("savage attacker: button/note also land in RSReforged's damage section of the usage card", async () => {
+  globalThis.HTMLElement = WmEl;
+  globalThis.document = { createElement: tag => new WmEl(tag) };
+  settings.savageAttackerMode = "auto";
+  const render = (message, html) => fire("dnd5e.renderChatMessage", message, html);
+  const owner = saActor("rsr1");
+  const available = { id: "dmgChild", rolls: [{ options: { [MODULE_ID]: { savage: "available", actor: owner.uuid } } }] };
+  game.messages = { get: id => (id === "dmgChild" ? available : null) };
+  game.modules = { get: id => (id === "rsreforged" ? { active: true } : undefined) };
+  game.user.isGM = true;
+  const { root } = wmCard();
+  const section = new WmEl("div"); section.className = "rsr-card rsr-section-damage"; section.dataset.messageId = "dmgChild";
+  root.append(section);
+  await render({ id: "usage", rolls: [], system: {}, flags: { rsreforged: { workflowVersion: 2 } } }, root);
+  assert.equal(section.querySelectorAll(".dt-savage").length, 1);
+  assert.match(section.textContent, /DT\.SavageAttacker\.Button/);
+  await render({ id: "usage", rolls: [], system: {}, flags: {} }, root);
+  assert.equal(section.querySelectorAll(".dt-savage").length, 1, "idempotent on re-render");
+  game.user.isGM = false;
+  game.modules = { get: () => undefined };
+  delete globalThis.document; delete globalThis.HTMLElement;
+});
+
 console.log(`\ntest-features: ${passed} passed`);

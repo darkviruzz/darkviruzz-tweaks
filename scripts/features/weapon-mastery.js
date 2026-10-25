@@ -45,6 +45,7 @@
 
 import { MODULE_ID } from "../constants.js";
 import { hitAgainst } from "../lib/attack-roll.js";
+import { watchRsrSections } from "../lib/rsr-sections.js";
 
 const KEY_ENABLED = "weaponMasteryEnabled";
 const MACRO_SETTINGS = {
@@ -679,27 +680,6 @@ function insertPanel(container, message) {
   if (ctx) container.append(buildPanel(ctx));
 }
 
-/** RSReforged 6: dnd5e's attack message is shown as a section of the usage card. */
-function decorateRsrSections(root) {
-  for (const section of root.querySelectorAll(RSR_SECTION)) {
-    const child = game.messages?.get(section.dataset.messageId);
-    if (child) insertPanel(section, child);
-  }
-}
-
-const watched = new WeakSet();
-
-function watchRsrSections(root) {
-  if (!game.modules?.get("rsreforged")?.active) return;
-  decorateRsrSections(root);
-  if ((typeof MutationObserver !== "function") || watched.has(root)) return;
-  // RSReforged appends its sections after an await, i.e. after this hook returned.
-  const observer = new MutationObserver(() => decorateRsrSections(root));
-  observer.observe(root, { childList: true, subtree: true });
-  watched.add(root);
-  setTimeout(() => observer.disconnect(), 10000);
-}
-
 /** Topple request card: a save button for the target's owners. */
 function decorateSaveRequest(message, root) {
   const request = message.flags[MODULE_ID][FLAG_SAVE];
@@ -721,7 +701,7 @@ function onRenderChatMessage(message, html) {
     if (!root) return;
     if (message?.flags?.[MODULE_ID]?.[FLAG_SAVE]) return decorateSaveRequest(message, root);
     insertPanel(root.querySelector(".message-content") ?? root, message);
-    watchRsrSections(root);
+    watchRsrSections(root, RSR_SECTION, insertPanel);
   } catch (err) {
     console.error(`${MODULE_ID} | weapon mastery (chat card) failed`, err);
   }

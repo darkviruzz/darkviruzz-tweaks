@@ -91,6 +91,7 @@ scripts/
     socket.js                   the module socket channel, messages routed per feature id
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
     attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
+    rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -520,6 +521,11 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   use `isCritical` / `isFumble` first.
 - **`chunkTerms`** (damage application by type) rebuilds every non-operator term with
   `RollTerm.fromData(term.toJSON())`, so a `PoolTerm` in a damage roll is fine.
+- **RSReforged 6 hides dnd5e's attack AND damage messages** and shows them as
+  `.rsr-section-attack[data-message-id]` / `.rsr-section-damage[data-message-id]` sections of its
+  usage card (id = the child message), appended after an await. Anything added to a child card
+  must also go into that section — use `lib/rsr-sections.js` (found 2026-10-25: Savage Attacker's
+  button was invisible on RSReforged cards until then).
 - Marks that must survive other modules' cards go into `roll.options` (serialised with the
   roll); `message.update({rolls: rolls.map(r => JSON.stringify(r))})` replaces a card's rolls
   (author or GM only — `message.canUserModify(user, "update")`).

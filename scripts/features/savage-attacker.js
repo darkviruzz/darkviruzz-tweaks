@@ -31,6 +31,10 @@
  * `dnd5e.postDamageRollConfiguration` — so `{2d8,2d8}kh` on a crit is the rule-accurate "roll
  * the (doubled) weapon dice twice". Unarmed Strikes are not weapons in the 2024 rules.
  *
+ * RSReforged 6 hides dnd5e's damage message and shows it as `.rsr-section-damage` of its usage
+ * card, so the button / note also goes into that section (lib/rsr-sections.js), and a re-roll
+ * redraws the usage card.
+ *
  * Hooks: dnd5e.rollAttack (remember hit/miss per actor + activity), dnd5e.post
  * DamageRollConfiguration (automatic pool + mark the card), dnd5e.renderChatMessage (button or
  * result note). Marks live in the roll's options, so they survive modules that put dnd5e's
@@ -39,6 +43,7 @@
 
 import { MODULE_ID } from "../constants.js";
 import { hitAgainst } from "../lib/attack-roll.js";
+import { watchRsrSections } from "../lib/rsr-sections.js";
 
 const KEY_MODE = "savageAttackerMode";
 
@@ -49,6 +54,8 @@ const FLAG_TURN = "savageAttackerTurn";
 const FEAT_IDENTIFIER = "savage-attacker";
 /** How long an attack roll's hit/miss is remembered for the damage roll that follows it. */
 const ATTACK_MEMORY_MS = 2 * 60 * 1000;
+/** RSReforged 6 shows dnd5e's damage message as this section of its usage card (and hides the message). */
+const RSR_DAMAGE_SECTION = ".rsr-section-damage[data-message-id]";
 
 const mode = () => game.settings.get(MODULE_ID, KEY_MODE) ?? "off";
 const localize = key => game.i18n.localize(key);
@@ -221,7 +228,19 @@ async function rerollOnMessage(message, index) {
 
   const actor = fromUuidSync(info.actor);
   if (actor) markUsed(actor);
+  refreshParent(message);
   return { before, after };
+}
+
+/** RSReforged shows this damage message inside its usage card: redraw that card too. */
+function refreshParent(message) {
+  try {
+    const parentId = message.system?.origin ?? message.flags?.dnd5e?.originatingMessage;
+    const parent = parentId ? game.messages?.get(parentId) : null;
+    if (parent) ui.chat?.updateMessage?.(parent);
+  } catch (err) {
+    console.debug(`${MODULE_ID} | savage attacker: could not redraw the usage card`, err);
+  }
 }
 
 function resultText(roll, info) {
@@ -230,11 +249,10 @@ function resultText(roll, info) {
   return game.i18n.format("DT.SavageAttacker.Result", { first, second, kept: Math.max(first, second) });
 }
 
-function onRenderChatMessage(message, html) {
+/** Button or result note for a damage message, appended to `container` (idempotent). */
+function decorateCard(container, message) {
   try {
-    if (mode() === "off") return;
-    const root = html instanceof HTMLElement ? html : html?.[0];
-    if (!root || root.querySelector(".dt-savage")) return;
+    if (!container || container.querySelector(":scope > .dt-savage")) return;
     const index = message?.rolls?.findIndex(r => r?.options?.[ROLL_OPTION]?.savage) ?? -1;
     if (index < 0) return;
     const roll = message.rolls[index];
@@ -276,10 +294,18 @@ function onRenderChatMessage(message, html) {
       text.textContent = resultText(roll, info);
       box.append(icon, text);
     }
-    (root.querySelector(".message-content") ?? root).append(box);
+    container.append(box);
   } catch (err) {
     console.error(`${MODULE_ID} | savage attacker (chat card) failed`, err);
   }
+}
+
+function onRenderChatMessage(message, html) {
+  if (mode() === "off") return;
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root) return;
+  decorateCard(root.querySelector(".message-content") ?? root, message);
+  watchRsrSections(root, RSR_DAMAGE_SECTION, decorateCard);
 }
 
 /** For tools/test-features.mjs only. */
