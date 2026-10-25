@@ -23,6 +23,10 @@ const getProperty = (o, p) => p.split(".").reduce((a, k) => a?.[k], o);
 const setProperty = (o, p, v) => { const ks = p.split("."); let t = o; for (const k of ks.slice(0, -1)) t = t[k] ??= {}; t[ks.at(-1)] = v; };
 let activeGMSelf = true;
 let createdEffects = [];
+const userList = [];
+const socketListeners = {};
+const emits = [];
+const keysDown = new Set();
 
 Object.assign(globalThis, {
   Hooks: { on: (n, f) => (hooks[n] ??= []).push(f), once: (n, f) => (hooks[n] ??= []).push(f), callAll() {}, call() {} },
@@ -30,8 +34,14 @@ Object.assign(globalThis, {
     system: { id: "dnd5e", version: "6.0.6" },
     settings: { get: (ns, k) => settings[k] },
     i18n: { localize: k => k, format: (k, d) => `${k}:${JSON.stringify(d)}` },
-    user: { isGM: false, character: null },
-    get users() { return { activeGM: { isSelf: activeGMSelf } }; }
+    user: { id: "me", isGM: false, character: null },
+    get users() { return Object.assign(userList.slice(), { activeGM: { isSelf: activeGMSelf } }); },
+    socket: {
+      on: (channel, fn) => { socketListeners[channel] = fn; },
+      emit: (channel, msg, opts) => emits.push({ channel, msg, opts, volatile: false }),
+      get volatile() { return { emit: (channel, msg, opts) => emits.push({ channel, msg, opts, volatile: true }) }; }
+    },
+    keyboard: { isModifierActive: m => keysDown.has(m) }
   },
   CONFIG: { specialStatusEffects: { DEFEATED: "dead" }, DND5E: { abilities: {} } },
   ui: { notifications: { info: m => notes.push(m), warn: m => notes.push(m) } },
@@ -46,11 +56,12 @@ const features = {
   defeated: await load("defeated-tokens.js"),
   movement: await load("movement-history-reset.js"),
   find: await load("find-my-token.js"),
-  pause: await load("pause-control.js")
+  pause: await load("pause-control.js"),
+  live: await load("live-token-drag.js")
 };
 for (const f of Object.values(features)) f.init();
 const fire = async (name, ...args) => { for (const h of hooks[name] ?? []) await h(...args); };
-const tick = () => new Promise(r => setTimeout(r, 10));
+const tick = (ms = 10) => new Promise(r => setTimeout(r, ms));
 console.debug = () => {};
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log(`  ✓ ${name}`); };
@@ -342,6 +353,183 @@ await test("pause: state at combat creation is restored when the combat is delet
   resetPause(false); await fire("deleteCombat", unrecorded); assert.equal(toggles.length, 0);
   settings.pauseRestoreAfterCombat = false; const d = pauseCombat(false);
   await fire("createCombat", d); assert.equal(d._flags[`${MODULE_ID}.pausedBeforeCombat`], undefined);
+});
+
+/* ---------- Live Token Drag ---------- */
+const CHANNEL = `module.${MODULE_ID}`;
+userList.push(
+  { id: "me", isGM: true, active: true, isSelf: true },
+  { id: "gm2", isGM: true, active: true, isSelf: false },
+  { id: "gm3", isGM: true, active: false, isSelf: false },
+  { id: "p1", isGM: false, active: true, isSelf: false }
+);
+canvas.scene = { id: "scene1" };
+const preview = (id, { x = 100, y = 100, hidden = false, previewType = "dragging", privateDrag = false } = {}) => ({
+  isPreview: true, previewType,
+  document: { id, x, y, hidden },
+  _original: { _plannedMovement: { me: { hidden: privateDrag } } }
+});
+const moveTo = (p, x) => { p.document.x = x; return fire("refreshToken", p, {}); };
+const endDrag = p => fire("destroyToken", p);
+const resetEmits = async () => { await tick(40); emits.length = 0; }; // also lets the send window lapse
+settings.liveDragEnabled = false; settings.liveDragShiftOnly = false;
+
+await test("live drag (sender): setting off → nothing is sent", async () => {
+  const p = preview("t1"); await moveTo(p, 150); await endDrag(p); await tick(40);
+  assert.equal(emits.length, 0);
+});
+await test("live drag (sender): moves are coalesced to the LATEST position (~30/s), volatile, to everyone", async () => {
+  settings.liveDragEnabled = true; await resetEmits();
+  const p = preview("t1");
+  for (const x of [110, 120, 130, 140, 150]) await moveTo(p, x);
+  await tick();
+  assert.equal(emits.length, 1);
+  assert.deepEqual(emits[0], { channel: CHANNEL, opts: undefined, volatile: true,
+    msg: { action: "move", scene: "scene1", tokens: [{ id: "t1", x: 150, y: 100 }], feature: "liveTokenDrag" } });
+  await moveTo(p, 160); await moveTo(p, 170); await tick();
+  assert.equal(emits.length, 1, "still inside the 33 ms window");
+  await tick(40);
+  assert.equal(emits.length, 2); assert.equal(emits[1].msg.tokens[0].x, 170);
+  await moveTo(p, 170); await tick(40);
+  assert.equal(emits.length, 2, "unchanged position is not sent again");
+  await endDrag(p);
+});
+await test("live drag (sender): drop/cancel sends a reliable end signal; an unsent position is dropped", async () => {
+  await resetEmits();
+  const p = preview("t2"); await moveTo(p, 200); await endDrag(p); await tick(40);
+  assert.deepEqual(emits.map(e => [e.msg.action, e.volatile]), [["end", false]]);
+  assert.deepEqual(emits[0].msg, { action: "end", scene: "scene1", ids: ["t2"], feature: "liveTokenDrag" });
+});
+await test("live drag (sender): ignores real tokens and non-drag previews", async () => {
+  await resetEmits();
+  await fire("refreshToken", { isPreview: false, document: { id: "real", x: 1, y: 1 } }, {});
+  const cfg = preview("t3", { previewType: "config" }); await moveTo(cfg, 300); await endDrag(cfg);
+  await tick(40);
+  assert.equal(emits.length, 0);
+});
+await test("live drag (sender): hidden token → only other CONNECTED GMs; nobody there → nothing", async () => {
+  await resetEmits();
+  const p = preview("h1", { hidden: true }); await moveTo(p, 120); await tick(); await endDrag(p);
+  assert.deepEqual(emits.map(e => [e.msg.action, e.opts]), [["move", { recipients: ["gm2"] }], ["end", { recipients: ["gm2"] }]]);
+  await resetEmits(); userList[1].active = false;
+  const q = preview("h2", { hidden: true }); await moveTo(q, 120); await tick(); await endDrag(q);
+  assert.equal(emits.length, 0);
+  userList[1].active = true;
+});
+await test("live drag (sender): drag started with Alt (private ruler) is not shown, no end signal", async () => {
+  await resetEmits();
+  const p = preview("a1", { privateDrag: true }); await moveTo(p, 120); await tick(40); await endDrag(p);
+  assert.equal(emits.length, 0);
+});
+await test("live drag (sender): Shift-only waits for Shift, then stays live after it is released", async () => {
+  settings.liveDragShiftOnly = true; await resetEmits();
+  const p = preview("s1"); await moveTo(p, 120); await tick(40);
+  assert.equal(emits.length, 0);
+  keysDown.add("SHIFT"); await moveTo(p, 130); keysDown.delete("SHIFT"); await tick(40);
+  await moveTo(p, 140); await tick(40); await endDrag(p);
+  assert.deepEqual(emits.map(e => e.msg.action), ["move", "move", "end"]);
+  assert.equal(emits[1].msg.tokens[0].x, 140);
+  await resetEmits(); const q = preview("s2"); await moveTo(q, 120); await endDrag(q);
+  assert.equal(emits.length, 0, "never live → no end signal");
+  settings.liveDragShiftOnly = false;
+});
+await test("live drag (sender): leaving the scene ends this client's live drags", async () => {
+  await resetEmits();
+  const p = preview("c1"); await moveTo(p, 120); await tick();
+  await fire("canvasTearDown");
+  await endDrag(p); // the preview is destroyed afterwards — no second end
+  assert.deepEqual(emits.map(e => e.msg.action), ["move", "end"]);
+});
+
+// Receivers: stubbed ticker, visibility (x ≥ 1000 is too dark to see) and token display objects.
+globalThis.PIXI = { UPDATE_PRIORITY: { NORMAL: 0, PRIMARY: 3 } };
+const ticker = { fns: [], add(fn, ctx, priority) { this.fns.push({ fn, priority }); }, remove(fn) { this.fns = this.fns.filter(f => f.fn !== fn); } };
+const frame = () => { for (const { fn } of ticker.fns) fn(); };
+canvas.app = { ticker };
+canvas.visibility = { tokenVision: true, testVisibility: points => points.every(p => p.x < 1000) };
+canvas.effects = { visionSources: [{ active: true }] };
+const liveTokens = new Map();
+const liveToken = (id, { x = 0, y = 0 } = {}) => {
+  const t = { id, hasPreview: false, destroyed: false, controlled: false, renderable: true, isVisible: true, vision: null,
+    visible: true, stops: 0, flags: [],
+    document: { id, x, y, getVisibilityTestPoints: p => [p] },
+    get center() { return { x: t.document.x + 50, y: t.document.y + 50 }; },
+    position: { x, y, set(a, b) { this.x = a; this.y = b; } },
+    mesh: { visible: true, position: { x: x + 50, y: y + 50, set(a, b) { this.x = a; this.y = b; } } },
+    renderFlags: { set: f => t.flags.push(f) },
+    stopAnimation: () => { t.stops++; } };
+  t.document.object = t; liveTokens.set(id, t); return t;
+};
+canvas.tokens.get = id => liveTokens.get(id);
+const receive = (msg, sender = "p1") => socketListeners[CHANNEL]({ feature: "liveTokenDrag", scene: "scene1", ...msg }, sender);
+const RESTORE = { refreshPosition: true, refreshVisibility: true };
+
+await test("live drag (receiver): glides the DISPLAY to the position; document, vision and light stay put", async () => {
+  const t = liveToken("r1");
+  receive({ action: "move", tokens: [{ id: "r1", x: 300, y: 0 }] });
+  assert.deepEqual(ticker.fns.map(f => f.priority), [4], "one ticker, after core's render flags");
+  frame(); assert.ok(t.position.x < 300, "glides, doesn't jump");
+  await tick(60); frame();
+  assert.deepEqual([t.position.x, t.position.y, t.mesh.position.x, t.mesh.position.y], [300, 0, 350, 50]);
+  assert.equal(t.document.x, 0); assert.equal(t.visible, true); assert.equal(t.mesh.visible, true);
+  receive({ action: "move", scene: "other", tokens: [{ id: "r1", x: 1, y: 1 }] });
+  socketListeners[CHANNEL]({ feature: "somethingElse", action: "move", scene: "scene1", tokens: [{ id: "r1", x: 2, y: 2 }] }, "p1");
+  receive({ action: "move", tokens: [{ id: "r1", x: "evil", y: 1 }] });
+  await tick(60); frame();
+  assert.equal(t.position.x, 300, "other scenes, features and bad data are ignored");
+});
+await test("live drag (receiver): visibility is tested where the token is SHOWN (and where it really is)", async () => {
+  const t = liveTokens.get("r1");
+  receive({ action: "move", tokens: [{ id: "r1", x: 1200, y: 0 }] });
+  await tick(60); frame();
+  assert.equal(t.visible, false); assert.equal(t.mesh.visible, false);
+  t.vision = { active: true }; receive({ action: "move", tokens: [{ id: "r1", x: 1300, y: 0 }] }); frame();
+  assert.equal(t.visible, true, "a token you see through is always visible (core rule)");
+  t.vision = null; t.isVisible = false; receive({ action: "move", tokens: [{ id: "r1", x: 500, y: 0 }] }); frame();
+  assert.equal(t.visible, false, "not visible where it really stands → not shown");
+  t.isVisible = true;
+});
+await test("live drag (receiver): end → glides back, then core redraws it; the ticker stops", async () => {
+  const t = liveTokens.get("r1");
+  receive({ action: "end", ids: ["r1"] });
+  frame(); assert.ok(t.position.x > 0);
+  await tick(270); frame();
+  assert.deepEqual(t.flags.at(-1), RESTORE);
+  assert.equal(ticker.fns.length, 0);
+  const before = t.flags.length; receive({ action: "end", ids: ["r1"] }); frame();
+  assert.equal(t.flags.length, before, "a second end is a no-op");
+});
+await test("live drag (receiver): drop → core's path animation is stopped, the end signal changes nothing", async () => {
+  const t = liveToken("r3");
+  receive({ action: "move", tokens: [{ id: "r3", x: 300, y: 300 }] });
+  await fire("updateToken", t.document, { flags: { x: 1 } }, {}, "p1");
+  assert.equal(t.stops, 0, "non-movement update leaves it alone");
+  await fire("updateToken", t.document, { x: 300, y: 300 }, {}, "p1");
+  assert.equal(t.stops, 1); assert.deepEqual(t.flags, [RESTORE]);
+  receive({ action: "end", ids: ["r3"] }); frame();
+  assert.equal(t.flags.length, 1); assert.equal(ticker.fns.length, 0);
+  await fire("updateToken", t.document, { x: 0 }, {}, "p1");
+  assert.equal(t.stops, 1, "later moves animate normally");
+});
+await test("live drag (receiver): own drags are ignored; starting to drag it here hands it back to core", () => {
+  const own = liveToken("r5"); own.hasPreview = true;
+  receive({ action: "move", tokens: [{ id: "r5", x: 1, y: 2 }] }); frame();
+  assert.equal(own.position.x, 0); assert.equal(ticker.fns.length, 0);
+  const t = liveToken("r6");
+  receive({ action: "move", tokens: [{ id: "r6", x: 100, y: 0 }] }); frame();
+  t.hasPreview = true; frame();
+  assert.deepEqual(t.flags, [RESTORE]); assert.equal(ticker.fns.length, 0);
+});
+await test("live drag (receiver): the dragging user disconnects → only their tokens glide back", async () => {
+  const a = liveToken("r7"); const b = liveToken("r8");
+  receive({ action: "move", tokens: [{ id: "r7", x: 100, y: 100 }] }, "p1");
+  receive({ action: "move", tokens: [{ id: "r8", x: 100, y: 100 }] }, "gm2");
+  await fire("userConnected", { id: "p1" }, true);
+  await fire("userConnected", { id: "p1" }, false);
+  await tick(270); frame();
+  assert.deepEqual(a.flags, [RESTORE]); assert.equal(b.flags.length, 0, "other users' drags continue");
+  await fire("canvasTearDown");
+  assert.equal(ticker.fns.length, 0);
 });
 
 console.log(`\ntest-features: ${passed} passed`);

@@ -4,6 +4,24 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.8.0] — 2026-10-25
+
+### Added
+- **Live Token Drag** (any system, GM): while a token is being dragged, everyone sees it
+  follow the mouse in real time, smoothly. Replaces the unmaintained *Live Drag* module by
+  Anyndel — **disable Live Drag** when you switch this on. Compared to Live Drag:
+  - the token no longer turns **invisible** for the person dragging it when it is dropped on
+    its own square or the drag is cancelled;
+  - a drag that ends without a move (cancelled with a right-click, dropped on the same spot,
+    refused move) **glides back** for everyone instead of staying at its last position;
+  - when a token is dropped, the others no longer see it walk its path a second time;
+  - **hidden tokens** are only shown to GMs, and holding **Alt** when you start a drag keeps
+    that drag private (like Foundry's ruler);
+  - optional **Shift-only** mode: a drag is shown live once Shift is pressed during it;
+  - doesn't need *socketlib* or *libWrapper*.
+
+  Off by default. If live drags don't show up right after updating, relaunch the world once.
+
 ## [1.7.0] — 2026-10-13
 
 ### Added

@@ -201,6 +201,52 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
+### 7. Live Token Drag  ·  *any system · world (GM)*
+
+While someone drags a token, everyone else sees the token itself follow the mouse in real
+time — on its own, Foundry only shows them the planned path (the ruler). A replacement for
+the unmaintained **Live Drag** module (see *Credits*); **disable Live Drag** when you switch
+this on, otherwise both modules send positions.
+
+**How it works:** while you drag, Foundry draws a preview copy of the token under your mouse.
+Your client sends the preview's position to the others — at most about 30 times per second,
+always the latest one — and their clients glide the token's picture there (with its border,
+bars, name and status icons), so it moves smoothly. Only the picture moves: the token's
+vision and light stay where the token really is until it is dropped, so nobody can peek
+around a corner — or uncover fog of war — through someone else's drag. Players only see the
+dragged token where they could see it anyway. Your own view while dragging stays exactly as
+in Foundry.
+
+- **Drop:** the token is already in place for everyone. The others skip Foundry's movement
+  animation so it doesn't walk its path a second time (you, the one dragging, see the normal
+  animation).
+- **Any other end** — cancelled with a right-click (which first removes waypoints you placed
+  with Ctrl+click), dropped on the same spot, or the move was refused: an end signal makes the
+  token glide back to where it really is. If the person dragging disconnects mid-drag, the
+  token glides back as well.
+- **Hidden tokens** are only sent to GMs — Foundry's server delivers those messages to the GMs
+  only, players' clients never receive them.
+- **Private drags:** hold **Alt** when you *start* dragging and that drag is not shown live —
+  the same key Foundry uses to keep your ruler private.
+- **Shift-only mode** (optional): a drag only goes live once you press Shift during it, then
+  stays live until you drop the token, so you can let go of Shift right away. Mind that Shift is
+  also Foundry's "don't snap to the grid" key: while you hold it, the token moves freely between
+  grid spaces; once you release it, the token snaps to the grid again.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Show Token Drags Live** | off | Everyone sees dragged tokens move in real time. |
+| **Live Drag Only With Shift** | off | Only show a drag live after Shift was pressed during it (see above). |
+
+> Pairs well with Foundry's own world setting **Token Drag Vision** (core settings, off by
+> default): the person dragging sees vision and light from the preview position in real
+> time. On its own that invites peeking around corners; with live dragging, everyone sees the
+> token being moved.
+>
+> The feature uses the module's own message channel, which Foundry sets up when a world is
+> launched. If live drags don't show up right after installing or updating the module,
+> return to setup and launch the world again.
+
 ---
 
 ## Already built in (no tweak needed)
@@ -210,6 +256,19 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 - **Cycle / find tokens** — **Tab** (see *Find My Token* above).
 - **Send to back / bring to front** — the **[** and **]** keys for the selected tokens.
 - **Clear movement history** — Combat Tracker button and combatant context menu.
+- **See where others are moving** — while a token is dragged, Foundry shows everyone its
+  planned path (ruler); hold **Alt** when you start dragging to keep it private. *Live Token
+  Drag* adds the token itself.
+
+
+## Credits
+
+- **Live Token Drag** is based on the idea of
+  [Live Drag](https://github.com/Anyndol/FoundryVTT-LiveDrag) by **Anyndel** (MIT License,
+  © 2024 Anyndol), which is no longer maintained (last release 1.0.4, made for Foundry 12).
+  This module re-implements it for Foundry v14 — without copying its code — and fixes its
+  known problems, most visibly that a token turned invisible for the person dragging it when
+  it was dropped on its own square or the drag was cancelled.
 
 
 ## Development
