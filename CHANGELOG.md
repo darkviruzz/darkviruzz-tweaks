@@ -26,12 +26,13 @@ and GMs, not for developers.
   (**disable Asset Preview** when you switch these on). Three options, all off by default:
   - **File Browser: Preview on Hover** (per player) — rest the mouse on an image in the List or
     Thumbnails view to see it beside the browser, with its size in pixels, its file size and,
-    in the Tile Browser, how many grid squares it covers at the Asset Grid Size.
+    in the Tile Browser, how many grid squares it covers at the Asset Grid Size. Preview size
+    per player: 256, 384 or 512 px (**File Browser: Preview Size**, default 384 px).
   - **File Browser: Cache Thumbnails of Large Images** (GM) — the first preview of a large
-    image saves a small thumbnail (max. 256 px) in the module's storage folder; from then on
+    image saves a thumbnail (max. 512 px) in the module's storage folder; from then on
     everyone sees that thumbnail instead of downloading the full image again. Made by users
     who may upload files; adjustable size threshold (**File Browser: Thumbnail Threshold (KB)**,
-    default 250 KB).
+    default 250 KB). Images up to 512 px or up to the threshold are always shown as they are.
   - **File Browser: File Names in Tiles View** (per player).
 
   Dragging files from the File Browser onto the canvas works exactly as before.

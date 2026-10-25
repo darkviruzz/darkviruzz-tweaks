@@ -687,6 +687,20 @@ await test("file preview: render hook toggles tile names per setting and binds i
   assert.deepEqual(listeners, ["pointerover", "pointerout", "dragstart", "scroll"]);
 });
 
+await test("file preview: preview size is the user's choice, clamped to the viewport; small images grow at most 2x", async () => {
+  assert.deepEqual(fp.displaySize(100, 50, 384), { width: 200, height: 100 });
+  assert.deepEqual(fp.displaySize(2000, 1000, 384), { width: 384, height: 192 });
+  assert.deepEqual(fp.displaySize(512, 256, 512), { width: 512, height: 256 });
+  assert.equal(fp.displaySize(0, 0, 384), null);
+  const saved = { w: globalThis.innerWidth, h: globalThis.innerHeight };
+  Object.assign(globalThis, { innerWidth: 1920, innerHeight: 1080 });
+  settings.filePreviewSize = 512; assert.equal(fp.previewSize(), 512);
+  settings.filePreviewSize = 999; assert.equal(fp.previewSize(), 384, "unknown value falls back to medium");
+  Object.assign(globalThis, { innerWidth: 800, innerHeight: 500 });
+  settings.filePreviewSize = 512; assert.equal(fp.previewSize(), 436, "never larger than the viewport");
+  Object.assign(globalThis, { innerWidth: saved.w, innerHeight: saved.h });
+});
+
 /* ---------- Token Art Picker (Too Many Tokens) ---------- */
 const tmt = await import(pathToFileURL(join(ROOT, "scripts/lib/too-many-tokens.js")).href);
 const artModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-art-picker.js")).href);

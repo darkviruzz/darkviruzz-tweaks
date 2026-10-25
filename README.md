@@ -260,9 +260,11 @@ maps over and over. Covers what the *Asset Preview* module does (which needs a c
   (pixel width ÷ Asset Grid Size, the same ratio Foundry uses when you drop the tile; shown in
   orange when it isn't a whole number — usually a sign that the Asset Grid Size doesn't match
   the asset pack). Sweeping the mouse over the list loads nothing; only resting on a row does.
+  The preview size (256, 384 or 512 px on the long side) is a per-user choice; small images
+  are enlarged to it, but at most to twice their own size.
 - *Thumbnail cache* — without it, the preview loads the full image, like every other view of
   the File Browser. With it, the first preview of an image larger than the threshold saves a
-  small thumbnail (max. 256 px, webp, typically 5–20 KB) in
+  thumbnail (max. 512 px, webp, typically 20–60 KB) in
   `Data/modules/darkviruzz-tweaks/storage/thumbs/`, and every later preview — for everyone,
   in later sessions too — shows that thumbnail instead of downloading the original again. If
   the original is replaced by a different file, its thumbnail is made again automatically.
@@ -270,20 +272,22 @@ maps over and over. Covers what the *Asset Preview* module does (which needs a c
   New Files* permission); everyone else uses the existing thumbnails and otherwise sees the
   original. The folder survives module updates and can be deleted at any time (thumbnails are
   simply made again). Only files of the normal user-data source are cached, not Foundry's own
-  core icons or S3.
+  core icons or S3. Images up to 512 px or up to the threshold never get a thumbnail — for them
+  the original is already small.
 - *File names in the Tiles view* — each tile shows its file name (the full name while you
   hover the tile).
 
 **Drag-and-drop is not affected:** the preview is a separate overlay, nothing in the file list
 is changed, and the Tiles/Thumbnails views keep loading their own images — Foundry sizes a
-dropped tile from that image, so swapping in a 256 px thumbnail would shrink it.
+dropped tile from that image, so swapping in a 512 px thumbnail would shrink it.
 
 | Setting | Default | Effect |
 |---|---|---|
 | **File Browser: Preview on Hover** | off | Show a preview, pixel size, file size and grid squares when resting the mouse on an image in the List or Thumbnails view. Per user. |
+| **File Browser: Preview Size** | Medium (384 px) | Size of the hover preview: Small (256 px), Medium (384 px) or Large (512 px). Per user. |
 | **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
 | **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
-| **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 256 px. World setting (GM). |
+| **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 512 px. World setting (GM). |
 ### 9. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
 
 Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –

@@ -610,7 +610,7 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 - **DRAG GOTCHA:** core rebinds its DragDrop to `li[data-file]` on every body render, and its
   drag start reads `li.querySelector("img").naturalWidth` to size the dropped tile. Never put
   an `<img>` into a row, never replace rows, never swap core's `img.src` for a thumbnail (a
-  256 px thumbnail = a 256 px tile). Keep listeners passive (no preventDefault/stopPropagation).
+  512 px thumbnail = a 512 px tile). Keep listeners passive (no preventDefault/stopPropagation).
 - **API:** `browse(source, target, {extensions, wildcard, bucket})` → `{target, dirs, files,
   gridSize, private, privateDirs}` (no file sizes!); rejects for a missing folder.
   `createDirectory(source, target, options)` rejects if it exists. `upload(source, path, file,
@@ -673,5 +673,5 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
-| File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
+| File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |

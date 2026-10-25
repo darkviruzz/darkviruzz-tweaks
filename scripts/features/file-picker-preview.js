@@ -13,8 +13,9 @@
  *     preview beside the browser — no click — with its pixel size, file size and, in the Tile
  *     Browser, its footprint in grid squares at the browser's "Asset Grid Size" field
  *     (naturalWidth / tileSize, the ratio core uses when the tile is dropped).
- *   - Thumbnail cache (world): an image larger than the threshold gets a small thumbnail (max.
- *     256 px, webp) the first time someone allowed to upload files hovers over it. It is stored
+ *   - Thumbnail cache (world): an image larger than the threshold gets a thumbnail (max.
+ *     512 px, webp) the first time someone allowed to upload files hovers over it. Images up to
+ *     512 px or up to the size threshold never get one — they are shown as they are. It is stored
  *     in this module's persistent storage folder and used for every later preview, so an
  *     original is only downloaded while no thumbnail exists.
  *   - File names in the Tiles view (CSS only, from the `data-name` core puts on each row).
@@ -53,6 +54,7 @@ const KEY_HOVER      = "filePreviewHover";
 const KEY_TILE_NAMES = "filePreviewTileNames";
 const KEY_CACHE      = "filePreviewThumbCache";
 const KEY_MIN_KB     = "filePreviewThumbMinKB";
+const KEY_SIZE       = "filePreviewSize";
 
 /** Root class of a FilePicker that shows file names in its Tiles view (see the CSS). */
 const CLASS_TILE_NAMES = "dt-fp-tile-names";
@@ -60,7 +62,12 @@ const CLASS_TILE_NAMES = "dt-fp-tile-names";
 const HOVER_MODES = new Set(["list", "thumbs"]);
 /** ms the mouse must rest on a row, so sweeping over the list loads nothing. */
 const HOVER_DELAY = 200;
-const THUMB_SIZE = 256;
+/** Long side of a thumbnail: sharp up to the largest preview size. */
+const THUMB_SIZE = 512;
+/** Preview sizes (long side, px) offered per user. */
+const PREVIEW_SIZES = [256, 384, 512];
+/** Small originals are enlarged to the preview size, but at most this much. */
+const MAX_UPSCALE = 2;
 const THUMB_QUALITY = 0.8;
 const CACHE_ROOT = `modules/${MODULE_ID}/storage/thumbs`;
 /** `<hash(file name)>-<width>x<height>-<bytes>.<ext>` — size and bytes of the ORIGINAL. */
@@ -345,6 +352,21 @@ function tileSizeOf(app) {
   return (value > 0) ? value : null;
 }
 
+/** The user's preview size, clamped to the offered sizes and the viewport. */
+function previewSize() {
+  const chosen = Number(game.settings.get(MODULE_ID, KEY_SIZE));
+  const size = PREVIEW_SIZES.includes(chosen) ? chosen : PREVIEW_SIZES[1];
+  const viewport = Math.min(globalThis.innerWidth ?? size, globalThis.innerHeight ?? size) - 64;
+  return Math.max(PREVIEW_SIZES[0] / 2, Math.min(size, viewport));
+}
+
+/** Display size of an image of `width` × `height` in a preview box of `size` px. */
+function displaySize(width, height, size) {
+  if (!width || !height) return null;
+  const scale = Math.min(size / Math.max(width, height), MAX_UPSCALE);
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
+
 const formatSpan = value => (Number.isInteger(value) ? String(value) : value.toFixed(2));
 
 function formatBytes(bytes) {
@@ -406,7 +428,11 @@ function renderPreview(app, row, preview) {
   stats.className = "dt-fp-preview__stats";
   previewElement.replaceChildren(img, name, stats);
 
+  const size = previewSize();
+  previewElement.style.setProperty("--dt-fp-size", `${size}px`);
   const fill = () => {
+    const shown = displaySize(img.naturalWidth, img.naturalHeight, size);
+    if (shown) Object.assign(img.style, { width: `${shown.width}px`, height: `${shown.height}px` });
     stats.replaceChildren(...statNodes(app, preview, img));
     placePreview(app, row);
   };
@@ -452,7 +478,7 @@ function refreshTileNames(enabled) {
 
 /** For tools/test-features.mjs only. */
 export const internals = {
-  hash, cacheSlot, indexFiles, resolvePreview, onRenderFilePicker,
+  hash, cacheSlot, indexFiles, resolvePreview, onRenderFilePicker, previewSize, displaySize,
   idle: () => queue,
   reset() {
     for (const set of [indexes, pending, noThumbnail, checked, knownDirs]) set.clear();
@@ -478,6 +504,22 @@ export default {
         type: Boolean,
         default: false,
         onChange: enabled => { if (!enabled) hidePreview(); }
+      }
+    },
+    {
+      key: KEY_SIZE,
+      options: {
+        name: "DT.Settings.FilePreviewSize.Name",
+        hint: "DT.Settings.FilePreviewSize.Hint",
+        scope: "user",
+        config: true,
+        type: Number,
+        choices: {
+          256: "DT.Settings.FilePreviewSize.Small",
+          384: "DT.Settings.FilePreviewSize.Medium",
+          512: "DT.Settings.FilePreviewSize.Large"
+        },
+        default: 384
       }
     },
     {
