@@ -700,6 +700,40 @@ await test("file preview: preview size is the user's choice, clamped to the view
   settings.filePreviewSize = 512; assert.equal(fp.previewSize(), 436, "never larger than the viewport");
   Object.assign(globalThis, { innerWidth: saved.w, innerHeight: saved.h });
 });
+await test("file preview: first preview after a long rest, then quick from image to image; off the images or out of the window resets", () => {
+  settings.filePreviewHover = true;
+  let clock = 0;
+  fp.timing.now = () => clock;
+  const app = { displayMode: "list" };
+  const row = path => { const r = { dataset: { path, file: "" }, isConnected: true }; r.closest = () => r; return r; };
+  const a = row("maps/a.png"); const b = row("maps/b.png"); const sound = row("sounds/x.ogg");
+  const gap = { closest: () => null };
+  const root = { contains: node => [a, b, sound, gap].includes(node) };
+  fp.hidePreview({ cool: true });
+  fp.onPointerOver(app, { target: a });
+  assert.equal(fp.hoverState().delay, 900, "first image: long rest");
+  fp.timing.shown = true;                                   // a's preview is on screen
+  fp.onPointerOver(app, { target: b });
+  assert.equal(fp.hoverState().delay, 150, "image to image");
+  fp.onPointerOver(app, { target: gap });                   // the gap between two rows
+  assert.equal(fp.hoverState(), null, "hidden off the images");
+  clock = 200; fp.onPointerOver(app, { target: a });
+  assert.equal(fp.hoverState().delay, 150, "within the grace period still quick");
+  fp.timing.shown = true; clock = 1000;
+  fp.onPointerOver(app, { target: sound });                 // not an image
+  clock = 1400; fp.onPointerOver(app, { target: b });
+  assert.equal(fp.hoverState().delay, 900, "after resting off the images: long again");
+  fp.timing.shown = true;
+  fp.onPointerOut({ currentTarget: root, relatedTarget: a });
+  assert.ok(fp.hoverState(), "moving inside the browser keeps the hover");
+  fp.onPointerOut({ currentTarget: root, relatedTarget: null });   // out of the window
+  fp.onPointerOver(app, { target: a });
+  assert.equal(fp.hoverState().delay, 900, "leaving the browser starts over");
+  settings.filePreviewHover = false; fp.hidePreview({ cool: true });
+  fp.onPointerOver(app, { target: a });
+  assert.equal(fp.hoverState(), null, "setting off: nothing");
+  fp.timing.now = () => performance.now();
+});
 
 /* ---------- Token Art Picker (Too Many Tokens) ---------- */
 const tmt = await import(pathToFileURL(join(ROOT, "scripts/lib/too-many-tokens.js")).href);
@@ -1045,12 +1079,13 @@ const wmActor = (id, { owner = true, playerOwner = false, mod = 3, prof = 2, siz
     id, uuid: `Actor.${id}`, name: id, isOwner: owner, hasPlayerOwner: playerOwner,
     system: { abilities: { str: { mod }, dex: { mod: 1 } }, attributes: { prof, movement: { units } }, traits: { size } },
     effects, created: [], deleted: [], damage: [], saves: [], statuses: [], nextSave: 5, tokens: [],
-    async createEmbeddedDocuments(type, data) { for (const d of data) { const e = { id: `wmE${++wmSeq}`, active: true, ...d }; effects.set(e.id, e); actor.created.push(e); } },
+    async createEmbeddedDocuments(type, data) { return data.map(d => { const e = { id: `wmE${++wmSeq}`, active: true, ...d }; effects.set(e.id, e); actor.created.push(e); return e; }); },
     async deleteEmbeddedDocuments(type, ids) { for (const i of ids) effects.delete(i); actor.deleted.push(...ids); },
     async applyDamage(d) { actor.damage.push(d); },
     async rollSavingThrow(config) { actor.saves.push(config); return [{ total: actor.nextSave, isSuccess: actor.nextSave >= config.target }]; },
     async toggleStatusEffect(status, options) { actor.statuses.push([status, options]); },
     getActiveTokens: () => actor.tokens,
+    async update(data) { for (const [path, value] of Object.entries(data)) setProperty(actor, path, value); actor.updates = (actor.updates ?? 0) + 1; },
     testUserPermission: (user, level) => !!user?.isGM || ((user?.id === "me") && (level === "OWNER") && actor.isOwner)
   };
   wmDocs[actor.uuid] = actor;
@@ -1060,7 +1095,13 @@ globalThis.fromUuidSync = uuid => wmDocs[uuid] ?? null;
 globalThis.fromUuid = async uuid => wmDocs[uuid] ?? null;
 globalThis.CONST = { ACTIVE_EFFECT_SHOW_ICON: { ALWAYS: 2 } };
 const wmChats = [];
-globalThis.ChatMessage = { implementation: { create: async d => { wmChats.push(d); return d; }, getSpeaker: ({ actor }) => ({ actor: actor?.id }) } };
+globalThis.ChatMessage = { implementation: {
+  create: async d => {
+    const m = { ...d, id: `chat${wmChats.length}`, deleted: false, async delete() { m.deleted = true; delete messagesById[m.id]; } };
+    wmChats.push(m); messagesById[m.id] = m; return m;
+  },
+  getSpeaker: ({ actor }) => ({ actor: actor?.id })
+} };
 Object.assign(CONFIG.DND5E, {
   weaponMasteries: Object.fromEntries(["cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex"].map(k => [k, { label: k.toUpperCase(), reference: `Compendium.dnd5e.rule.${k}` }])),
   damageTypes: { slashing: { label: "Slashing" } },
@@ -1174,7 +1215,8 @@ await test("weapon mastery: Graze applies the modifier as weapon damage and mark
   assert.deepEqual({ ...damage, properties: [...damage.properties] }, { value: 3, type: "slashing", properties: ["mgc"] });
   assert.equal(msg.flags[MODULE_ID].weaponMastery.done.t0.graze, true);
   game.user.isGM = false; notes.length = 0;
-  assert.equal(await wm.applyRows(ctx, [ctx.targets[0]]), false, "a player who doesn't own the target can't");
+  const other = wm.attackContext(wmMessage({ mastery: "graze", total: 5, targets: [t(goblin, 13)], id: "wm-graze-player" }));
+  assert.equal(await wm.applyRows(other, [other.targets[0]]), false, "a player who doesn't own the target can't");
   assert.deepEqual(notes, ["DT.WeaponMastery.NoPermission"]); assert.equal(goblin.damage.length, 1);
 });
 await test("weapon mastery: Topple — GM rolls for NPCs (Prone on a failure), player-owned targets get a save request", async () => {
@@ -1184,9 +1226,12 @@ await test("weapon mastery: Topple — GM rolls for NPCs (Prone on a failure), p
   assert.deepEqual(goblin.saves.at(-1), { ability: "con", target: 13, event: undefined });
   assert.deepEqual(goblin.statuses, [["prone", { active: true }]]);
   goblin.nextSave = 13; await wm.applyRows(ctx, [ctx.targets[0]]);
+  assert.equal(goblin.saves.length, 1, "the same attack topples once");
+  const again = wm.attackContext(wmMessage({ mastery: "topple", targets: [t(goblin, 13)], id: "wm1b" }));
+  await wm.applyRows(again, [again.targets[0]]);
   assert.equal(goblin.statuses.length, 1, "saved: not prone");
   const pc = wmActor("rogue", { playerOwner: true });
-  const msg = wmMessage({ mastery: "topple", targets: [t(pc, 12)] });
+  const msg = wmMessage({ mastery: "topple", targets: [t(pc, 12)], id: "wm-pc" });
   const pcCtx = wm.attackContext(msg);
   wmChats.length = 0;
   assert.equal(await wm.applyRows(pcCtx, [pcCtx.targets[0]]), true);
@@ -1201,12 +1246,14 @@ await test("weapon mastery: Topple — GM rolls for NPCs (Prone on a failure), p
 });
 await test("weapon mastery: Sap and Slow replace older effects (no stacking), Vex once per target on the attacker", async () => {
   game.user.isGM = true; asV6();
-  const sapCtx = wm.attackContext(wmMessage({ mastery: "sap", targets: [t(ogre, 10)] }));
+  const sapCtx = wm.attackContext(wmMessage({ mastery: "sap", targets: [t(ogre, 10)], id: "sap1" }));
   await wm.applyRows(sapCtx, [sapCtx.targets[0]]);
-  await wm.applyRows(sapCtx, [sapCtx.targets[0]]);
+  const sapCtx2 = wm.attackContext(wmMessage({ mastery: "sap", targets: [t(ogre, 10)], id: "sap2" }));
+  await wm.applyRows(sapCtx2, [sapCtx2.targets[0]]);
   assert.equal(ogre.effects.size, 1); assert.equal(ogre.deleted.length, 1);
-  const slowCtx = wm.attackContext(wmMessage({ mastery: "slow", targets: [t(ogre, 10)] }));
-  await wm.applyRows(slowCtx, [slowCtx.targets[0]]); await wm.applyRows(slowCtx, [slowCtx.targets[0]]);
+  const slowCtx = wm.attackContext(wmMessage({ mastery: "slow", targets: [t(ogre, 10)], id: "slow1" }));
+  const slowCtx2 = wm.attackContext(wmMessage({ mastery: "slow", targets: [t(ogre, 10)], id: "slow2" }));
+  await wm.applyRows(slowCtx, [slowCtx.targets[0]]); await wm.applyRows(slowCtx2, [slowCtx2.targets[0]]);
   assert.equal(ogre.effects.filter(e => e.flags[MODULE_ID].weaponMastery.mastery === "slow").length, 1);
   assert.equal(ogre.effects.size, 2, "Slow doesn't remove Sap");
   game.user.isGM = false;   // the attacker's owner may apply Vex to their own actor
@@ -1444,6 +1491,99 @@ await test("weapon mastery: GM tray switches to the selected tokens like dnd5e (
   assert.match(card.content.querySelector(".dt-wm__target").textContent, /Rat/);
   canvas.tokens.controlled = [];
   game.user.isGM = false;
+});
+await test("weapon mastery: applied once per target — repeated clicks and (concurrent) player requests do nothing", async () => {
+  const render = hooks["dnd5e.renderChatMessage"].at(-1);
+  const dispatch = socketListeners[`module.${MODULE_ID}`];
+  game.user.isGM = true; activeGMSelf = true; notes.length = 0;
+  const elk = wmActor("elk", { owner: false });
+  const msg = wmMessage({ mastery: "topple", targets: [t(elk, 10)], id: "once" });
+  elk.nextSave = 1;
+  await Promise.all([
+    dispatch({ feature: "weaponMastery", action: "use", messageId: "once" }, "me"),
+    dispatch({ feature: "weaponMastery", action: "use", messageId: "once" }, "me")
+  ]);
+  await dispatch({ feature: "weaponMastery", action: "use", messageId: "once" }, "me"); await tick();
+  assert.equal(elk.saves.length, 1, "one save for three requests");
+  assert.deepEqual(elk.statuses, [["prone", { active: true }]]);
+  assert.deepEqual(msg.flags[MODULE_ID].weaponMastery.undo.t0.topple, { prone: "Actor.elk" });
+  assert.equal(notes.filter(n => n.startsWith("DT.WeaponMastery.RequestApplied")).length, 1, "the GM hears about it once");
+  const ctx = wm.attackContext(msg);
+  notes.length = 0;
+  assert.equal(await wm.useMastery(ctx), false, "the GM's button: nothing left to apply");
+  assert.match(notes.at(-1), /AllApplied\.GM/);
+  game.user.isGM = false; emits.length = 0; notes.length = 0;
+  const card = wmCard(); render(msg, card.root);
+  await card.content.querySelector(".dt-wm__use").click(); await tick();
+  assert.equal(emits.length, 0, "a player's repeated click sends no request");
+  assert.match(notes.at(-1), /AllApplied\.Player/);
+});
+await test("weapon mastery: the GM's Undo reverts the application and offers Apply again", async () => {
+  const render = hooks["dnd5e.renderChatMessage"].at(-1);
+  game.user.isGM = true; wm.trays.clear(); wm.overrides.clear();
+  const bat = wmActor("bat", { owner: false });
+  const msg = wmMessage({ mastery: "sap", targets: [t(bat, 10)], id: "undo-sap" });
+  let card = wmCard(); render(msg, card.root);
+  await buttonsOf(card.content.querySelector(".dt-wm__target"))[0].click(); await tick();
+  assert.equal(bat.effects.size, 1);
+  card = wmCard(); render(msg, card.root);
+  const undo = card.content.querySelector(".dt-wm__undo");
+  assert.ok(undo, "Undo instead of Apply");
+  await undo.click(); await tick();
+  assert.equal(bat.effects.size, 0, "effect removed");
+  assert.equal(msg.flags[MODULE_ID].weaponMastery.done.t0.sap, false);
+  card = wmCard(); render(msg, card.root);
+  assert.equal(card.content.querySelector(".dt-wm__undo"), null);
+  await buttonsOf(card.content.querySelector(".dt-wm__target"))[0].click(); await tick();
+  assert.equal(bat.effects.size, 1, "can be applied again");
+  // a player-owned target's save request is deleted; Prone set by the GM's roll is removed
+  const pc = wmActor("bard", { playerOwner: true });
+  const reqCtx = wm.attackContext(wmMessage({ mastery: "topple", targets: [t(pc, 10)], id: "undo-req" }));
+  await wm.applyRows(reqCtx, [reqCtx.targets[0]]);
+  const request = wmChats.at(-1);
+  await wm.undoRow(reqCtx, reqCtx.targets[0]);
+  assert.equal(request.deleted, true);
+  const mole = wmActor("mole", { owner: false }); mole.nextSave = 1;
+  const prone = wm.attackContext(wmMessage({ mastery: "topple", targets: [t(mole, 10)], id: "undo-prone" }));
+  await wm.applyRows(prone, [prone.targets[0]]);
+  await wm.undoRow(prone, prone.targets[0]);
+  assert.deepEqual(mole.statuses, [["prone", { active: true }], ["prone", { active: false }]]);
+  game.user.isGM = false;
+  assert.equal(await wm.undoRow(prone, prone.targets[0]), false, "players can't undo");
+});
+await test("weapon mastery: Graze records the HP it took and Undo gives it back; Push moves the token back", async () => {
+  game.user.isGM = true;
+  const toad = wmActor("toad", { owner: false });
+  toad.system.attributes.hp = { value: 10, temp: 2, effectiveMax: 12 };
+  toad.applyDamage = async ([{ value }]) => {
+    const fromTemp = Math.min(toad.system.attributes.hp.temp, value);
+    toad.system.attributes.hp.temp -= fromTemp;
+    toad.system.attributes.hp.value -= value - fromTemp;
+  };
+  const msg = wmMessage({ mastery: "graze", total: 5, targets: [t(toad, 13)], id: "undo-graze" });
+  const ctx = wm.attackContext(msg);
+  await wm.applyRows(ctx, [ctx.targets[0]]);
+  assert.deepEqual(toad.system.attributes.hp, { value: 9, temp: 0, effectiveMax: 12 });
+  assert.deepEqual(msg.flags[MODULE_ID].weaponMastery.undo.t0.graze, { hp: { actor: "Actor.toad", value: 1, temp: 2 } });
+  await wm.undoRow(ctx, ctx.targets[0]);
+  assert.deepEqual(toad.system.attributes.hp, { value: 10, temp: 2, effectiveMax: 12 });
+  const moves = [];
+  wmDocs["Scene.s.Token.toad"] = { move: async to => moves.push(to) };
+  await wm.revert({ move: { token: "Scene.s.Token.toad", x: 100, y: 200 } });
+  assert.deepEqual(moves, [{ x: 100, y: 200, action: "displace" }]);
+  await wm.revert(null);
+  game.user.isGM = false;
+});
+await test("weapon mastery: the save button on a request rolls once per client", async () => {
+  const render = hooks["dnd5e.renderChatMessage"].at(-1);
+  const pc = wmActor("cleric", { playerOwner: true });
+  const request = { id: "req-once", rolls: [], flags: { [MODULE_ID]: { weaponMasterySave: { actor: pc.uuid, dc: 13, ability: "con" } } } };
+  game.user.isGM = false;
+  const card = wmCard(); render(request, card.root);
+  await buttonsOf(card.content)[0].click(); await tick();
+  await buttonsOf(card.content)[0].click(); await tick();
+  assert.equal(pc.saves.length, 1);
+  assert.ok(buttonsOf(card.content)[0].classList.contains("dt-wm__btn--done"));
 });
 await test("weapon mastery: RSReforged — panel in the attack section, never on its hidden child card; save requests", () => {
   const render = hooks["dnd5e.renderChatMessage"].at(-1);

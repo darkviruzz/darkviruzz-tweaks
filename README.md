@@ -259,7 +259,11 @@ maps over and over. Covers what the *Asset Preview* module does (which needs a c
   in the Tile Browser, how many **grid squares** it covers at the browser's *Asset Grid Size*
   (pixel width ÷ Asset Grid Size, the same ratio Foundry uses when you drop the tile; shown in
   orange when it isn't a whole number — usually a sign that the Asset Grid Size doesn't match
-  the asset pack). Sweeping the mouse over the list loads nothing; only resting on a row does.
+  the asset pack). Sweeping the mouse over the list loads nothing: the first preview appears
+  after resting on an image for about a second. While a preview is showing, moving on from
+  image to image brings the next one almost at once (the picture stays until the next is
+  ready). Resting off the images (another file, the header) or leaving the browser window starts
+  over with the longer wait.
   The preview size (256, 384 or 512 px on the long side) is a per-user choice; small images
   are enlarged to it, but at most to twice their own size.
 - *Thumbnail cache* — without it, the preview loads the full image, like every other view of
@@ -401,8 +405,15 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
   switch, a button switches the list to the **selected tokens** (automatically when the attack
   recorded no target). The GM's mastery button applies it to every target in the list it applies
   to. After applying, the tray **folds up** like dnd5e's trays (unless dnd5e's *Collapse Chat Card
-  Trays* is set to *Manual*; with *Always* it starts folded). A mastery that was used shows a ✓;
-  it can still be used again.
+  Trays* is set to *Manual*; with *Always* it starts folded).
+- **Once per target.** A mastery is applied to each target of an attack only once: clicking again —
+  also a player clicking several times, even quickly — does nothing (the button shows a ✓, a
+  player gets a short note). The GM is told when a player's click was applied. In the GM's tray,
+  every target it was applied to shows **Undo** instead of *Apply*: it takes the mastery back
+  (removes the Sap/Slow/Vex effect or the Prone the GM's roll set, gives back the Graze damage incl.
+  temporary HP, moves a pushed token back, deletes a save request) — after that it can be applied
+  again, e.g. after correcting hit or miss. A Prone that a player's own save set after a request
+  is removed on the token as usual.
 - **Hit or miss** comes from dnd5e's own data: the attack total against each target's AC as it
   was when you attacked (a natural 20 always hits, a natural 1 always misses). No AC (or a
   selected token) means unknown.

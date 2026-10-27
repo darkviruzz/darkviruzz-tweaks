@@ -26,8 +26,10 @@ and GMs, not for developers.
   (**disable Asset Preview** when you switch these on). Three options, all off by default:
   - **File Browser: Preview on Hover** (per player) — rest the mouse on an image in the List or
     Thumbnails view to see it beside the browser, with its size in pixels, its file size and,
-    in the Tile Browser, how many grid squares it covers at the Asset Grid Size. Preview size
-    per player: 256, 384 or 512 px (**File Browser: Preview Size**, default 384 px).
+    in the Tile Browser, how many grid squares it covers at the Asset Grid Size. The first
+    preview appears after about a second; going on from image to image, the next ones follow
+    almost at once. Preview size per player: 256, 384 or 512 px (**File Browser: Preview Size**,
+    default 384 px).
   - **File Browser: Cache Thumbnails of Large Images** (GM) — the first preview of a large
     image saves a thumbnail (max. 512 px) in the module's storage folder; from then on
     everyone sees that thumbnail instead of downloading the full image again. Made by users
@@ -63,8 +65,11 @@ and GMs, not for developers.
   (Vex, on their own character, directly), and targets whose hit is unknown are left to the GM.
   The GM also gets a tray like dnd5e's damage and effect trays: each target's hit or miss (click
   to correct it), the targets of the attack or the selected tokens, Apply per target — and it
-  folds up after applying. Optionally every mastery can run a **macro** of your choice. Works
-  with RSReforged one-click attacks. Off by default.
+  folds up after applying. Each mastery is applied **once per target**: clicking again (also a
+  player clicking several times) does nothing, and the GM gets **Undo** per target to take it back
+  (effect, Prone, Graze damage, push or save request) and apply it again if needed. Optionally
+  every mastery can run a **macro** of your choice. Works with RSReforged one-click attacks. Off
+  by default.
 
 ## [1.7.0] — 2026-10-13
 

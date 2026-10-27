@@ -12,7 +12,10 @@
  *   - Hover preview: resting the mouse on an image file in the List (or Thumbnails) view shows a
  *     preview beside the browser — no click — with its pixel size, file size and, in the Tile
  *     Browser, its footprint in grid squares at the browser's "Asset Grid Size" field
- *     (naturalWidth / tileSize, the ratio core uses when the tile is dropped).
+ *     (naturalWidth / tileSize, the ratio core uses when the tile is dropped). The first preview
+ *     needs a longer rest (HOVER_DELAY); while one is showing, moving from image to image brings
+ *     the next ones quickly (HOVER_DELAY_WARM) and the picture stays until the next is ready.
+ *     Off the images for WARM_GRACE (another file, the header) or out of the window → long again.
  *   - Thumbnail cache (world): an image larger than the threshold gets a thumbnail (max.
  *     512 px, webp) the first time someone allowed to upload files hovers over it. Images up to
  *     512 px or up to the size threshold never get one — they are shown as they are. It is stored
@@ -60,8 +63,12 @@ const KEY_SIZE       = "filePreviewSize";
 const CLASS_TILE_NAMES = "dt-fp-tile-names";
 /** Display modes whose rows get a hover preview — Tiles/Images show the picture already. */
 const HOVER_MODES = new Set(["list", "thumbs"]);
-/** ms the mouse must rest on a row, so sweeping over the list loads nothing. */
-const HOVER_DELAY = 200;
+/** ms the mouse must rest on the first image, so sweeping over the list loads nothing. */
+const HOVER_DELAY = 900;
+/** ms per image while a preview is showing: going from image to image keeps them coming. */
+const HOVER_DELAY_WARM = 150;
+/** ms off the images (a gap between rows counts) after which the long delay applies again. */
+const WARM_GRACE = 300;
 /** Long side of a thumbnail: sharp up to the largest preview size. */
 const THUMB_SIZE = 512;
 /** Preview sizes (long side, px) offered per user. */
@@ -294,40 +301,67 @@ async function resolvePreview(app, path) {
 /*  Hover preview                                                     */
 /* ------------------------------------------------------------------ */
 
-/** The row being hovered: `{row, timer}`. */
+/** The row being hovered: `{row, delay, timer}`. */
 let hover = null;
-/** Bumped on every hide, so late results for an earlier row are dropped. */
+/** Bumped whenever a pending preview is dropped, so late results for an earlier row are dropped. */
 let generation = 0;
 let previewElement = null;
-/** Object URL of the original currently shown (revoked on hide). */
+/** Object URL of the original currently shown (revoked when replaced or hidden). */
 let previewURL = null;
+/** shown: a preview is visible; warmUntil: after hiding it, until when the next one is quick. */
+const timing = { now: () => performance.now(), shown: false, warmUntil: 0 };
 
-function hidePreview() {
+const isWarm = () => timing.shown || (timing.now() < timing.warmUntil);
+const hoverDelay = () => (isWarm() ? HOVER_DELAY_WARM : HOVER_DELAY);
+
+/** Drop the pending preview of the hovered row; the picture on screen stays. */
+function cancelPending() {
   generation++;
   if (hover) clearTimeout(hover.timer);
   hover = null;
+}
+
+/**
+ * Hide the preview. For WARM_GRACE the next image still comes quickly; `cool` (leaving the
+ * window, dragging, closing) starts over with the long delay.
+ */
+function hidePreview({ cool = false } = {}) {
+  cancelPending();
+  if (cool) timing.warmUntil = 0;
+  else if (timing.shown) timing.warmUntil = timing.now() + WARM_GRACE;
+  timing.shown = false;
   previewElement?.classList.remove("is-visible");
   if (previewURL) URL.revokeObjectURL(previewURL);
   previewURL = null;
 }
 
-function onPointerOver(app, event) {
-  const row = event.target?.closest?.("li[data-file]");
-  if (!row || (row === hover?.row)) return;
-  hidePreview();
-  const path = row.dataset.path;
-  if (!path || !isImage(path) || !HOVER_MODES.has(app.displayMode)) return;
-  if (!game.settings.get(MODULE_ID, KEY_HOVER)) return;
-
-  const ticket = generation;
-  hover = { row, timer: setTimeout(() => showPreview(app, row, path, ticket), HOVER_DELAY) };
+/** The image row under `node` in a view with hover previews, or null. */
+function imageRow(app, node) {
+  const row = node?.closest?.("li[data-file]");
+  const path = row?.dataset?.path;
+  return (path && isImage(path) && HOVER_MODES.has(app.displayMode)) ? row : null;
 }
 
+function onPointerOver(app, event) {
+  if (!game.settings.get(MODULE_ID, KEY_HOVER)) return;
+  const row = imageRow(app, event.target);
+  if (row && (row === hover?.row)) return;
+  if (!row) {
+    // Off the images (another file, a gap, the header): hide — quick again only within the grace.
+    if (hover || timing.shown) hidePreview();
+    return;
+  }
+  // From image to image the current picture stays until the next one is ready.
+  const delay = hoverDelay();
+  cancelPending();
+  const ticket = generation;
+  hover = { row, delay, timer: setTimeout(() => showPreview(app, row, row.dataset.path, ticket), delay) };
+}
+
+/** Leaving the browser window starts over; inside it, pointerover of the new element decides. */
 function onPointerOut(event) {
-  if (!hover) return;
   const to = event.relatedTarget;
-  if ((to instanceof Node) && hover.row.contains(to)) return;
-  hidePreview();
+  if (!to || !event.currentTarget?.contains?.(to)) hidePreview({ cool: true });
 }
 
 async function showPreview(app, row, path, ticket) {
@@ -342,8 +376,11 @@ async function showPreview(app, row, path, ticket) {
     if (preview.objectURL) URL.revokeObjectURL(preview.src);
     return;
   }
-  if (preview.objectURL) previewURL = preview.src;
+  const previous = previewURL;
+  previewURL = preview.objectURL ? preview.src : null;
   renderPreview(app, row, preview);
+  if (previous && (previous !== previewURL)) URL.revokeObjectURL(previous);
+  timing.shown = true;
 }
 
 /** The browser's "Asset Grid Size" field — only present in the Tile Browser. */
@@ -465,8 +502,8 @@ function onRenderFilePicker(app, element) {
   // DragDrop see every event exactly as without this module.
   root.addEventListener("pointerover", event => onPointerOver(app, event));
   root.addEventListener("pointerout", onPointerOut);
-  root.addEventListener("dragstart", hidePreview, true);
-  root.addEventListener("scroll", hidePreview, true);
+  root.addEventListener("dragstart", () => hidePreview({ cool: true }), true);
+  root.addEventListener("scroll", () => hidePreview(), true);
 }
 
 function refreshTileNames(enabled) {
@@ -479,6 +516,7 @@ function refreshTileNames(enabled) {
 /** For tools/test-features.mjs only. */
 export const internals = {
   hash, cacheSlot, indexFiles, resolvePreview, onRenderFilePicker, previewSize, displaySize,
+  onPointerOver, onPointerOut, hidePreview, timing, hoverState: () => hover,
   idle: () => queue,
   reset() {
     for (const set of [indexes, pending, noThumbnail, checked, knownDirs]) set.clear();
@@ -503,7 +541,7 @@ export default {
         config: true,
         type: Boolean,
         default: false,
-        onChange: enabled => { if (!enabled) hidePreview(); }
+        onChange: enabled => { if (!enabled) hidePreview({ cool: true }); }
       }
     },
     {
@@ -560,6 +598,6 @@ export default {
   ],
   init() {
     Hooks.on("renderFilePicker", onRenderFilePicker);
-    Hooks.on("closeFilePicker", () => hidePreview());
+    Hooks.on("closeFilePicker", () => hidePreview({ cool: true }));
   }
 };

@@ -18,6 +18,10 @@
  *     "Targeted / Selected" control, the selected tokens — with hit/miss (clickable to correct
  *     it, e.g. after a Shield spell) and an Apply button per target. After applying, it folds up
  *     like dnd5e's damage and effect trays (unless dnd5e's "Collapse Chat Card Trays" is Manual).
+ *   - A mastery is applied once per target and attack: further clicks (and a player's repeated
+ *     requests, also concurrent ones) do nothing. The card records what was done and how to
+ *     revert it; the GM's tray shows Undo instead of Apply for such a target, which reverts it
+ *     (effect, Prone, Graze damage, push, save request) so it can be applied again.
  * What each mastery does:
  *   - Graze (miss): damage = the attack's ability modifier, weapon damage type (applyDamage).
  *   - Topple (hit): Constitution save DC 8 + ability mod + proficiency, Prone on a failure. The
@@ -91,7 +95,12 @@ const RULES = {
 
 /** effect.flags[MODULE_ID].weaponMastery = { mastery, source, message, target? } */
 const FLAG_EFFECT = "weaponMastery";
-/** attackMessage.flags[MODULE_ID].weaponMastery = { done: { <row key>: { <mastery>: true | "requested" } } } */
+/**
+ * attackMessage.flags[MODULE_ID].weaponMastery = {
+ *   done: { <row key>: { <mastery>: true | "requested" | false } },   false = undone
+ *   undo: { <row key>: { <mastery>: <undo data> | null } }            see revert()
+ * }
+ */
 const FLAG_DONE = "weaponMastery";
 /** saveRequest.flags[MODULE_ID].weaponMasterySave = { actor, dc, ability, status, mastery } */
 const FLAG_SAVE = "weaponMasterySave";
@@ -356,18 +365,31 @@ function vexEffect(ctx, row, target) {
   });
 }
 
-/** Replace this mastery's effects on the actor (Sap and Slow don't stack; Vex once per target). */
+/**
+ * Replace this mastery's effects on the actor (Sap and Slow don't stack; Vex once per target).
+ * @returns {Promise<{result: true, undo: object}>}  undo: the created effect
+ */
 async function replaceEffect(actor, data, same = () => true) {
   const { mastery } = data.flags[MODULE_ID][FLAG_EFFECT];
   const old = actor.effects.filter(e => (effectInfo(e)?.mastery === mastery) && same(e)).map(e => e.id);
   if (old.length) await actor.deleteEmbeddedDocuments("ActiveEffect", old);
-  await actor.createEmbeddedDocuments("ActiveEffect", [data]);
-  return true;
+  const created = await actor.createEmbeddedDocuments("ActiveEffect", [data]);
+  return { result: true, undo: { effects: (created ?? []).map(e => ({ actor: actor.uuid, id: e.id })) } };
 }
 
 /* -------------------------------------------- */
 /*  Actions                                     */
 /* -------------------------------------------- */
+
+/*
+ * An action returns false (nothing applied) or {result, undo}: result is what the card records
+ * (true, or "requested" for a Topple save request), undo what revert() needs to take it back.
+ */
+
+const hpOf = actor => {
+  const hp = actor?.system?.attributes?.hp;
+  return hp ? { value: Number(hp.value) || 0, temp: Number(hp.temp) || 0 } : null;
+};
 
 async function applyGraze(ctx, row) {
   const actor = targetActor(row);
@@ -375,18 +397,23 @@ async function applyGraze(ctx, row) {
   if (!(game.user.isGM || actor.isOwner)) return warn("DT.WeaponMastery.NoPermission");
   const { value, type, properties } = grazeDamage(ctx);
   if (value <= 0) return warn("DT.WeaponMastery.GrazeNoDamage");
+  const before = hpOf(actor);
   await actor.applyDamage([{ value, type, properties: new Set(properties) }]);
-  return true;
+  const after = hpOf(actor);
+  // What the damage actually took (after resistances, temporary HP first).
+  const lost = (before && after) ? { value: before.value - after.value, temp: before.temp - after.temp } : null;
+  return { result: true, undo: lost ? { hp: { actor: actor.uuid, ...lost } } : null };
 }
 
 /** Roll a Topple save for an actor the current user owns; Prone on a failure. */
 async function rollToppleSave(actor, dc, { event, fastForward = false } = {}) {
+  const wasProne = !!actor.statuses?.has?.("prone");
   const rolls = await actor.rollSavingThrow({ ability: "con", target: dc, event }, fastForward ? { configure: false } : {});
   const roll = rolls?.[0];
   if (!roll) return false;
   const saved = (typeof roll.isSuccess === "boolean") ? roll.isSuccess : (roll.total >= dc);
   if (!saved) await actor.toggleStatusEffect("prone", { active: true });
-  return true;
+  return { result: true, undo: (!saved && !wasProne) ? { prone: actor.uuid } : null };
 }
 
 async function applyTopple(ctx, row, { event, fastForward } = {}) {
@@ -397,12 +424,12 @@ async function applyTopple(ctx, row, { event, fastForward } = {}) {
     // Players roll their own saves: post a request with a save button for the owners.
     const text = document.createElement("p");
     text.textContent = format("DT.WeaponMastery.ToppleRequest", { target: actor.name, dc, attacker: ctx.actor?.name ?? "" });
-    await ChatMessage.implementation.create({
+    const request = await ChatMessage.implementation.create({
       content: text.outerHTML,
       speaker: ChatMessage.implementation.getSpeaker({ actor: ctx.actor }),
       flags: { [MODULE_ID]: { [FLAG_SAVE]: { actor: actor.uuid, dc, ability: "con", status: "prone", mastery: "topple" } } }
     });
-    return "requested";
+    return { result: "requested", undo: request?.id ? { request: request.id } : null };
   }
   if (!(game.user.isGM || actor.isOwner)) return warn("DT.WeaponMastery.NoPermission");
   return rollToppleSave(actor, dc, { event, fastForward });
@@ -456,8 +483,9 @@ async function applyPush(ctx, row) {
   if (tooLargeToPush(target.actor)) return warn("DT.WeaponMastery.PushTooLarge", { target: target.name });
   const position = pushDestination(attacker, target);
   if (!position) return warn("DT.WeaponMastery.PushBlocked", { target: target.name });
+  const from = { token: target.document.uuid, x: target.document.x, y: target.document.y };
   await target.document.move({ x: position.x, y: position.y, action: "displace" });
-  return true;
+  return { result: true, undo: { move: from } };
 }
 
 async function applySap(ctx, row) {
@@ -484,6 +512,40 @@ async function applyVex(ctx, row) {
 
 const ACTIONS = { graze: applyGraze, topple: applyTopple, push: applyPush, sap: applySap, slow: applySlow, vex: applyVex };
 
+/**
+ * Take back one application (GM). Undo data, all optional:
+ *   effects: [{actor, id}]  created effects → deleted (if still there)
+ *   prone: actor uuid       Prone set by the Topple save → removed
+ *   request: message id     the save request for a player's creature → deleted
+ *   hp: {actor, value, temp} HP and temporary HP the Graze damage took → given back
+ *   move: {token, x, y}     the pushed token's position before the push → moved back
+ * A Prone that a player's own save set after a request is not recorded — remove it on the token.
+ */
+async function revert(undo) {
+  if (!undo) return;
+  for (const { actor, id } of undo.effects ?? []) {
+    const owner = resolve(actor);
+    if (owner?.effects?.get(id)) await owner.deleteEmbeddedDocuments("ActiveEffect", [id]);
+  }
+  if (undo.prone) await resolve(undo.prone)?.toggleStatusEffect?.("prone", { active: false });
+  if (undo.request) await game.messages?.get(undo.request)?.delete?.();
+  if (undo.hp) {
+    const actor = resolve(undo.hp.actor);
+    const hp = actor?.system?.attributes?.hp;
+    if (hp) {
+      const max = Number(hp.effectiveMax ?? hp.max);
+      const value = (Number(hp.value) || 0) + (Number(undo.hp.value) || 0);
+      const update = { "system.attributes.hp.value": Number.isFinite(max) ? Math.min(value, max) : value };
+      if (undo.hp.temp) update["system.attributes.hp.temp"] = (Number(hp.temp) || 0) + undo.hp.temp;
+      await actor.update(update);
+    }
+  }
+  if (undo.move) {
+    const token = resolve(undo.move.token);
+    if (token) await token.move({ x: undo.move.x, y: undo.move.y, action: "displace" });
+  }
+}
+
 /* -------------------------------------------- */
 /*  Tray state                                  */
 /* -------------------------------------------- */
@@ -495,8 +557,26 @@ function doneMap(ctx) {
   return ctx.message.flags?.[MODULE_ID]?.[FLAG_DONE]?.done ?? {};
 }
 
+function undoMap(ctx) {
+  return ctx.message.flags?.[MODULE_ID]?.[FLAG_DONE]?.undo ?? {};
+}
+
+/** A row's key in the card's flags: "t0" for recorded targets, the token UUID made flag-safe for selected tokens. */
+const doneKey = row => String(row.key).replace(/[^A-Za-z0-9_]/g, "_");
+
+/**
+ * "<message id>:<row key>:<mastery>" applied by this client — covers a card this user can't
+ * update (the flag is the record everyone else sees) and the moments until the flag arrives.
+ */
+const appliedHere = new Set();
+/** The same keys while being applied, so a second click or request can't apply it twice. */
+const applying = new Set();
+const lockKey = (ctx, row) => `${ctx.message.id}:${doneKey(row)}:${ctx.mastery}`;
+
 function isDone(ctx, row) {
-  return !!doneMap(ctx)[row.key]?.[ctx.mastery];
+  const recorded = doneMap(ctx)[doneKey(row)]?.[ctx.mastery];
+  // The card's record wins once it exists (false = the GM undid it).
+  return (recorded !== undefined) ? !!recorded : appliedHere.has(lockKey(ctx, row));
 }
 
 const anyDone = ctx => Object.values(doneMap(ctx)).some(entry => entry?.[ctx.mastery]);
@@ -520,21 +600,48 @@ function trayRows(ctx) {
 }
 
 /**
- * Apply the mastery to the rows, record it on the card and fold the GM tray.
+ * Apply the mastery to the rows it wasn't applied to yet, record it (with its undo data) on the
+ * card and fold the GM tray. Rows already done or being applied are skipped.
  * @returns {Promise<boolean>} whether anything was applied
  */
 async function applyRows(ctx, rows, options = {}) {
   const updates = {};
+  const locks = [];
   let applied = false;
-  for (const row of rows) {
-    const result = await ACTIONS[ctx.mastery](ctx, row, options);
-    if (!result) continue;
-    applied = true;
-    if (/^t\d+$/.test(row.key)) updates[`flags.${MODULE_ID}.${FLAG_DONE}.done.${row.key}.${ctx.mastery}`] = result;
+  try {
+    for (const row of rows) {
+      const lock = lockKey(ctx, row);
+      if (isDone(ctx, row) || applying.has(lock)) continue;
+      applying.add(lock);
+      locks.push(lock);
+      const outcome = await ACTIONS[ctx.mastery](ctx, row, options);
+      if (!outcome?.result) continue;
+      applied = true;
+      appliedHere.add(lock);
+      const key = doneKey(row);
+      updates[`flags.${MODULE_ID}.${FLAG_DONE}.done.${key}.${ctx.mastery}`] = outcome.result;
+      updates[`flags.${MODULE_ID}.${FLAG_DONE}.undo.${key}.${ctx.mastery}`] = outcome.undo ?? null;
+    }
+    if (!applied) return false;
+    if (!options.keepOpen && (trayCollapseSetting() !== "manual")) trayState(ctx).open = false;
+    if (ctx.message.canUserModify?.(game.user, "update")) await ctx.message.update(updates);
+    return true;
+  } finally {
+    for (const lock of locks) applying.delete(lock);
   }
-  if (!applied) return false;
-  if (!options.keepOpen && (trayCollapseSetting() !== "manual")) trayState(ctx).open = false;
-  if (Object.keys(updates).length && ctx.message.canUserModify?.(game.user, "update")) await ctx.message.update(updates);
+}
+
+/** The GM's Undo for one row: revert what was applied and clear the record, so it can be applied again. */
+async function undoRow(ctx, row) {
+  if (!game.user.isGM) return false;
+  const key = doneKey(row);
+  await revert(undoMap(ctx)[key]?.[ctx.mastery] ?? null);
+  appliedHere.delete(lockKey(ctx, row));
+  await ctx.message.update({
+    [`flags.${MODULE_ID}.${FLAG_DONE}.done.${key}.${ctx.mastery}`]: false,
+    [`flags.${MODULE_ID}.${FLAG_DONE}.undo.${key}.${ctx.mastery}`]: null
+  });
+  trayState(ctx).open = true;
   return true;
 }
 
@@ -550,19 +657,23 @@ async function useMastery(ctx, event) {
   const rule = RULES[ctx.mastery];
   if (!rule) return false;
   const label = masteryLabel(ctx.mastery);
+  const open = eligible => eligible.filter(row => !isDone(ctx, row));
   if (game.user.isGM) {
     const rows = trayRows(ctx);
     if (!rows.length) return warn("DT.WeaponMastery.NoTokens");
     const eligible = rows.filter(row => applies(ctx.mastery, trueState(ctx, row)));
     if (!eligible.length) return warn("DT.WeaponMastery.NothingApplies", { mastery: label });
-    return applyRows(ctx, eligible, { event });
+    if (!open(eligible).length) return warn("DT.WeaponMastery.AllApplied.GM", { mastery: label });
+    return applyRows(ctx, open(eligible), { event });
   }
   const rows = (!ctx.targets.length && (ctx.mastery === "vex")) ? currentTargetRows() : ctx.targets;
+  const eligible = rows.filter(row => applies(ctx.mastery, trueState(ctx, row)));
+  // A repeated click does nothing — also no new request to the GM.
+  if (eligible.length && !open(eligible).length) return warn("DT.WeaponMastery.AllApplied.Player", { mastery: label });
   if (!mayApplyLocally(ctx, rows)) return requestFromGM(ctx);
   if (!rows.length) return warn("DT.WeaponMastery.NoTargets");
-  const eligible = rows.filter(row => applies(ctx.mastery, trueState(ctx, row)));
   if (!eligible.length) return warn("DT.WeaponMastery.NothingApplies", { mastery: label });
-  return applyRows(ctx, eligible, { event });
+  return applyRows(ctx, open(eligible), { event });
 }
 
 /** Ask the active GM's client to apply the mastery of this attack card. */
@@ -577,7 +688,8 @@ function requestFromGM(ctx) {
 
 /**
  * On the active GM's client: a player used the mastery button. Apply it to the targets with a
- * known matching result; targets whose hit is unknown are left to the GM, who gets a note.
+ * known matching result it wasn't applied to yet, and tell the GM (who can undo it in the tray);
+ * targets whose hit is unknown are left to the GM, who gets a note. A repeated request does nothing.
  */
 async function onSocketRequest(request, senderId) {
   if ((request?.action !== "use") || !game.users.activeGM?.isSelf || !enabled()) return;
@@ -587,11 +699,20 @@ async function onSocketRequest(request, senderId) {
   if (!ctx || !sender || !RULES[ctx.mastery]) return;
   // Only the attacker's side may ask for its mastery.
   if (!(ctx.actor?.testUserPermission?.(sender, "OWNER") || (message.author?.id === senderId))) return;
-  const known = ctx.targets.filter(row => trueState(ctx, row) === RULES[ctx.mastery].on);
-  const unknown = ctx.targets.filter(row => trueState(ctx, row) === "unknown");
+  const eligible = ctx.targets.filter(row => applies(ctx.mastery, trueState(ctx, row)));
+  const open = eligible.filter(row => !isDone(ctx, row));
+  if (eligible.length && !open.length) return;
+  const known = open.filter(row => trueState(ctx, row) === RULES[ctx.mastery].on);
+  const unknown = open.filter(row => trueState(ctx, row) === "unknown");
   const data = { user: sender.name, mastery: masteryLabel(ctx.mastery), attacker: ctx.actor?.name ?? "" };
   // Targets left for the GM keep the tray open.
-  if (known.length) await applyRows(ctx, known, { fastForward: true, keepOpen: unknown.length > 0 });
+  const applied = known.length
+    ? await applyRows(ctx, known, { fastForward: true, keepOpen: unknown.length > 0 })
+    : false;
+  if (applied) {
+    const names = known.filter(row => isDone(ctx, row)).map(r => r.name).join(", ");
+    ui.notifications.info(format("DT.WeaponMastery.RequestApplied", { ...data, targets: names }));
+  }
   if (!ctx.targets.length) ui.notifications.info(format("DT.WeaponMastery.RequestNoTargets", data));
   else if (unknown.length) ui.notifications.info(format("DT.WeaponMastery.RequestUnknown", { ...data, targets: unknown.map(r => r.name).join(", ") }));
   else if (!known.length) ui.notifications.info(format("DT.WeaponMastery.RequestNothing", data));
@@ -735,6 +856,17 @@ function targetRow(ctx, row, refresh) {
   });
   li.append(toggle, el("span", "name dt-wm__name", row.name));
 
+  // Applied: Undo instead of Apply (also after correcting hit/miss).
+  if (isDone(ctx, row)) {
+    li.classList.add("dt-wm__target--done");
+    li.append(button(localize("DT.WeaponMastery.Undo"), "fa-solid fa-rotate-left",
+      { tooltip: localize("DT.WeaponMastery.UndoHint"), className: "dt-wm__undo" },
+      async () => {
+        if (await undoRow(ctx, row)) refresh();
+      }));
+    return li;
+  }
+
   if (!applies(ctx.mastery, state)) {
     li.append(el("span", "dt-wm__na", localize((state === "hit") ? "DT.WeaponMastery.NotOn.Hit" : "DT.WeaponMastery.NotOn.Miss")));
     return li;
@@ -749,9 +881,7 @@ function targetRow(ctx, row, refresh) {
     disabled = true;
     tooltip = format("DT.WeaponMastery.PushTooLarge", { target: row.name });
   }
-  const done = isDone(ctx, row);
-  if (done) tooltip = `${localize("DT.WeaponMastery.AlreadyApplied")} ${tooltip}`;
-  li.append(button(localize("DT.WeaponMastery.Apply"), RULES[ctx.mastery].icon, { tooltip, disabled, done },
+  li.append(button(localize("DT.WeaponMastery.Apply"), RULES[ctx.mastery].icon, { tooltip, disabled },
     async event => {
       if (await applyRows(ctx, [row], { event })) refresh();
     }));
@@ -858,6 +988,24 @@ function insertPanel(container, message) {
   if (ctx) container.append(buildPanel(ctx));
 }
 
+/** Save requests this client has rolled — the button works once (the GM's request card can't record it). */
+const rolledRequests = new Set();
+
+function saveBox(message, request, actor) {
+  const box = el("div", "dt-wm dt-wm-save");
+  const ability = CONFIG.DND5E?.abilities?.[request.ability]?.label ?? request.ability;
+  const rolled = rolledRequests.has(message.id);
+  box.append(button(format("DT.WeaponMastery.SaveButton", { ability, dc: request.dc }), "fa-solid fa-shield-halved",
+    { done: rolled, disabled: rolled, tooltip: rolled ? localize("DT.WeaponMastery.SaveRolled") : undefined },
+    async event => {
+      if (rolledRequests.has(message.id)) return;
+      rolledRequests.add(message.id);
+      if (!(await rollToppleSave(actor, request.dc, { event }))) rolledRequests.delete(message.id);   // dialog closed
+      box.replaceWith(saveBox(message, request, actor));
+    }));
+  return box;
+}
+
 /** Topple request card: a save button for the target's owners. */
 function decorateSaveRequest(message, root) {
   const request = message.flags[MODULE_ID][FLAG_SAVE];
@@ -865,11 +1013,7 @@ function decorateSaveRequest(message, root) {
   if (content.querySelector(".dt-wm-save")) return;
   const actor = resolve(request.actor);
   if (!actor?.isOwner) return;
-  const box = el("div", "dt-wm dt-wm-save");
-  const ability = CONFIG.DND5E?.abilities?.[request.ability]?.label ?? request.ability;
-  box.append(button(format("DT.WeaponMastery.SaveButton", { ability, dc: request.dc }), "fa-solid fa-shield-halved",
-    {}, event => rollToppleSave(actor, request.dc, { event })));
-  content.append(box);
+  content.append(saveBox(message, request, actor));
 }
 
 function onRenderChatMessage(message, html) {
@@ -941,8 +1085,8 @@ function onUpdateActiveEffect(effect, changed) {
 /** For tools/test-features.mjs only. */
 export const internals = {
   attackContext, isAttackMessage, rowState, trueState, applies, mayApplyLocally, toppleDC, grazeDamage,
-  tooLargeToPush, untilAttackersTurn, sapEffect, slowEffect, vexEffect, applyRows, useMastery, runMacro,
-  rollToppleSave, pushDestination, pushDistance, buildPanel, overrides, trays
+  tooLargeToPush, untilAttackersTurn, sapEffect, slowEffect, vexEffect, applyRows, undoRow, revert, useMastery,
+  runMacro, rollToppleSave, pushDestination, pushDistance, buildPanel, overrides, trays
 };
 
 const macroSetting = mastery => ({

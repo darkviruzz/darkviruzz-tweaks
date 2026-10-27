@@ -33,6 +33,15 @@
   opacity: 0.75;
 }
 
+/* Applied targets: the name dims, Undo stands out a little less than Apply. */
+.dt-wm__target--done .dt-wm__name {
+  opacity: 0.7;
+}
+
+.dt-wm__undo {
+  font-style: italic;
+}
+
 /* The tray sits inside the card content, not at its bottom edge like dnd5e's. */
 .dt-wm .card-tray.dt-wm__tray {
   margin: 4px 0 0;
