@@ -208,5 +208,26 @@
   "DT.WeaponMastery.PushBlocked": "{target} kann nicht gestoßen werden: kein freier Platz in gerader Linie vom Angreifer weg (Wand).",
   "DT.WeaponMastery.Failed": "Weapon Mastery fehlgeschlagen: {error}",
 
-  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden."
+  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: Keine Würfelmethode für {ability} gefunden.",
+  "DT.Categories.ChatExport.Label": "Chat-Export nach Zeitraum",
+  "DT.Categories.ChatExport.Hint": "Nur die Chatnachrichten eines Zeitraums exportieren — z. B. die der letzten Session — statt des ganzen Chatverlaufs von Foundry. Welteinstellung (Spielleitung).",
+  "DT.Settings.ChatExportEnabled.Name": "Chat-Export nach Zeitraum",
+  "DT.Settings.ChatExportEnabled.Hint": "Fügt neben Foundrys Chat-Export einen Knopf (Uhr-Symbol) hinzu: die letzten Stunden, die letzten Tage oder die Tage von … bis … als Textdatei in Foundrys eigenem Format exportieren. Der Dialog zeigt, wie viele Nachrichten der Zeitraum enthält.",
+  "DT.Settings.ChatExportPlayers.Name": "Chat-Export: auch für Spieler",
+  "DT.Settings.ChatExportPlayers.Hint": "Auch Spieler bekommen den Knopf. Sie exportieren nur, was sie sehen dürfen — fremde Flüsternachrichten und verdeckte Würfe fehlen. Aus: nur die Spielleitung.",
+  "DT.ChatExport.Button": "Chat eines Zeitraums exportieren",
+  "DT.ChatExport.Title": "Chat nach Zeitraum exportieren",
+  "DT.ChatExport.Mode": "Zeitraum",
+  "DT.ChatExport.Mode.Hours": "Letzte Stunden",
+  "DT.ChatExport.Mode.Days": "Letzte Tage",
+  "DT.ChatExport.Mode.Range": "Von Tag … bis Tag …",
+  "DT.ChatExport.Hours": "Stunden",
+  "DT.ChatExport.Days": "Tage (je 24 h)",
+  "DT.ChatExport.From": "Von",
+  "DT.ChatExport.To": "Bis (ganzer Tag)",
+  "DT.ChatExport.Count": "{count} Nachrichten von {from} bis {to}.",
+  "DT.ChatExport.Export": "Exportieren",
+  "DT.ChatExport.None": "Keine Chatnachrichten von {from} bis {to}.",
+  "DT.ChatExport.InvalidRange": "Chat-Export: Bitte einen gültigen Zeitraum wählen.",
+  "DT.ChatExport.Header": "Chatverlauf von {world}, {from} bis {to} ({count} Nachrichten)"
 }

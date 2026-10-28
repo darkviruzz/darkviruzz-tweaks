@@ -208,5 +208,26 @@
   "DT.WeaponMastery.PushBlocked": "{target} can't be pushed: no free space straight away from the attacker (wall).",
   "DT.WeaponMastery.Failed": "Weapon Mastery failed: {error}",
 
-  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}."
+  "DT.Notifications.NoRollMethod": "Darkviruzz Tweaks: no ability-roll method found for {ability}.",
+  "DT.Categories.ChatExport.Label": "Chat Export by Time Range",
+  "DT.Categories.ChatExport.Hint": "Export only the chat messages of a time range — e.g. the last session — instead of Foundry's whole chat log. World-level (set by the GM).",
+  "DT.Settings.ChatExportEnabled.Name": "Chat Export by Time Range",
+  "DT.Settings.ChatExportEnabled.Hint": "Adds a button (clock icon) next to Foundry's chat export: export the last hours, the last days or the days from … to … as a text file in Foundry's own format. The dialog shows how many messages the range holds.",
+  "DT.Settings.ChatExportPlayers.Name": "Chat Export: Also for Players",
+  "DT.Settings.ChatExportPlayers.Hint": "Players get the button too. They export only what they can see — others' whispers and blind rolls are left out. Off: GMs only.",
+  "DT.ChatExport.Button": "Export chat of a time range",
+  "DT.ChatExport.Title": "Export Chat by Time Range",
+  "DT.ChatExport.Mode": "Time range",
+  "DT.ChatExport.Mode.Hours": "Last hours",
+  "DT.ChatExport.Mode.Days": "Last days",
+  "DT.ChatExport.Mode.Range": "From day … to day …",
+  "DT.ChatExport.Hours": "Hours",
+  "DT.ChatExport.Days": "Days (24 h each)",
+  "DT.ChatExport.From": "From",
+  "DT.ChatExport.To": "To (whole day)",
+  "DT.ChatExport.Count": "{count} messages from {from} to {to}.",
+  "DT.ChatExport.Export": "Export",
+  "DT.ChatExport.None": "No chat messages from {from} to {to}.",
+  "DT.ChatExport.InvalidRange": "Chat export: choose a valid time range.",
+  "DT.ChatExport.Header": "Chat log of {world}, {from} to {to} ({count} messages)"
 }

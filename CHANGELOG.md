@@ -70,6 +70,11 @@ and GMs, not for developers.
   (effect, Prone, Graze damage, push or save request) and apply it again if needed. Optionally
   every mastery can run a **macro** of your choice. Works with RSReforged one-click attacks. Off
   by default.
+- **Chat Export by Time Range** (any system, GM): a second button next to Foundry's chat export
+  saves only the messages of the **last hours**, the **last days** or **from day … to day …** —
+  e.g. the last session — as a text file in Foundry's own export format. The dialog shows how many
+  messages the range holds. Optionally players get the button too and export only what they can
+  see. Macros can call it as `api.exportChat({ hours: 5 })`. Off by default.
 
 ## [1.7.0] — 2026-10-13
 

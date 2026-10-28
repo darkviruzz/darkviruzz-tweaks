@@ -814,6 +814,32 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   **deactivated** module are still served under `modules/<id>/…` (Foundry serves the Data
   folder statically) — the picker relies on it when TMT is deactivated.
 
+### Chat log, export & UI layers (feature *Chat Export by Time Range*, verified 2026-10-29 against the core 14.364 sources)
+
+- `ChatLog#export()` (on `game.messages`, triggered by the action `export` of the sidebar
+  `ChatLog`): `this.contents.map(m => m.export()).join("\n---------------------------\n")`,
+  saved via `foundry.utils.saveDataToFile(log, "text/plain", "fvtt-log-<Date#toDateString>.txt")`.
+  No filter, all messages of the collection.
+- `ChatMessage#export()`: content HTML → plain text (DIV/BR become line breaks, whitespace
+  collapsed), then one line `${roll.formula} = ${roll.result} = ${roll.total}` per roll, prefixed
+  `[<toLocaleDateString("en-US", {hour, minute, second})>] <alias>`.
+- Template `templates/sidebar/tabs/chat/notifications.hbs` (part `log` of `ChatLog`):
+  `#chat-controls` > `#message-modes` + (GM only) `.control-buttons` with
+  `button.ui-control.icon[data-action="export"|"flush"]`. Our button has no `data-action`
+  (AppV2's click dispatcher ignores it). `renderChatLog(app, element)` fires on every (partial)
+  render → insert idempotently.
+- `DialogV2.wait({render})` calls `render(event, dialog)` on the dialog's render event; the
+  content sits in `form.dialog-form` (`button.form` in a button callback); button labels and the
+  window title are localized by core.
+- **UI layers** (core CSS variables): canvas 0, `#ui-left`/`#ui-middle`/`#ui-right` and `.app`
+  `--z-index-app` 30, `--z-index-ui` 60, `.application` (AppV2 windows) `--z-index-window` 100 (+
+  `ApplicationV2._maxZ` counting up in `bringToFront()`, only for framed apps), tooltip 9999,
+  notifications 99999. `#ui-top` is inside `#ui-middle` (`templates/views/game.hbs`), so
+  anything docked there (Carousel/combat-tracker-dock in mode `rowDocked`) lives in layer 30.
+  Token Action HUD (`#token-action-hud-app`, AppV2 `frame: false`) uses `position.zIndex` 100 and
+  sets `element.style.zIndex = 20` on every right-click of a group (`sendHudToBottom`) — then it
+  falls below layer 30 until the next reload.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -828,4 +854,5 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
 | Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<row>.<mastery>` (true / "requested" / false = undone) + `weaponMastery.undo.<row>.<mastery>` (revert data; row = `t#` or the flag-safe token UUID of a selected token) — once per row, GM Undo in the tray; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |
+| Chat Export by Time Range | `chatExport` | `features/chat-export.js` | any | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); API `api.exportChat({hours} \| {days} \| {from, to})` |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |

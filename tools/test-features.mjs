@@ -1046,7 +1046,8 @@ class WmEl {
   matches(sel) {
     const classes = [...sel.matchAll(/\.([\w-]+)/g)].map(m => m[1]);
     const attrs = [...sel.matchAll(/\[data-([\w-]+)\]/g)].map(m => m[1].replace(/-(\w)/g, (_, c) => c.toUpperCase()));
-    return classes.every(c => this.classList.contains(c)) && attrs.every(a => a in this.dataset);
+    const ids = [...sel.matchAll(/#([\w-]+)/g)].map(m => m[1]);
+    return classes.every(c => this.classList.contains(c)) && attrs.every(a => a in this.dataset) && ids.every(i => this.id === i);
   }
   *walk() { for (const c of this.children) { yield c; yield* c.walk(); } }
   querySelectorAll(sel) {
@@ -1656,6 +1657,91 @@ await test("savage attacker: the note shows both totals, each with its dice as t
   assert.deepEqual(card.content.querySelectorAll(".dt-savage__total").map(n => n.dataset.tooltip), ["2 + 3", "4 + 5"],
     "discarded dice (e.g. rerolls) are left out");
   assert.match(card.content.textContent, /→ 9/);
+  delete globalThis.document; delete globalThis.HTMLElement;
+});
+
+/* ---------- Chat Export by Time Range ---------- */
+const ceModule = await import(pathToFileURL(join(ROOT, "scripts/features/chat-export.js")).href);
+const ce = ceModule.internals;
+ceModule.default.init();
+const ceSaved = [];
+foundry.utils.saveDataToFile = (data, type, filename) => ceSaved.push({ data, type, filename });
+game.world = { title: "Greyhawk" };
+const ceNow = new Date(2026, 9, 29, 1, 30).getTime();
+const ceMsg = (id, time, { visible = true, contentVisible = true } = {}) =>
+  ({ id, timestamp: time, visible, isContentVisible: contentVisible, export: () => `[${id}] Speaker\ntext ${id}` });
+
+await test("chat export: ranges — last hours / days up to now, whole days from … to … (also swapped)", () => {
+  const H = 3600e3;
+  assert.deepEqual(ce.rangeFor({ hours: 5 }, ceNow), { from: ceNow - (5 * H), to: ceNow });
+  assert.deepEqual(ce.rangeFor({ days: 2 }, ceNow), { from: ceNow - (48 * H), to: ceNow });
+  const days = ce.rangeFor({ from: "2026-10-28", to: "2026-10-29" }, ceNow);
+  assert.equal(days.from, new Date(2026, 9, 28).getTime());
+  assert.equal(days.to, new Date(2026, 9, 30).getTime() - 1, "until the end of the last day");
+  assert.deepEqual(ce.rangeFor({ from: "2026-10-29", to: "2026-10-28" }, ceNow), days, "swapped days");
+  assert.deepEqual(ce.rangeFor({ from: new Date(2026, 9, 28, 18) }, ceNow), { from: new Date(2026, 9, 28, 18).getTime(), to: ceNow });
+  assert.equal(ce.rangeFor({ from: "28.10.2026" }, ceNow), null, "unknown date format");
+  assert.equal(ce.rangeFor({}, ceNow), null);
+  assert.deepEqual(ce.specFromForm({ mode: "hours", hours: "3", days: "1", from: "x", to: "y" }), { hours: 3 });
+  assert.deepEqual(ce.specFromForm({ mode: "range", hours: "3", from: "2026-10-28", to: "2026-10-29" }), { from: "2026-10-28", to: "2026-10-29" });
+  assert.equal(ce.stamp(new Date(2026, 9, 28, 18, 5).getTime()), "2026-10-28_1805");
+});
+await test("chat export: messages in the range, oldest first; players only what they can see", () => {
+  const H = 3600e3;
+  game.messages = { contents: [
+    ceMsg("late", ceNow - H), ceMsg("old", ceNow - (30 * H)), ceMsg("early", ceNow - (3 * H)),
+    ceMsg("whisper", ceNow - (2 * H), { visible: false }), ceMsg("blind", ceNow - (2 * H), { contentVisible: false })
+  ] };
+  const range = { from: ceNow - (5 * H), to: ceNow };
+  assert.deepEqual(ce.messagesIn(range, { isGM: true }).map(m => m.id), ["early", "whisper", "blind", "late"]);
+  assert.deepEqual(ce.messagesIn(range, { isGM: false }).map(m => m.id), ["early", "late"]);
+});
+await test("chat export: file in core's format with a header; nothing in the range or no valid range → note, no file", () => {
+  const H = 3600e3;
+  game.user.isGM = true; ceSaved.length = 0; notes.length = 0;
+  const realNow = Date.now();
+  game.messages = { contents: [ceMsg("b", realNow - H), ceMsg("a", realNow - (2 * H)), ceMsg("old", realNow - (50 * H))] };
+  assert.equal(ce.exportChat({ hours: 5 }), 2);
+  const [file] = ceSaved;
+  assert.equal(file.type, "text/plain");
+  assert.match(file.filename, /^fvtt-log-\d{4}-\d{2}-\d{2}_\d{4}--\d{4}-\d{2}-\d{2}_\d{4}\.txt$/);
+  const [header, , ...rest] = file.data.split("\n");
+  assert.match(header, /^DT\.ChatExport\.Header:.*"world":"Greyhawk".*"count":2/);
+  assert.equal(rest.join("\n"), "[a] Speaker\ntext a\n---------------------------\n[b] Speaker\ntext b\n");
+  assert.equal(ce.exportChat({ from: "2020-01-01", to: "2020-01-02" }), 0);
+  assert.match(notes.at(-1), /DT\.ChatExport\.None/);
+  assert.equal(ce.exportChat({}), 0);
+  assert.equal(notes.at(-1), "DT.ChatExport.InvalidRange");
+  assert.equal(ceSaved.length, 1, "no further files");
+  game.user.isGM = false;
+});
+await test("chat export: button next to core's export for the GM, for players only when allowed, once", async () => {
+  globalThis.HTMLElement = WmEl;
+  globalThis.document = { createElement: tag => new WmEl(tag), getElementById: () => null };
+  const chatRoot = () => {
+    const root = new WmEl("section");
+    const controls = new WmEl("div"); controls.id = "chat-controls";
+    root.append(controls);
+    return { root, controls };
+  };
+  const render = (root) => fire("renderChatLog", {}, root);
+  settings.chatExportEnabled = false; settings.chatExportPlayers = false;
+  game.user.isGM = true;
+  let { root, controls } = chatRoot();
+  const core = new WmEl("div"); core.className = "control-buttons"; controls.append(core);
+  await render(root);
+  assert.equal(root.querySelector(".dt-chat-export"), null, "off: nothing");
+  settings.chatExportEnabled = true;
+  await render(root); await render(root);
+  assert.equal(core.querySelectorAll(".dt-chat-export").length, 1, "in core's control buttons, once");
+  game.user.isGM = false;
+  ({ root, controls } = chatRoot());
+  await render(root);
+  assert.equal(root.querySelector(".dt-chat-export"), null, "players: only when allowed");
+  settings.chatExportPlayers = true;
+  await render(root);
+  assert.ok(controls.querySelector(".control-buttons").querySelector(".dt-chat-export"), "players get their own button box");
+  settings.chatExportEnabled = false; settings.chatExportPlayers = false;
   delete globalThis.document; delete globalThis.HTMLElement;
 });
 

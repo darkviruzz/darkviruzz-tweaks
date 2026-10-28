@@ -21,6 +21,7 @@ import filePickerPreview from "./file-picker-preview.js";
 import tokenArtPicker from "./token-art-picker.js";
 import savageAttacker from "./savage-attacker.js";
 import weaponMastery from "./weapon-mastery.js";
+import chatExport from "./chat-export.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -33,5 +34,6 @@ export const FEATURES = [
   filePickerPreview,
   tokenArtPicker,
   savageAttacker,
-  weaponMastery
+  weaponMastery,
+  chatExport
 ];

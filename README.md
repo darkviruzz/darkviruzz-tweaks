@@ -455,6 +455,29 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
 | **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
 | **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
 
+### 12. Chat Export by Time Range  ·  *any system · world (GM)*
+
+Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
+chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
+
+**How it works:** a second button with a clock icon sits next to Foundry's chat export. It opens a
+small dialog: **last hours** (e.g. 5), **last days** (24 h each, counted back from now) or **from day
+… to day …** (whole days, local time). The dialog shows how many messages the range holds; *Export*
+saves them as a text file (`fvtt-log-<from>--<to>.txt`) in exactly the format of Foundry's own export
+— time and speaker, the text of the message, one line per roll with formula and total — oldest
+first, with one header line naming the world and the range. Nothing in the world is changed.
+
+Players can get the button too (second setting). They export only what they can see: whispers to
+others and blind rolls are left out. The GM always exports everything, like Foundry's export.
+
+For macros: `game.modules.get("darkviruzz-tweaks").api.exportChat({ hours: 5 })`, `({ days: 2 })` or
+`({ from: "2026-10-28", to: "2026-10-29" })` (`from`/`to` may also be dates or timestamps).
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
+| **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
+
 ## Already built in (no tweak needed)
 
 - **GM: move tokens through walls and other tokens** — the GM's *unconstrained movement*
