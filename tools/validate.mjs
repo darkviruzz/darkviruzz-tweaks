@@ -14,6 +14,7 @@
  *   - README documents every setting/keybinding, CLAUDE.md lists every feature, and
  *     CHANGELOG.md has a section for the current version
  *   - each feature's init() runs without throwing against stubbed Foundry globals
+ *   - module.json declares "socket": true when a script uses the module socket channel
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -139,6 +140,10 @@ for (const file of scripts) {
   if (check.status !== 0) fail(`${file}: syntax error\n${check.stderr.trim()}`);
 
   const src = stripComments(read(file));
+  // Foundry only relays "module.<id>" socket messages when the manifest opts in.
+  if (/game\.socket\.on\(/.test(src) && manifest && manifest.socket !== true) {
+    fail(`${file} listens on game.socket, but module.json lacks "socket": true`);
+  }
   for (const [, key] of src.matchAll(/["'`](DT\.[A-Za-z0-9_.]+)["'`]/g)) {
     usedKeys.add(key);
     if (!(key in en)) fail(`${file}: i18n key "${key}" is not in lang/en.json`);
@@ -233,7 +238,8 @@ Object.assign(globalThis, {
     system: { id: "dnd5e", version: "6.0.0" },
     settings: { get: () => undefined, set: async () => undefined },
     i18n: { localize: k => k, format: k => k, has: () => true },
-    user: { isGM: true }, users: { activeGM: null }
+    user: { isGM: true }, users: { activeGM: null },
+    socket: { on() {}, emit() {} }
   },
   CONFIG: {}, CONST: {}, ui: {}, canvas: null, foundry: { utils: {} }
 });

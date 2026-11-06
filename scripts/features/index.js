@@ -16,6 +16,12 @@ import findMyToken from "./find-my-token.js";
 import movementHistoryReset from "./movement-history-reset.js";
 import defeatedTokens from "./defeated-tokens.js";
 import pauseControl from "./pause-control.js";
+import liveTokenDrag from "./live-token-drag.js";
+import filePickerPreview from "./file-picker-preview.js";
+import tokenArtPicker from "./token-art-picker.js";
+import savageAttacker from "./savage-attacker.js";
+import weaponMastery from "./weapon-mastery.js";
+import chatExport from "./chat-export.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -23,5 +29,11 @@ export const FEATURES = [
   findMyToken,
   movementHistoryReset,
   defeatedTokens,
-  pauseControl
+  pauseControl,
+  liveTokenDrag,
+  filePickerPreview,
+  tokenArtPicker,
+  savageAttacker,
+  weaponMastery,
+  chatExport
 ];

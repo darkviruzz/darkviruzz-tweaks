@@ -201,7 +201,282 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
+### 7. Live Token Drag  ·  *any system · world (GM)*
+
+While someone drags a token, everyone else sees the token itself follow the mouse in real
+time — on its own, Foundry only shows them the planned path (the ruler). A replacement for
+the unmaintained **Live Drag** module (see *Credits*); **disable Live Drag** when you switch
+this on, otherwise both modules send positions.
+
+**How it works:** while you drag, Foundry draws a preview copy of the token under your mouse.
+Your client sends the preview's position to the others — at most about 30 times per second,
+always the latest one — and their clients glide the token's picture there (with its border,
+bars, name and status icons), so it moves smoothly. Only the picture moves: the token's
+vision and light stay where the token really is until it is dropped, so nobody can peek
+around a corner — or uncover fog of war — through someone else's drag. Players only see the
+dragged token where they could see it anyway. Your own view while dragging stays exactly as
+in Foundry.
+
+- **Drop:** the token is already in place for everyone. The others skip Foundry's movement
+  animation so it doesn't walk its path a second time (you, the one dragging, see the normal
+  animation).
+- **Any other end** — cancelled with a right-click (which first removes waypoints you placed
+  with Ctrl+click), dropped on the same spot, or the move was refused: an end signal makes the
+  token glide back to where it really is. If the person dragging disconnects mid-drag, the
+  token glides back as well.
+- **Hidden tokens** are only sent to GMs — Foundry's server delivers those messages to the GMs
+  only, players' clients never receive them.
+- **Private drags:** hold **Alt** when you *start* dragging and that drag is not shown live —
+  the same key Foundry uses to keep your ruler private.
+- **Shift-only mode** (optional): a drag only goes live once you press Shift during it, then
+  stays live until you drop the token, so you can let go of Shift right away. Mind that Shift is
+  also Foundry's "don't snap to the grid" key: while you hold it, the token moves freely between
+  grid spaces; once you release it, the token snaps to the grid again.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Show Token Drags Live** | off | Everyone sees dragged tokens move in real time. |
+| **Live Drag Only With Shift** | off | Only show a drag live after Shift was pressed during it (see above). |
+
+> Pairs well with Foundry's own world setting **Token Drag Vision** (core settings, off by
+> default): the person dragging sees vision and light from the preview position in real
+> time. On its own that invites peeking around corners; with live dragging, everyone sees the
+> token being moved.
+>
+> The feature uses the module's own message channel, which Foundry sets up when a world is
+> launched. If live drags don't show up right after installing or updating the module,
+> return to setup and launch the world again.
+### 8. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
+
+See images in Foundry's File Browser without clicking them — and without downloading big
+maps over and over. Covers what the *Asset Preview* module does (which needs a click), so
+**disable Asset Preview** when you switch these on (both draw file names on the tiles).
+
+**How it works:**
+
+- *Preview on hover* — rest the mouse on an image in the **List** or **Thumbnails** view and a
+  preview appears beside the browser: the picture, its **size in pixels**, its **file size** and,
+  in the Tile Browser, how many **grid squares** it covers at the browser's *Asset Grid Size*
+  (pixel width ÷ Asset Grid Size, the same ratio Foundry uses when you drop the tile; shown in
+  orange when it isn't a whole number — usually a sign that the Asset Grid Size doesn't match
+  the asset pack). Sweeping the mouse over the list loads nothing: the first preview appears
+  after resting on an image for about a second. While a preview is showing, moving on from
+  image to image brings the next one almost at once (the picture stays until the next is
+  ready). Resting off the images (another file, the header) or leaving the browser window starts
+  over with the longer wait.
+  The preview size (256, 384 or 512 px on the long side) is a per-user choice; small images
+  are enlarged to it, but at most to twice their own size.
+- *Thumbnail cache* — without it, the preview loads the full image, like every other view of
+  the File Browser. With it, the first preview of an image larger than the threshold saves a
+  thumbnail (max. 512 px, webp, typically 20–60 KB) in
+  `Data/modules/darkviruzz-tweaks/storage/thumbs/`, and every later preview — for everyone,
+  in later sessions too — shows that thumbnail instead of downloading the original again. If
+  the original is replaced by a different file, its thumbnail is made again automatically.
+  Thumbnails are made by users who may upload files (GMs, and players with Foundry's *Upload
+  New Files* permission); everyone else uses the existing thumbnails and otherwise sees the
+  original. The folder survives module updates and can be deleted at any time (thumbnails are
+  simply made again). Only files of the normal user-data source are cached, not Foundry's own
+  core icons or S3. Images up to 512 px or up to the threshold never get a thumbnail — for them
+  the original is already small.
+- *File names in the Tiles view* — each tile shows its file name (the full name while you
+  hover the tile).
+
+**Drag-and-drop is not affected:** the preview is a separate overlay, nothing in the file list
+is changed, and the Tiles/Thumbnails views keep loading their own images — Foundry sizes a
+dropped tile from that image, so swapping in a 512 px thumbnail would shrink it.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **File Browser: Preview on Hover** | off | Show a preview, pixel size, file size and grid squares when resting the mouse on an image in the List or Thumbnails view. Per user. |
+| **File Browser: Preview Size** | Medium (384 px) | Size of the hover preview: Small (256 px), Medium (384 px) or Large (512 px). Per user. |
+| **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
+| **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
+| **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 512 px. World setting (GM). |
+### 9. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
+
+Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –
+Online* in a gallery with preview — a replacement for that module's macro *"DND/PF – Get Too
+Many Tokens For Selected Tokens"*. **The module *Too Many Tokens – Online* must be
+installed**; it may stay deactivated — the picker only reads its image lists, and the images
+are loaded from GitHub exactly as before.
+
+**How it works:**
+
+- **Open it** for the selected tokens with the Token HUD button (option below) or a
+  keybinding; for an actor's prototype token via **right-click on the actor in the Actors
+  sidebar → Token Art (Too Many Tokens)**; or from a macro:
+  `game.modules.get("darkviruzz-tweaks").api.openTokenArtPicker();`
+- **Creature:** guessed from the current Too Many Tokens image, the token/actor name and the
+  compendium the actor came from (D&D 2024 names such as *Tough* → *Thug*, *Warrior Veteran*
+  → *Veteran* are mapped). Suggestions appear as buttons; the search field offers every
+  creature (Enter takes the best match). Switch between the D&D and Pathfinder collections.
+- **Gallery:** filter chips built from the file names (*Human*, *Female*, *Melee*, *Forest* …,
+  combined with AND, counts update live) and a text filter. Hover shows a large preview.
+  Click picks one image, **Ctrl-click** adds/removes, **Shift-click** adds a range;
+  *Select all matching* and *Show only selected* help with larger selections.
+- **Apply** to the selected tokens (several images are spread randomly — no repeats until
+  each was used once), the prototype token and/or the actor portrait.
+- **Wildcard:** with the prototype option and at least two images, the selection is stored
+  on the actor and every newly placed token of it gets a random image from it (never the same
+  one twice in a row). Tokens placed with a different image (e.g. copy & paste) keep it.
+  Reopening the picker for that actor shows the stored images; applying without *Wildcard*
+  removes them.
+- **Old Too Many Tokens wildcards** (prototype path `tmtopptmtopptmtopp_…`) are recognised:
+  their images are preselected, and applying with *Wildcard* converts them so they no longer
+  need the Too Many Tokens module to be active.
+- Only tokens and actors you own are changed.
+
+| Setting / control | Default | Effect |
+|---|---|---|
+| **Enable Token Art Picker** | off | World switch (GM): the picker (sidebar entry, keybinding, macro API, HUD button) and the wildcard on token placement. |
+| **Token Art Picker: Token HUD Button** | off | Per user: adds an image button to the Token HUD (right column) for the selected tokens. |
+| **Open Token Art Picker** (keybinding) | unbound | Opens the picker for the selected tokens. Assign it under **Configure Controls → Darkviruzz Tweaks & QoL**. |
+
+> Differences from the Too Many Tokens macro: it showed no images at all; its checkbox
+> columns assumed the attribute words stand at fixed positions in the file names (they
+> don't, so variants were missed); and its wildcard is resolved by a `createToken` hook that
+> runs on every connected client, changes the token after it was created and — in v2.0.1 —
+> throws a console error for every other token placed. Here the image is chosen before the
+> token is created, on the placing client only. Tokens already on your scenes are plain image
+> links and keep working with Too Many Tokens deactivated; actors with an old Too Many Tokens
+> wildcard need converting once (see above).
+
 ---
+
+### 10. Savage Attacker  ·  *dnd5e · world (GM)*
+
+Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
+roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
+dnd5e 6's new rule effects can't express it (they cover d20 rolls and attack/check/save bonuses,
+not damage).
+
+**How it works** (for every creature that has the feat — player characters, sidekicks, NPCs):
+
+- *Automatic* — the **first weapon damage roll of a turn** rolls the weapon dice twice and keeps
+  the higher total. Dice So Nice shows both sets; the card shows "Savage Attacker: 4 / 7 → 7" — hover a
+  total to see its dice (e.g. "8 + 6" on a critical hit or a two-dice weapon).
+  "Once per turn" counts every creature's turn of the running combat: an **opportunity attack**
+  on someone else's turn qualifies again, the second attack of your own turn (Extra Attack) does
+  not. If the attack was a **known miss** (exactly one target with a known AC), the chance is not
+  used up and the next hit gets it; with several or no targets the hit is unknown and the roll
+  counts. Outside combat every weapon damage roll qualifies. On a critical hit the doubled
+  weapon dice are rolled twice, as the rules say.
+- *Button* — every other weapon damage card of a creature with the feat gets a **Savage Attacker**
+  button (for the GM and the creature's owners). It rolls the weapon dice of that card again and
+  keeps the higher result; the card's damage — and dnd5e's damage tray — then uses the new total.
+  The button stays usable after the turn's use and only notes "already used this turn": which hit
+  was really the first is the GM's call. Changing a card needs the GM or the card's author.
+- Only real weapons count — not an Unarmed Strike (not a weapon in the 2024 rules), not spells.
+  Extra damage dice (Hex, Sneak Attack, a second damage part) are not re-rolled, only the
+  weapon's own dice.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Savage Attacker** | Off | *Automatic (first hit per turn) + button*, *Button only* or *Off*. World setting (GM). |
+
+---
+
+### 11. Weapon Mastery  ·  *dnd5e · world (GM)*
+
+Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
+a weapon's mastery when you attack and remembers it, but automates none of them. With this
+feature every **attack card** that carries a mastery gets one line:
+
+> **Weapon Mastery:** *Sap* &nbsp; `[Sap]`
+
+The mastery's name is dnd5e's rule link (hover: the rule, click: the rule page). The button
+**carries the mastery out**. Masteries are optional, so nothing ever happens without a click —
+the button is a reminder that you may use it. Cleave and Nick have nothing to automate and show
+only the line with the link. The line appears only on attack cards (never on the usage or damage
+card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon's mastery
+(characters; NPCs have no weapon masteries in dnd5e).
+
+**How it works**
+
+- **Players see only the line.** Clicking the button:
+  - runs the mastery right away if the player may change everything it touches — in practice
+    **Vex**, which goes on their own character;
+  - otherwise **asks the GM**: the GM's client applies it to every target that was **hit** (Graze:
+    missed) according to the card, and tells the GM about targets whose hit is unknown, so the GM
+    decides those on the card. A GM must be connected.
+- **The GM additionally gets a tray** below the line, built like dnd5e's damage and effect trays:
+  the targets of the attack with **hit ✓ / miss ✗ / unknown ?** and an **Apply** button per target.
+  Click a ✓/✗ to correct it (e.g. after a *Shield* spell). Like dnd5e's *Targeted / Selected*
+  switch, a button switches the list to the **selected tokens** (automatically when the attack
+  recorded no target). The GM's mastery button applies it to every target in the list it applies
+  to. After applying, the tray **folds up** like dnd5e's trays (unless dnd5e's *Collapse Chat Card
+  Trays* is set to *Manual*; with *Always* it starts folded).
+- **Once per target.** A mastery is applied to each target of an attack only once: clicking again —
+  also a player clicking several times, even quickly — does nothing (the button shows a ✓, a
+  player gets a short note). The GM is told when a player's click was applied. In the GM's tray,
+  every target it was applied to shows **Undo** instead of *Apply*: it takes the mastery back
+  (removes the Sap/Slow/Vex effect or the Prone the GM's roll set, gives back the Graze damage incl.
+  temporary HP, moves a pushed token back, deletes a save request) — after that it can be applied
+  again, e.g. after correcting hit or miss. A Prone that a player's own save set after a request
+  is removed on the token as usual.
+- **Hit or miss** comes from dnd5e's own data: the attack total against each target's AC as it
+  was when you attacked (a natural 20 always hits, a natural 1 always misses). No AC (or a
+  selected token) means unknown.
+- What each mastery does:
+
+  | Mastery | When | Effect |
+  |---|---|---|
+  | **Graze** | miss | Damage equal to the attack's ability modifier, of the weapon's damage type, applied to the target (resistances count). Nothing if the modifier is 0 or less. |
+  | **Topple** | hit | Constitution save, DC 8 + ability modifier + proficiency bonus; **Prone** on a failure. The GM rolls for creatures without a player owner. For a player's creature a chat card asks its player to roll (save button for the owners); Prone follows automatically on a failure. |
+  | **Push** | hit | The target token is pushed up to **10 ft straight away** from the attacker (3 m on metric scenes), as far as the grid allows (equidistant diagonals: 2 diagonal squares), stopping before walls. Only Large or smaller creatures. The push doesn't count against the target's movement. |
+  | **Sap** | hit | Effect on the target: **Disadvantage on its next attack roll**, until the start of the attacker's next turn. Removed once the target has made that attack. |
+  | **Slow** | hit (with damage) | Effect on the target: **Speed −10 ft** (all speeds) until the start of the attacker's next turn. Doesn't stack: a new Slow replaces the old one. |
+  | **Vex** | hit (with damage) | Effect on the attacker: **Advantage on the next attack roll against that creature**, until the end of the attacker's next turn. Applies when that creature is the only target of the attack, then it's removed. |
+  | **Cleave**, **Nick** | — | Nothing to automate — only the line with the rule link. |
+
+- **Effects end on their own** at the start (Sap, Slow) or end (Vex) of the attacker's next turn,
+  also when the attack was an opportunity attack on someone else's turn. On dnd5e 6 they use
+  dnd5e's "start/end of the source's next turn" durations and Sap uses dnd5e's own
+  *disadvantage* rule; on dnd5e 5.3 Foundry's turn durations and this module apply them. Outside
+  combat they end as soon as game time advances.
+- **Macros (optional):** for each mastery the GM can name a macro (name or UUID). The line then
+  shows a **Macro** button (for the GM and the attacker's owner). A script macro receives
+  `actor`, `token` (attacker), `item`, `activity`, `mastery`, `targets` (list of `{actor, token,
+  name, ac, hit}`), `message` (the attack message) and `hit` (`true` if every target was hit,
+  `false` if every one was missed, otherwise `null`). Use it for anything the built-in buttons
+  don't do — e.g. rolling Cleave's extra attack.
+- Works with **RSReforged** one-click attacks: the line appears in the attack section of
+  RSReforged's combined card (RSReforged 6 doesn't show dnd5e's own mastery line there).
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Weapon Mastery Panel on Attack Cards** | Off | Shows the line and the GM's tray and enables the buttons, effects and macros. World setting (GM). |
+| **Weapon Mastery Macro: Cleave** | *(empty)* | Optional macro (name or UUID) for Cleave. Empty = no macro button. |
+| **Weapon Mastery Macro: Graze** | *(empty)* | … for Graze. |
+| **Weapon Mastery Macro: Nick** | *(empty)* | … for Nick. |
+| **Weapon Mastery Macro: Push** | *(empty)* | … for Push. |
+| **Weapon Mastery Macro: Sap** | *(empty)* | … for Sap. |
+| **Weapon Mastery Macro: Slow** | *(empty)* | … for Slow. |
+| **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
+| **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
+
+### 12. Chat Export by Time Range  ·  *any system · world (GM)*
+
+Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
+chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
+
+**How it works:** a second button with a clock icon sits next to Foundry's chat export. It opens a
+small dialog: **last hours** (e.g. 5), **last days** (24 h each, counted back from now) or **from day
+… to day …** (whole days, local time). The dialog shows how many messages the range holds; *Export*
+saves them as a text file (`fvtt-log-<from>--<to>.txt`) in exactly the format of Foundry's own export
+— time and speaker, the text of the message, one line per roll with formula and total — oldest
+first, with one header line naming the world and the range. Nothing in the world is changed.
+
+Players can get the button too (second setting). They export only what they can see: whispers to
+others and blind rolls are left out. The GM always exports everything, like Foundry's export.
+
+For macros: `game.modules.get("darkviruzz-tweaks").api.exportChat({ hours: 5 })`, `({ days: 2 })` or
+`({ from: "2026-10-28", to: "2026-10-29" })` (`from`/`to` may also be dates or timestamps).
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
+| **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
 
 ## Already built in (no tweak needed)
 
@@ -210,6 +485,19 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 - **Cycle / find tokens** — **Tab** (see *Find My Token* above).
 - **Send to back / bring to front** — the **[** and **]** keys for the selected tokens.
 - **Clear movement history** — Combat Tracker button and combatant context menu.
+- **See where others are moving** — while a token is dragged, Foundry shows everyone its
+  planned path (ruler); hold **Alt** when you start dragging to keep it private. *Live Token
+  Drag* adds the token itself.
+
+
+## Credits
+
+- **Live Token Drag** is based on the idea of
+  [Live Drag](https://github.com/Anyndol/FoundryVTT-LiveDrag) by **Anyndel** (MIT License,
+  © 2024 Anyndol), which is no longer maintained (last release 1.0.4, made for Foundry 12).
+  This module re-implements it for Foundry v14 — without copying its code — and fixes its
+  known problems, most visibly that a token turned invisible for the person dragging it when
+  it was dropped on its own square or the drag was cancelled.
 
 
 ## Development

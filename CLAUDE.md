@@ -54,17 +54,21 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
    keys (same keys, same `{placeholders}` in both). Never hard-code display strings in JS;
    build DOM with `textContent`, not `innerHTML` with translated strings.
 8. **Verify APIs against real source before using them.** Don't guess Foundry/dnd5e APIs.
-   dnd5e: clone `foundryvtt/dnd5e` at the `release-x.y.z` tag. Foundry has no public source:
-   use the v14 API docs (https://foundryvtt.com/api/), release notes, the League
-   `foundry-vtt-types` repo, a v13 client-source mirror for implementation details (mark
-   those "v14 impl unverified"), and modules verified on v14. Record confirmed facts in
+   dnd5e: clone `foundryvtt/dnd5e` at the `release-x.y.z` tag. Foundry has no public source
+   repo, but **an installed Foundry ships its real source**: readable client code in
+   `<install>/client/**/*.mjs` and the (minified) server in `<install>/dist/`. On the dev
+   machine a v14 install (build 14.364) lives in `Documents/foundryuserdata/foundry` — grep it
+   first; it beats every other source. Otherwise use the v14 API docs
+   (https://foundryvtt.com/api/), release notes, the League `foundry-vtt-types` repo, a v13
+   client-source mirror for implementation details (mark those "v14 impl unverified"), and
+   modules verified on v14. Record confirmed facts in
    *Verified facts & gotchas* below. Prefer reusing the system's own code paths over
    re-implementing them (see *Spell Effect Auto-Apply*).
 
 ## Architecture
 
 ```
-module.json                     manifest (id, compatibility v14+, esmodule = scripts/main.js)
+module.json                     manifest (id, compatibility v14+, esmodule = scripts/main.js, socket: true)
 CHANGELOG.md                    one "## [x.y.z]" section per release = the release notes
 scripts/
   constants.js                  exports MODULE_ID (must match module.json id)
@@ -77,8 +81,17 @@ scripts/
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
+    live-token-drag.js          everyone sees token drags live (world/GM; module socket)
+    file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
+    token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
+    savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
+    weapon-mastery.js           dnd5e: weapon mastery line + GM tray on attack cards — effects, macros (world/GM; module socket)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
+    socket.js                   the module socket channel, messages routed per feature id
+    too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
+    attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
+    rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -160,6 +173,12 @@ effect (e.g. ones read by `getSceneControlButtons`) use `requiresReload: true`.
 World-level features that write documents (tokens, effects of other actors…) must run on
 exactly one client: guard with `game.users.activeGM?.isSelf`.
 
+Features that need to talk to other clients without writing documents use the shared module
+socket in `scripts/lib/socket.js`: `onSocketMessage(featureId, handler)` in `init()` and
+`emitSocketMessage(featureId, payload, {recipients, volatile})`. No socketlib, no globals.
+`module.json` has `"socket": true` (the validator checks it whenever a script listens on
+`game.socket`).
+
 ## Tooling
 
 `npm run validate` (= `node tools/validate.mjs`, Node 20+, no dependencies) fails on:
@@ -171,13 +190,16 @@ from en.json; en/de key or `{placeholder}` mismatch; feature-contract violations
 duplicate keys/actions, missing i18n keys, Boolean default ≠ false, bound keybindings, init()
 throwing against stubbed globals, a feature touching Foundry globals at import time); README
 not mentioning a setting/keybinding name; a feature id missing from this file; no CHANGELOG
-section for the current version. It warns about en.json keys that look unused.
+section for the current version; a script listening on `game.socket` without
+`"socket": true` in module.json. It warns about en.json keys that look unused.
 
 `npm test` (= `node tools/test-features.mjs`) loads the real feature files, captures the
 hooks/keybindings they register and drives them with stubbed Foundry/dnd5e objects (both
 dnd5e 5.x and 6.x message shapes). It verifies OUR logic and guards against the APIs as
 documented below — it cannot prove Foundry behaves like the stubs, so keep the stubs in sync
-with the verified facts and still test in a real world when possible. Both commands run in
+with the verified facts and still test in a real world when possible. A feature whose logic
+is mostly DOM/network glue may export its pure parts as a named `internals` object for the
+tests (see `file-picker-preview.js`); the loader only uses the default export. Both commands run in
 CI on every PR and before every release.
 
 ## Release process
@@ -186,7 +208,9 @@ CI on every PR and before every release.
 `https://github.com/darkviruzz/darkviruzz-tweaks/releases/latest/download/module.json`.
 
 1. Add a `## [x.y.z] — YYYY-MM-DD` section to CHANGELOG.md (written for players/GMs — it
-   becomes the release notes verbatim).
+   becomes the release notes verbatim). Feature branches that are not tied to a release yet
+   (several run in parallel) put their entries under `## [Unreleased]` and leave `version`
+   alone; move the entries into the version section when that release is cut.
 2. Bump `version` in `module.json` and set `download` to the new `v<version>` zip URL.
 3. `npm run validate`, commit, PR, squash-merge to `main`.
 4. Release: push the matching tag (`git tag vX.Y.Z <merge-commit> && git push origin vX.Y.Z`)
@@ -278,6 +302,34 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   moved to `system.changes` in v14.
 - **Users:** `game.users.activeGM` and `User#isActiveGM` both exist; use
   `game.users.activeGM?.isSelf` to pick the one client that writes.
+- **Context menus (v14):** `ContextMenuEntry` is `{label, icon, visible, onClick, group,
+  classes}` — `label` is localised by the menu, `visible: boolean | (target: HTMLElement) =>
+  boolean`, `onClick(event: PointerEvent, target: HTMLElement)`. (The v13 keys
+  `name`/`condition`/`callback` are what older modules use.) Document directories fire
+  `get<DocumentName>ContextOptions(application, menuItems)`, e.g. `getActorContextOptions`;
+  mutate `menuItems`. Sidebar entries carry `data-entry-id` (v13; v14 impl unverified — we
+  also fall back to `data-document-id`).
+- **`preCreate<Document>` hooks** `(document, data, options, userId)` fire **only on the
+  client that initiates the creation**, may modify the pending document with
+  `document.updateSource(...)` and cancel with `return false` — the right place to change a
+  token's image before it exists (no second update, no other client involved).
+  `TokenDocument#baseActor` = the world-level actor a token represents.
+- **Token HUD (v13/v14):** `renderTokenHUD(hud, html)` — `html` is an HTMLElement with
+  `.col.left` / `.col.right` columns of `<button type="button" class="control-icon">`;
+  `hud.object` is the Token placeable. Add buttons with your own click listener and **no**
+  `data-action` (the HUD is ApplicationV2 and would try to dispatch it). Source: module
+  token-border 1.0 (verified v14) and Token Variant Art 6.1 (v13); TokenHUD is replaceable via
+  `CONFIG.Token.hudClass`.
+- **ApplicationV2 without Handlebars:** implement `_renderHTML(context, options)` (return an
+  element) and `_replaceHTML(result, content, options)` (`content.replaceChildren(result)`);
+  `_prepareContext` may be async (load data there). Actions: `DEFAULT_OPTIONS.actions` map
+  `data-action` → static handler `(event, target)` with `this` = the app (left click only
+  unless `{buttons, handler}`). We override `get title()` to localise the window title
+  ourselves. A feature file must not `extend foundry.applications.api.ApplicationV2` at
+  import time (Foundry global) — build the class lazily inside a function (see
+  `token-art-picker.js` `pickerClass()`).
+- **CSS gotcha:** an element with the `hidden` attribute is still shown if one of our rules
+  sets `display` on it — scope a `[hidden] { display: none !important; }` rule.
 
 ### dnd5e default actor sheet (verified against dnd5e 6.0.6; same structure in 5.3.3)
 
@@ -446,6 +498,348 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
 
+### Damage rolls (feature *Savage Attacker*, verified 2026-10-25 against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6)
+
+- **Roll workflow** (`BasicRoll.build` → `buildConfigure` / `buildEvaluate` / `buildPost`, same in
+  both versions): `dnd5e.preRoll<Name>` / `…V2` (config, dialog, message) → rolls built (dialog or
+  `fromConfig`) → `dnd5e.post<Name>RollConfiguration(rolls, config, dialog, message)` with the
+  **constructed but unevaluated** rolls → evaluate → chat message. For damage `hookNames` is
+  `["damage"]`, i.e. `dnd5e.postDamageRollConfiguration`. `Activity#rollDamage` sets
+  `rollConfig.subject = this` (the activity) and fires `dnd5e.rollDamage(rolls, {subject})`
+  only AFTER the message exists — too late to change the roll.
+- **Criticals are applied before that hook:** `DamageRoll`'s constructor calls
+  `configureDamage()` (6.0: guarded by `options.configured`, applied exactly once; 5.3: also
+  re-run by the damage dialog when "Critical" is chosen). Plain dice are doubled with
+  `term.alter()`; dice WITH modifiers (e.g. Great Weapon Fighting `min3`) are duplicated as extra
+  terms — Savage Attacker then only pools the first copy (known limitation).
+- **Weapon base damage:** `AttackActivity#_processDamagePart` marks the weapon's own part
+  `base: true` on the roll CONFIG (`config.rolls[i].base`, not on the roll's options) and appends
+  `@mod` / `@magicalBonus` as further parts of the same roll. Roll order = `config.rolls` order.
+- **Attack hit:** `dnd5e.rollAttack(rolls, {subject, ammoUpdate})` fires after evaluation;
+  `roll.options.target` is the AC only when exactly ONE target was selected
+  (`targets.length === 1 ? targets[0].ac : undefined`). `D20Roll#isSuccess` ignores nat 20/1 —
+  use `isCritical` / `isFumble` first.
+- **`chunkTerms`** (damage application by type) rebuilds every non-operator term with
+  `RollTerm.fromData(term.toJSON())`, so a `PoolTerm` in a damage roll is fine.
+- **RSReforged 6 hides dnd5e's attack AND damage messages** and shows them as
+  `.rsr-section-attack[data-message-id]` / `.rsr-section-damage[data-message-id]` sections of its
+  usage card (id = the child message), appended after an await. Anything added to a child card
+  must also go into that section — use `lib/rsr-sections.js` (found 2026-10-25: Savage Attacker's
+  button was invisible on RSReforged cards until then).
+- Marks that must survive other modules' cards go into `roll.options` (serialised with the
+  roll); `message.update({rolls: rolls.map(r => JSON.stringify(r))})` replaces a card's rolls
+  (author or GM only — `message.canUserModify(user, "update")`).
+
+### Weapon masteries, rule effects & expiry (feature *Weapon Mastery*, verified 2026-10-25)
+
+Against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6, the local v14 install (14.364:
+`common/documents/active-effect.mjs`, `client/documents/{active-effect,combat,token,macro}.mjs`,
+`client/helpers/active-effect-registry.mjs`, `client/canvas/placeables/token.mjs`) and
+RSReforged 6.0.2 (`src/utils/native-*.js`, `hooks.js`).
+
+- **Where the mastery lives:** `AttackActivity#rollAttack` takes `rollConfig.mastery` from the
+  item flag `last.<activityId>.mastery`, else `item.system.masteryOptions[0]`; it ends up in
+  `rolls[0].options.mastery` (both versions), in the message — 6.0 `system.mastery` (next to
+  `system.ability/ammunition/mode`), 5.3 `flags.dnd5e.roll.mastery` (+ `ammunition`,
+  `attackMode`) — and back in the item flag. 6.0 lets you choose the attack ability
+  (`rolls[0].options.ability`, `system.ability`); 5.3 has no choice → `AttackActivity#ability`
+  (attack.ability, else the best of `availableAbilities`).
+- `WeaponData#masteryOptions` is null unless `actor.system.traits.weaponProf.mastery.value` has
+  the weapon's `type.baseItem` and the item has `system.mastery`; extra options come from
+  `weaponProf.mastery.bonus`. `weaponProf.mastery` exists only on characters (verified again 2026-10-25: `NPCData` traits have no `weaponProf`) → **NPC attacks
+  never carry a mastery**. `CONFIG.DND5E.weaponMasteries` = cleave, graze, nick, push, sap, slow,
+  topple, vex with `label` (pre-localised) and `reference` (journal page UUID in `content24`),
+  identical in both versions.
+- **Per-target hit:** dnd5e itself evaluates every recorded target: 6.0
+  `AttackMessageData#evaluatedTargets` / 5.3 `_enrichAttackTargets`: miss = `ac === null ||
+  (!isCritical && (total < ac || isFumble))`. Descriptor `ac` is null for total cover or no AC
+  (we treat that as unknown). 5.3 descriptors `{name, img, uuid, ac}` (uuid = token's actor),
+  6.0 `{actor, ac, img, name, token}`.
+- `Actor5e#applyDamage(damages, options)` is identical in both: `damages` = a number (then
+  `options.ignore = true` — resistances ignored!) or `[{value, type, properties: Set}]`. Weapon
+  damage `properties` = item properties with `CONFIG.DND5E.itemProperties[p].isPhysical`.
+- `Actor5e#rollSavingThrow(config, dialog, message)` → `D20Roll[] | null` (both); `config.target`
+  becomes `roll.options.target` (`BasicRoll.fromConfig`: `options.target ??= process.target`),
+  `isSuccess` = `total >= target`.
+- **Advantage from a hook:** `BasicRoll.buildConfigure` fires `dnd5e.preRoll<Hook>` / `…V2`
+  (config, dialog, message) BEFORE `applyKeybindings`, which uses `roll.options.advantage ||
+  config.advantage || key` (same for disadvantage; both → normal). So setting
+  `config.advantage` / `config.disadvantage` in `dnd5e.preRollAttackV2` works in 5.3 and 6.0;
+  `config.subject` is the activity, and keys put into `config.rolls[0].options` reach the final
+  roll's options (seen again in `dnd5e.rollAttack`).
+- **dnd5e 6 rule-type changes:** `CONFIG.ActiveEffect.changeTypes` gains `dnd5e.advantage`,
+  `dnd5e.bonus`, `dnd5e.maximum`, `dnd5e.minimum` (handler `_applyChangeRule` →
+  `actor.appliedRules`). The change `key` is the roll category — `attack`, `check`, `save` or
+  `d20` (`attack:advantage` also collects `d20:advantage`); advantage values `"1"` / `"-1"`
+  (counted) or `"=1"` / `"=-1"` (forced). Conditions (`FiltersField` on the change or
+  `system.conditions`) only see roll data; attack roll data has `roll.ability`,
+  `roll.attack.{classification,mode,type}`, `roll.type` — **no target**, so "against that
+  creature" (Vex) can't be expressed. Rules are never consumed by a roll (`filterWith`'s
+  `consumed` set only avoids double counting across damage parts). dnd5e 5.3 has none of this.
+- **dnd5e 6 pseudo expiries:** `duration.expiry` ∈ `sourceStart`/`sourceEnd`/`targetStart`/
+  `targetEnd` (`ActiveEffect5e.PSEUDO_EXPIRIES`, labels `CONFIG.DND5E.pseudoExpiryEvents`).
+  `isExpiryEvent` checks only that actor's turn start/end in the combat the effect started in
+  and skips the turn it was created in; source = `getSourceActor()` (`system.origin.actor ??
+  item ?? activity ?? origin`); out of combat any world-time advance expires them; `_preCreate`
+  forces `duration.value = null`. `system.origin` = `{activity, actor, behavior, effect, item,
+  message, profile}`.
+- **Core v14 effects:** `start {combat, combatant, initiative, round, turn, time}` (client
+  `_preCreate` fills it from `getEffectStart()` for actor effects but keeps keys you pass),
+  `duration {value, units, expiry, expired}`, changes in `system.changes` `{key, type, value,
+  phase, priority}` with `type` "add"/"multiply"/"override"/"upgrade"/"downgrade"/"custom" or a
+  system type (old `changes` + numeric `mode` are migrated). Expiry events
+  `combatStart|roundStart|turnStart|combatEnd|roundEnd|turnEnd` refer to the combatant in
+  `start.combatant` (in the start combat) — pass it to make "turnStart" mean the attacker's turn.
+  `value: null` → remaining Infinity → expires at the first matching event; `units: "rounds"` →
+  remaining `value - (round - start.round)`, not recomputed on turnEnd/roundEnd. Turn events run
+  only on the active GM (`Combat#onStartTurn/#onEndTurn` → `ActiveEffect.registry.refresh`;
+  turnEnd's context is the turn that ended). `CONFIG.ActiveEffect.expiryAction` defaults to
+  `"update"`: expired effects stay on the actor with `duration.expired: true` (suppressed); dnd5e
+  6 doesn't change that.
+- **Speed:** `system.attributes.movement.bonus` (FormulaField, both versions) is added to every
+  speed > 0, never below 0. dnd5e 6 FormulaField "add": `"" + "-10"` → `"-10"`, else
+  `"<v> - 10"`. 6.0 moved the speeds to `movement.speeds.<type>` (shims for the old keys).
+- **Moving a token (v14):** `TokenDocument#move(waypoint | waypoints, options)`; waypoint
+  `action: "displace"` = teleport, ignores walls, recorded with cost 0. `Token#checkCollision(
+  destination, {origin, type: "move", mode: "any"})` takes movement origins
+  (`TokenDocument#getMovementOrigin({x, y})` = centre + half depth);
+  `TokenDocument#getSnappedPosition({x, y})`; `canvas.grid.measurePath([a, b]).distance` uses the
+  scene's diagonal rule; `canvas.dimensions.distancePixels`.
+- `Macro#execute(scope)`: needs LIMITED (`canExecute`); a script macro gets the scope keys as
+  variables.
+- **RSReforged 6.0.2 on dnd5e 6** ("native workflow"): runs from `dnd5e.postUseActivity`, calls
+  `activity.rollAttack(config, {configure: false}, seed)` and `rollDamage` (all dnd5e hooks
+  fire; `dnd5e.rollAttack` before the attack message exists), creates dnd5e's own attack and
+  damage messages (`system.origin` = usage card, `system.targets` = copy of the card's targets,
+  `flags.rsreforged.parentId`) and shows them as sections
+  `div.rsr-section-attack[data-message-id=<attack message id>]` in the usage card — appended
+  after an `await` inside its `dnd5e.renderChatMessage` handler, so other hook listeners run
+  first (watch with a MutationObserver). The child cards are hidden and emptied; updating a child
+  re-renders the parent. It copies none of dnd5e's attack-card extras (no mastery line —
+  RSReforged issue #47). The 5.3 (legacy) path merges damage into the attack message instead
+  (the usage card then gets the rolls and `flags.dnd5e.roll = {type: "attack", mastery}`).
+  RSReforged's children carry `flags.rsreforged.parentId` (+ `workflowVersion: 2`); a child is
+  only hidden by RSReforged's reconcile pass (class `rsr-native-combined-original` on
+  `.message[data-message-id]`, content emptied) if a registered section represents it.
+- **GOTCHA — decorate only the attack message, and never RSReforged's child card** (found
+  2026-10-25 from the user's screenshots: the panel showed twice — in the attack section and again
+  below the card / as a separate small card). Gate on 6.x `message.type === "attack"` or 5.x
+  `flags.dnd5e.roll.type === "attack"` instead of "has a mastery", and skip messages with
+  `flags.rsreforged.parentId` while RSReforged is active (decorate their section instead). Which
+  path showed the extra copy was not reproduced; chat notifications (`#chat-notifications`, which
+  dnd5e's `ChatTrayElement#visible` also checks) render messages a second time and are a
+  suspect (unverified).
+- **dnd5e trays (5.3 and 6.0):** `.card-tray.<kind>-tray.collapsible(.collapsed) > label.roboto-upper
+  (i.icon + span + i.fa-caret-down) + .collapsible-content > .wrapper`. `Item5e.chatListeners`
+  toggles `.collapsed` on any click inside a `.collapsible` outside `.collapsible-content`;
+  dnd5e's CSS (`.dnd5e2 .collapsible .collapsible-content` grid rows 1fr ↔ 0fr, scoped `@scope`)
+  animates it — so the same markup folds natively without a custom element. The custom trays
+  (`damage-application`, `effect-application`, base `ChatTrayElement`) reflect it as an `open`
+  attribute; after Apply `DamageApplicationElement` sets `open = false` unless the dnd5e setting
+  `autoCollapseChatTrays` (manual / never / older (default, > 5 min) / always) is `manual`;
+  `ChatMessage5e#_collapseTrays` applies the setting at render time (before
+  `dnd5e.renderChatMessage`, so trays added in that hook must apply it themselves). 6.0's
+  Targeted / Selected switch is `<recorded-targets>` (`button.target-source-toggle[data-mode]`,
+  `targeted` = `message.system.targets` resolved via `TargetsField.resolve`, `selected` =
+  `canvas.tokens.controlled`, forced to `selected` without recorded targets, rebuilt on
+  `controlToken`) — it renders `target-pill` groups, not suited for per-target buttons.
+- dnd5e 6 setting `chatCardSummary`: a usage card that `rendersSummaries` shows its child rolls
+  as `.card-summary[data-message-id]` (`message.system.render({summary: true})`, no
+  `dnd5e.renderChatMessage`) and the child card itself renders with `hidden` — a panel on it is
+  invisible.
+
+### Token drag, animation & module socket (feature *Live Token Drag*, v1.8.0)
+
+Verified 2026-10-25 against the real v14 source (local install, build 14.364:
+`client/canvas/placeables/{placeable-object,token}.mjs`, `client/canvas/layers/…`,
+`dist/server/sockets.mjs`, `dist/packages/{package,world}.mjs`).
+
+- **Drag workflow:** `PlaceableObject#_initializeDragLeft` clones every draggable controlled
+  object (`clone()`, then `_previewType = "dragging"`; `_original` points back), adds the clone
+  to `layer.preview` and draws it async → `drawToken(preview)` then `refreshToken(preview,
+  flags)`. Token drags move the preview via `Token.#updateDragPreview` (sets
+  `preview.document.x/y/elevation/…` + `refreshPosition`) → `refreshToken(preview)`. EVERY
+  end goes through `layer.clearPreviewContainer()` (`_onDragEnd()` + `destroy()` →
+  `destroyToken(preview)`): on drop in the `finally` after the update promise (also for an
+  empty update = dropped on the same spot, and for errors/rejections), on cancel via
+  `_finalizeDragLeft`. So `refreshToken`/`destroyToken` filtered by
+  `token.previewType === "dragging"` cover the whole drag — no wrapping needed.
+- `PlaceableObject#previewType` (public getter): `"dragging"|"controls"|"wheel"|"creation"|
+  "config"|"api"|null`; `isPreview`, `hasPreview` (`!!_preview`), `_original`. While dragging,
+  core shows the original at alpha 0.4 and the preview at 0.8 (`_getTargetAlpha`).
+- Drag input: Shift = no grid snapping (`_onDragLeftMove` → `_updateDragDestination(point,
+  {snap: !event.shiftKey})`), Ctrl+click adds a waypoint, right-click removes the last
+  waypoint or cancels (`_onDragClickRight` → `_triggerDragLeftCancel`), Ctrl+wheel changes
+  elevation, pausing cancels (`interactionData.cancelOnPause`). **Esc does NOT cancel a
+  token drag** (`TokenLayer#_onDismissKey` only cancels placement / movement planning; the
+  base layer's handler does nothing while a preview exists). Drop → `_prepareDragLeftDropUpdates` → `updateEmbeddedDocuments("Token",
+  [{_id}], {method: "dragging", movement: {[id]: {waypoints, …}}})`; contexts whose
+  `foundPath.length <= 1` produce no update.
+- **MouseInteractionManager callbacks are captured when a placeable's MIM is created**
+  (`_createInteractionManager` stores `this._onDragLeftMove` etc.) — patching a prototype
+  after tokens are drawn would not reach existing tokens. Another reason to prefer hooks.
+- **Core already shares the planned path, not the token:** `Token.#updatePlannedMovement` →
+  throttled (100 ms) `game.user.broadcastActivity({plannedMovements: {[id]: …}})`, only with
+  the `SHOW_RULER` permission. `hidden` = Alt held at drag start (`token._plannedMovement
+  [userId].hidden`, protected field) — other clients then don't show that ruler.
+- **Token animation:** `Token#animate(to, {name, duration, easing, chain, action, …})`
+  animates the private `#animationData` and merges it into `token.document` every frame
+  (derived data — `_source` is untouched) → `_onAnimationUpdate` refreshes
+  position/visibility/HUD/occlusion and, with `core.visionAnimation` (default on),
+  `initializeSources()`. An explicit `duration` wins over the movement action's defaults; no
+  `easing` = linear (string easings are `CanvasAnimation[name]`). CanvasAnimation names are
+  GLOBAL — an animation with the same name is terminated, so include the token id.
+  `Token#stopAnimation({reset = true})` terminates every animation of the token and
+  `document.reset()`s it (jumps to the source state); `Token#_destroy` calls it.
+  `movementAnimationPromise` is non-null while a movement animation runs.
+- **GOTCHA — `Token#animate` moves vision and light too.** The vision source is built from
+  the derived document position (`_getVisionSourceData` → `document.getVisionOrigin()`), and
+  for a player with OBSERVER on the token and no controlled sighted token, that token IS a
+  vision source (`_isVisionSource`) — so "showing" a position with `animate()` lets them see,
+  and explore fog, wherever it is shown. For a display-only move, move `token.position` (the
+  container: border, bars, nameplate, tooltip, effects, target pips, turn marker) and
+  `token.mesh.position` (= center, lives in the primary group) instead. The token ruler's path
+  is in `layer._rulerPaths` and its labels are HTML, so neither moves with the container.
+  Core resets both positions in `_refreshPosition` and `visible`/`mesh.visible` in
+  `_refreshVisibility` (`mesh.visible = visible && renderable`); re-apply after core.
+- **Ticker priorities** (`Canvas.#activateTicker`, set on `PIXI.UPDATE_PRIORITY`): token
+  animations OBJECTS+1 (24), render flags OBJECTS = HIGH−2 (23), INTERFACE 22, primary group
+  update PRIMARY = NORMAL+3 (3), perception PERCEPTION = NORMAL+2 (2); PIXI's own render
+  callback runs after these (PIXI v7 Application uses LOW = −25 — not re-checked in Foundry's
+  minified vendor bundle). A ticker at PRIMARY+1 runs after the render flags.
+  `VisibilityGroup#restrictVisibility` only sets `refreshVisibility` render flags (applied in
+  the next frame's OBJECTS pass).
+- **Visibility:** `Token#isVisible` (getter; resets/sets `detectionFilter`): preview → true;
+  controlled → true; hidden → GM only; no token vision → not culled; own active vision source
+  → true; GM without active vision sources → true; else `canvas.visibility.testVisibility(
+  document.getVisibilityTestPoints(), {tolerance: 0, object})`.
+  `TokenDocument#getVisibilityTestPoints(data)` takes a partial position (`{x, y}`; defaults
+  to the prepared document), constrained by walls from that position's center.
+- **Update animation:** `Token#_onUpdate` → `#onUpdateAnimation`: `options.animate === false`
+  → `stopAnimation({reset: false})`; otherwise the movement animates from the CURRENT rendered
+  state through `options._movement[id].passed.waypoints`. The client backend calls
+  `doc._onUpdate()` and then, synchronously, `Hooks.callAll("updateToken")` — stopping the
+  animation in the hook means no frame of it is ever drawn (CanvasAnimation's first frame runs
+  synchronously at t = 0, i.e. at the start position; terminating before the next microtask
+  keeps it off the ticker).
+- **Module socket:** manifest `"socket": true`, channel `module.<id>`. Server
+  `handleCustomSocket(event, data, {recipients} = {}, ack)`: a `recipients` array of user ids →
+  emitted to exactly those users' sockets, otherwise `socket.broadcast` (everyone but the
+  sender); listeners get `(data, senderUserId)`. The server registers these listeners per client
+  connection for `game.world.modules`, whose manifests are read at world launch — a changed
+  manifest needs a relaunch, not just F5. `game.socket` exists before `init` (Game
+  constructor). `game.socket.volatile.emit(…)` is what core uses for frequent activity data.
+  For a document update the server acks the requester BEFORE broadcasting to the others, so a
+  message the requester sends after its update resolved arrives after that update everywhere.
+- Hooks: `userConnected(user, connected)`; `canvasTearDown(canvas)` fires after the layers
+  were deactivated (the token layer's preview container is already cleared).
+  `game.keyboard.isModifierActive("SHIFT")`. Core world setting `core.tokenDragPreview`
+  ("Token Drag Vision", default false) previews vision/light for the person dragging only.
+- **Original *Live Drag* 1.0.4 (Anyndol/Anyndel, MIT, Foundry 11–12; libWrapper + socketlib):**
+  wraps `Token.prototype._onDragLeftStart`, sets the original's `document.alpha` etc. to 0 and
+  restores it ONLY in `updateToken` → invisible after drop-on-same-spot/cancel/rejection; sends
+  every `refreshToken` of the preview unthrottled via socketlib and moves receivers'
+  `token.x/y`/`mesh` directly; no end signal; `animate: false` for the drop; leftover
+  `console.log` and an undeclared global `pressedKey`.
+### File Browser / FilePicker (feature *File Browser Preview*, verified 2026-10-25)
+
+Sources: v14 API docs 14.368 (signatures), the *Asset Preview* module 0.1.2 by
+BufferUnderrunOK (verified on 14.364 — row DOM and drag details), and modules on this table's
+v14.364 world that write to persistent storage (Token Action HUD Core 2.1.1, Dig Down 5.0.0).
+FilePicker implementation details are otherwise **v14 impl unverified** (no public source).
+
+- **Class:** `foundry.applications.apps.FilePicker` (ApplicationV2), active class
+  `FilePicker.implementation` (= `CONFIG.ux.FilePicker`, which modules may subclass). Render
+  hook `renderFilePicker(app, element)` fires for subclasses too and on partial re-renders; the
+  root element survives those, so bind delegated listeners once per root (WeakSet).
+  `app.activeSource` ∈ `data`/`public`/`s3`; `app.displayMode` ∈ `DISPLAY_MODES` =
+  `list`, `thumbs`, `tiles`, `images`.
+- **Rows:** files are `li[data-file]` with `data-path` (the URL as browsed — URL-encoded, e.g.
+  `Big%20Map.png`) and `data-name` (decoded name). The Tiles list is `ul.tiles`; core shows
+  names in the Images view but not in Tiles. The *Asset Grid Size* field
+  `input[name="tileSize"]` exists only when the picker is opened with `tileSize: true` (Tile
+  Browser); a dropped tile covers `naturalWidth / tileSize` grid squares.
+- **DRAG GOTCHA:** core rebinds its DragDrop to `li[data-file]` on every body render, and its
+  drag start reads `li.querySelector("img").naturalWidth` to size the dropped tile. Never put
+  an `<img>` into a row, never replace rows, never swap core's `img.src` for a thumbnail (a
+  512 px thumbnail = a 512 px tile). Keep listeners passive (no preventDefault/stopPropagation).
+- **API:** `browse(source, target, {extensions, wildcard, bucket})` → `{target, dirs, files,
+  gridSize, private, privateDirs}` (no file sizes!); rejects for a missing folder.
+  `createDirectory(source, target, options)` rejects if it exists. `upload(source, path, file,
+  body = {}, {notify = true})` returns the response JSON (`{status, path, message}`) or
+  `false`/`undefined`/`{}` on failure — check `result?.path`; the target folder must exist.
+- **Permissions:** `CONST.USER_PERMISSIONS.FILES_BROWSE` (default role 2 Trusted) and
+  `FILES_UPLOAD` (default role 3 Assistant GM; GMs always). Check with
+  `game.user.can("FILES_UPLOAD")`. TAH Core only creates its storage folders as GM — not
+  verified whether a non-GM with `FILES_UPLOAD` may `createDirectory`; our code handles a
+  refusal by switching thumbnail creation off for the session.
+- **Upload locations (v13+, article "Asset Management"):** uploads are refused at the top
+  level of Data and of `modules/`/`systems/`/`worlds/`, inside (most) installed packages and
+  other worlds; allowed in a top-level `assets` folder, new top-level folders, and the running
+  world. Packages can opt in with `flags.canUpload: true`. A package with
+  `persistentStorage: true` (BasePackage schema field) gets `modules/<id>/storage/`, kept
+  across updates; uploading there works on v14 (TAH Core and Dig Down do it; create the
+  folders with browse → catch → createDirectory, like TAH). `game.modules.get(id).persistentStorage`
+  tells whether the running manifest declares it. The Forge doesn't support persistent storage.
+- **Image types:** `CONST.IMAGE_FILE_EXTENSIONS` = apng avif bmp gif jpeg jpg png svg tiff webp
+  (object ext → MIME; use `Object.hasOwn`).
+### Too Many Tokens – Online (feature *Token Art Picker*, verified 2026-10-25 against v2.0.1)
+
+- Module id `too-many-tokens-online` (IsThisMyRealName/Jojop, MIT, compatibility verified 12,
+  last release 2.0.1 in 2024-09; one later commit 2025-12 without release). It ships **only
+  text lists**; images live in the GitHub repos `too-many-tokens-dnd` (folder per creature)
+  and `too-many-tokens-pf` (`Tokens/<creature>/`) and are loaded from
+  `raw.githubusercontent.com/IsThisMyRealName/too-many-tokens-<sys>/main/…` (CORS `*`,
+  `max-age=300`, ~40 KB WebP, 256 px).
+- Lists: `<sys>/names.txt` (dnd 374, pf 234 creatures, no trailing newline) and
+  `<sys>/links/<creature>.txt` (one file name per line, plus `Prompts.txt`-like lines that
+  must be skipped). dnd: 16 022 entries, **identical to the GitHub tree**; pf: 7 737, of which
+  60 (`Xulgath Leader/_<uuid>_cleanup.jpg`) don't exist on GitHub → handle broken images.
+- File names: `<CreatureNoSpaces><Words…> (n).webp` with CamelCase attribute words in **no
+  fixed order** (race, gender, environment, weapon…), compounds `HalfOrc`/`HalfElf`, `NSFW`,
+  typos (`Costal`, `Halfing`, `Kight`, `Dessert`, `Femorian`…), a few without counter or with
+  `_cleanup`, some with spaces (`Giant Crawling Hand (1).webp`).
+- The macros in its pack (`DND -`/`PF - Get Too Many Tokens For Selected Tokens`, LevelDB
+  pack `packs/too-many-tokens-online-macros`) are byte-identical to the shipped
+  `too-many-tokens-online-show-dialogue-<sys>.js`: V1 `Dialog`, datalist of names, then
+  checkbox columns by word POSITION → regex `.*(A|B).*(C).*` (case-insensitive, so `Male`
+  also matches `Female`); no image preview. Its wildcard writes
+  `prototypeToken.texture.src = "tmtopptmtopptmtopp_<sys>_<Creature[/Creature]>_<regex>.webp"`
+  + `randomImg: true`, resolved by `scripts/index.js`'s `createToken` hook: runs on **every**
+  client, no GM/owner guard, updates the token after creation, and for every token whose
+  prototype is NOT such a path it throws (`links.length` of `undefined`; also
+  `baseActor.prototypeToken` for actorless tokens) — console errors on each token creation.
+- Token URLs in worlds appear both `%20`-encoded and with raw spaces → compare decoded.
+- Assumption (not verified in a running v14 world yet): files of an installed but
+  **deactivated** module are still served under `modules/<id>/…` (Foundry serves the Data
+  folder statically) — the picker relies on it when TMT is deactivated.
+
+### Chat log, export & UI layers (feature *Chat Export by Time Range*, verified 2026-10-29 against the core 14.364 sources)
+
+- `ChatLog#export()` (on `game.messages`, triggered by the action `export` of the sidebar
+  `ChatLog`): `this.contents.map(m => m.export()).join("\n---------------------------\n")`,
+  saved via `foundry.utils.saveDataToFile(log, "text/plain", "fvtt-log-<Date#toDateString>.txt")`.
+  No filter, all messages of the collection.
+- `ChatMessage#export()`: content HTML → plain text (DIV/BR become line breaks, whitespace
+  collapsed), then one line `${roll.formula} = ${roll.result} = ${roll.total}` per roll, prefixed
+  `[<toLocaleDateString("en-US", {hour, minute, second})>] <alias>`.
+- Template `templates/sidebar/tabs/chat/notifications.hbs` (part `log` of `ChatLog`):
+  `#chat-controls` > `#message-modes` + (GM only) `.control-buttons` with
+  `button.ui-control.icon[data-action="export"|"flush"]`. Our button has no `data-action`
+  (AppV2's click dispatcher ignores it). `renderChatLog(app, element)` fires on every (partial)
+  render → insert idempotently.
+- `DialogV2.wait({render})` calls `render(event, dialog)` on the dialog's render event; the
+  content sits in `form.dialog-form` (`button.form` in a button callback); button labels and the
+  window title are localized by core.
+- **UI layers** (core CSS variables): canvas 0, `#ui-left`/`#ui-middle`/`#ui-right` and `.app`
+  `--z-index-app` 30, `--z-index-ui` 60, `.application` (AppV2 windows) `--z-index-window` 100 (+
+  `ApplicationV2._maxZ` counting up in `bringToFront()`, only for framed apps), tooltip 9999,
+  notifications 99999. `#ui-top` is inside `#ui-middle` (`templates/views/game.hbs`), so
+  anything docked there (Carousel/combat-tracker-dock in mode `rowDocked`) lives in layer 30.
+  Token Action HUD (`#token-action-hud-app`, AppV2 `frame: false`) uses `position.zIndex` 100 and
+  sets `element.style.zIndex = 20` on every right-click of a group (`sendHudToBottom`) — then it
+  falls below layer 30 until the next reload.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -456,3 +850,9 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
+| Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
+| File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
+| Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
+| Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<row>.<mastery>` (true / "requested" / false = undone) + `weaponMastery.undo.<row>.<mastery>` (revert data; row = `t#` or the flag-safe token UUID of a selected token) — once per row, GM Undo in the tray; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |
+| Chat Export by Time Range | `chatExport` | `features/chat-export.js` | any | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); API `api.exportChat({hours} \| {days} \| {from, to})` |
+| Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
