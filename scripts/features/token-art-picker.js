@@ -23,7 +23,9 @@
  * are randomised; a token created with another image (e.g. pasted) keeps it. Our prototype
  * keeps `randomImg: false` (core can't browse remote URLs as a wildcard).
  *
- * Entry points: Token HUD button (per-user option), Actors sidebar context entry (prototype),
+ * Entry points: Token HUD button (per-user option; shared "Token Tools" entry from
+ * lib/token-tools.js — its own button, or one entry of the Token Tools palette when another
+ * tool applies too), Actors sidebar context entry (prototype),
  * keybinding (unbound) and `game.modules.get("darkviruzz-tweaks").api.openTokenArtPicker()`
  * for a macro. Only documents the user owns are changed.
  *
@@ -39,6 +41,7 @@
  */
 
 import { MODULE_ID } from "../constants.js";
+import { registerTokenTool, selectionFor } from "../lib/token-tools.js";
 import {
   tmtInstalled, sameImage, parseImageUrl, parseLegacyWildcard, rankCreatures,
   compactPool, expandPool, randomPick, distribute, loadCreatureNames, loadVariants, variantFromUrl
@@ -752,26 +755,15 @@ export function openTokenArtPicker({ tokens, actor } = {}) {
   return current;
 }
 
-function onRenderTokenHUD(hud, html) {
-  if (!enabled() || !game.settings.get(MODULE_ID, KEY_HUD)) return;
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  const token = hud?.object;
-  if (!root || !token?.document?.isOwner || root.querySelector(".dt-token-art-hud")) return;
-  const column = root.querySelector(".col.right") ?? root.querySelector(".right");
-  if (!column) return;
-
-  const label = localize("DT.TokenArt.HudButton");
-  const button = el("button", {
-    type: "button", class: "control-icon dt-token-art-hud", "data-tooltip": label, "aria-label": label
-  }, [icon("fa-solid fa-images")]);
-  button.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    const controlled = canvas?.tokens?.controlled ?? [];
-    openTokenArtPicker({ tokens: controlled.includes(token) ? controlled : [token] });
-  });
-  column.append(button);
-}
+/** Token HUD entry (shared Token Tools button, lib/token-tools.js) — only where it applies. */
+const HUD_TOOL = {
+  id: "tokenArt",
+  order: 10,
+  icon: "fa-solid fa-images",
+  label: "DT.TokenArt.HudButton",
+  visible: token => enabled() && !!game.settings.get(MODULE_ID, KEY_HUD) && !!token?.document?.isOwner,
+  onClick: token => openTokenArtPicker({ tokens: selectionFor(token) })
+};
 
 /** The world actor of an Actors-sidebar entry. */
 function actorOfEntry(target) {
@@ -837,7 +829,7 @@ export default {
   ],
   init() {
     Hooks.on("preCreateToken", onPreCreateToken);
-    Hooks.on("renderTokenHUD", onRenderTokenHUD);
+    registerTokenTool(HUD_TOOL);
     Hooks.on("getActorContextOptions", onGetActorContextOptions);
     const module = game.modules?.get(MODULE_ID);
     if (module) module.api = Object.assign(module.api ?? {}, { openTokenArtPicker });

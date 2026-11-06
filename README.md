@@ -172,7 +172,44 @@ the defeated status is removed (e.g. the creature is revived).
 > combat (system setting `autoApplyDowned` in dnd5e's combat settings, off by default); its
 > "Dead" effect already uses the overlay and works together with this feature.
 
-### 6. Pause Control  ·  *any system · world (GM)*
+### 6. Token Status Icons  ·  *any system · world (GM)*
+
+Clearer condition icons on tokens: the conditions that matter most as the big overlay, and
+larger icons when a token only has a few.
+
+**How it works:** purely visual — every client lays out the icons Foundry has just drawn, no
+effect or token is changed.
+
+- **Overlay by priority:** the conditions in your list (by default *Dead*, then *Unconscious*)
+  are shown as the big picture across the token, even when they were set from the Token HUD
+  without the overlay option. If several are active, the first one in the list wins — a dead
+  creature shows *Dead*, not *Unconscious*. Effects someone marked as overlay by hand (right-click
+  in the Token HUD) come after the list. The overlay is not shown a second time as a small icon.
+  The list is edited right in the settings window: drag the entries (or use the arrows) to set
+  the order, remove them with ×, add more from the selection below the list (all conditions of
+  your system).
+- **Larger icons when there are few:** icon size = token height ÷ number of icons, never smaller
+  than Foundry's normal size and never larger than the maximum (default 2×). On a Medium token:
+  one or two icons at double size, three at 33 px, four at 25 px, from five on the normal 20 px.
+  Larger tokens fit more large icons.
+- **Ignored effects** (e.g. `bloodied, concentrating` — status ids or effect names): they don't
+  make the other icons smaller. Either they stay at normal size behind the others, or they are
+  not drawn on the token at all (they remain on the sheet and in the Token HUD).
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Large Overlay by Priority** | off | Show the conditions of the list as the big overlay, the first active one wins. |
+| **Overlay Conditions (Priority Order)** | Dead, Unconscious | The list and its order (sortable in the settings window). |
+| **Larger Status Icons When There Are Few** | off | Icon size = token height ÷ number of icons, between normal and the maximum. |
+| **Status Icons: Maximum Size** | 2× | Largest icon size as a multiple of the normal size. |
+| **Status Icons: Ignored Effects** | — | Effects that don't count (status ids or names, comma-separated). |
+| **Status Icons: Ignored Effects Are …** | shown small, not counted | … or hidden on the token. |
+
+> *Defeated Tokens → Show Defeated as Full-Token Overlay* writes the overlay into the effect
+> itself (every module sees it); *Token Status Icons* only changes how tokens are drawn. Both
+> work together.
+
+### 7. Pause Control  ·  *any system · world (GM)*
 
 Automatic pausing and unpausing — a replacement for the unmaintained
 *Koboldworks – Pause Control* module (last release 2024, made for Foundry 12). **Disable
@@ -201,7 +238,7 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
-### 7. Live Token Drag  ·  *any system · world (GM)*
+### 8. Live Token Drag  ·  *any system · world (GM)*
 
 While someone drags a token, everyone else sees the token itself follow the mouse in real
 time — on its own, Foundry only shows them the planned path (the ruler). A replacement for
@@ -246,7 +283,7 @@ in Foundry.
 > The feature uses the module's own message channel, which Foundry sets up when a world is
 > launched. If live drags don't show up right after installing or updating the module,
 > return to setup and launch the world again.
-### 8. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
+### 9. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
 
 See images in Foundry's File Browser without clicking them — and without downloading big
 maps over and over. Covers what the *Asset Preview* module does (which needs a click), so
@@ -292,7 +329,7 @@ dropped tile from that image, so swapping in a 512 px thumbnail would shrink it.
 | **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
 | **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
 | **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 512 px. World setting (GM). |
-### 9. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
+### 10. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
 
 Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –
 Online* in a gallery with preview — a replacement for that module's macro *"DND/PF – Get Too
@@ -329,7 +366,7 @@ are loaded from GitHub exactly as before.
 | Setting / control | Default | Effect |
 |---|---|---|
 | **Enable Token Art Picker** | off | World switch (GM): the picker (sidebar entry, keybinding, macro API, HUD button) and the wildcard on token placement. |
-| **Token Art Picker: Token HUD Button** | off | Per user: adds an image button to the Token HUD (right column) for the selected tokens. |
+| **Token Art Picker: Token HUD Button** | off | Per user: adds the picker to the Token HUD (right column) for the selected tokens — its own button, or an entry of the **Token Tools** menu when another tool (e.g. *Token Formations*) applies too. |
 | **Open Token Art Picker** (keybinding) | unbound | Opens the picker for the selected tokens. Assign it under **Configure Controls → Darkviruzz Tweaks & QoL**. |
 
 > Differences from the Too Many Tokens macro: it showed no images at all; its checkbox
@@ -341,9 +378,49 @@ are loaded from GitHub exactly as before.
 > links and keep working with Too Many Tokens deactivated; actors with an old Too Many Tokens
 > wildcard need converting once (see above).
 
+### 11. Token Formations  ·  *any system · world (GM) + per-user HUD entry*
+
+Arrange a group of tokens in one go — made for gridless maps.
+
+**How it works:** select several tokens and open **Formation** (Token HUD, a keybinding or
+`game.modules.get("darkviruzz-tweaks").api.openFormation()`). A small window offers four
+formations, and the canvas shows a live preview — a ghost image at every new place and a line
+from each token to it:
+
+- **Block** — rows and columns, as square as possible and rather wider than deep (7 tokens →
+  3 + 3 + 1); *Width (columns)* makes it a broad line (all in one rank) or a column (1).
+- **Hex** — a honeycomb around the centre, the most compact arrangement.
+- **Ring** — one ring around the centre, e.g. to surround something.
+- **Crowd** — random places without overlap; *Reshuffle* until you like it.
+
+*Spacing* sets how close they stand: **1 = touching** (5 ft between Medium creatures), 0.5 =
+crowded (half overlapping), up to 5 = far apart — and larger creatures automatically keep a
+larger distance. *Facing* turns the formation (the front row of a block faces up at 0°).
+*Who goes where*: **least movement** (default — every token takes a place close to where it
+stands, tokens of the same size swap until the total way is shortest), **larger creatures in
+the middle / front** or **outside / behind**. On maps with a grid, *Snap to grid* is offered.
+
+Places behind walls are skipped: a place counts only if the straight line from the formation's
+centre to it isn't blocked by a wall, and it lies inside the scene. *Apply* moves all tokens
+together as a normal movement, so Foundry still stops a token at a wall on its own way there
+(the preview marks those in red). The formation is centred where the group stands; afterwards
+the tokens stay selected, so you can drag the whole formation somewhere else. Players can
+arrange the tokens they own.
+
+**Token HUD — Token Tools:** the Token HUD shows only the tools that apply right now. If one
+applies (e.g. *Formation* with several tokens selected), it gets its own button; if several apply
+(e.g. *Formation* and the *Token Art Picker*), one **Token Tools** button opens a small menu with
+both — so the HUD doesn't fill up.
+
+| Setting / control | Default | Effect |
+|---|---|---|
+| **Token Formations** | off | World switch (GM): allows the formation window. |
+| **Token Formations: Token HUD Entry** | off | Per user: *Formation* in the Token HUD when several tokens are selected. |
+| **Token Formation** (keybinding) | unbound | Opens the formation window for the selected tokens. Assign it under **Configure Controls → Darkviruzz Tweaks & QoL**. |
+
 ---
 
-### 10. Savage Attacker  ·  *dnd5e · world (GM)*
+### 12. Savage Attacker  ·  *dnd5e · world (GM)*
 
 Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
 roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
@@ -376,7 +453,7 @@ not damage).
 
 ---
 
-### 11. Weapon Mastery  ·  *dnd5e · world (GM)*
+### 13. Weapon Mastery  ·  *dnd5e · world (GM)*
 
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this
@@ -455,28 +532,77 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
 | **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
 | **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
 
-### 12. Chat Export by Time Range  ·  *any system · world (GM)*
+### 14. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
+
+See whom an attack was rolled against when you use **RSReforged**.
+
+**How it works:** dnd5e 6 shows the targets of an *attack* only on its attack card (name, and
+for the GM AC and hit/miss) — unlike saves, whose usage card lists the targets. RSReforged hides
+that attack card and shows only the roll in its own card, so nobody saw the target any more
+(e.g. an *Unarmed Strike* card showed no target while the *Stunning Strike* card after it did).
+This puts dnd5e's own targets row back into the attack part of RSReforged's card: the same
+clickable target pills, sorted hits first. Who sees AC and hit/miss follows dnd5e's setting
+*Attack Roll Visibility* (the GM always).
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Show Attack Targets on RSReforged Cards** | off | Adds the targets row to RSReforged's attack section (RSReforged on dnd5e 6). |
+
+### 15. Chat Export by Time Range  ·  *any system · world (GM)*
 
 Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
 chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
 
 **How it works:** a second button with a clock icon sits next to Foundry's chat export. It opens a
-small dialog: **last hours** (e.g. 5), **last days** (24 h each, counted back from now) or **from day
-… to day …** (whole days, local time). The dialog shows how many messages the range holds; *Export*
-saves them as a text file (`fvtt-log-<from>--<to>.txt`) in exactly the format of Foundry's own export
-— time and speaker, the text of the message, one line per roll with formula and total — oldest
-first, with one header line naming the world and the range. Nothing in the world is changed.
+small dialog: **last hours** (e.g. 5), **last days** (24 h each, counted back from now), **from day …
+to day …** (whole days, local time) or the **whole chat log**. The dialog shows how many messages the
+range holds; *Export* saves them as a text file (`fvtt-log-<from>--<to>.txt`), oldest first, with one
+header line naming the world and the range. Nothing in the world is changed. Two formats:
+
+- **Detailed** (default) — readable without Foundry. For dnd5e: the item and activity of every card
+  (*Unarmed Strike — Attack*, *Stunning Strike — Save*), every roll with its d20s (advantage /
+  disadvantage, critical, natural 1), damage per type and in total, the targets with AC and hit or
+  miss, save DCs with success or failure, the effects a card offers, and whispers / blind rolls.
+  Plain chat messages keep their text. (Foundry's own export leaves dnd5e 6 cards empty — their text
+  is not stored in the message.) Players see AC and hit/miss only as far as dnd5e's *Attack Roll
+  Visibility* shows them.
+- **Foundry's format** (compact) — exactly what Foundry's own export writes: time and speaker, the
+  text of the message, one line per roll with formula and total.
+
+Example (detailed):
+
+```
+[03.11.26, 19:55:35] Shortsighted Hobgoblin Warrior: Longbow — Attack
+    Attack roll: 1d20 + 1 + 2 = 4 + 1 + 2 = 7
+    vs. Rhogar Tonitruvales (AC 17): miss
+```
 
 Players can get the button too (second setting). They export only what they can see: whispers to
 others and blind rolls are left out. The GM always exports everything, like Foundry's export.
 
-For macros: `game.modules.get("darkviruzz-tweaks").api.exportChat({ hours: 5 })`, `({ days: 2 })` or
-`({ from: "2026-10-28", to: "2026-10-29" })` (`from`/`to` may also be dates or timestamps).
+For macros: `game.modules.get("darkviruzz-tweaks").api.exportChat({ hours: 5 })`, `({ days: 2 })`,
+`({ from: "2026-10-28", to: "2026-10-29" })` or `({ all: true })` (`from`/`to` may also be dates or
+timestamps); a second argument `{ format: "foundry" }` writes Foundry's format.
 
 | Setting | Default | Effect |
 |---|---|---|
 | **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
 | **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
+
+### 16. Token Action HUD Layer  ·  *any system · world (GM)*
+
+Keeps **Token Action HUD** visible above the interface.
+
+**How it works:** Token Action HUD moves itself behind the interface whenever one of its groups
+is right-clicked (it sets its layer to 20) and doesn't come back until a reload — then e.g. the
+docked *Carousel* combat tracker (layer 30) covers it. With this option the HUD stays on one
+layer (default 50: above docked interface parts, below windows, which start at 100). Off, the
+HUD behaves as the module made it.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Keep Token Action HUD Above the Interface** | off | Pin the HUD to the layer below. |
+| **Token Action HUD: Layer (z-index)** | 50 | 31–99; 50 = above the Carousel (30), below windows (100+). |
 
 ## Already built in (no tweak needed)
 

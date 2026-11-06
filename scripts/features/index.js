@@ -22,6 +22,10 @@ import tokenArtPicker from "./token-art-picker.js";
 import savageAttacker from "./savage-attacker.js";
 import weaponMastery from "./weapon-mastery.js";
 import chatExport from "./chat-export.js";
+import tokenStatusIcons from "./token-status-icons.js";
+import tokenFormation from "./token-formation.js";
+import rsrAttackTargets from "./rsr-attack-targets.js";
+import tahLayer from "./tah-layer.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -29,11 +33,15 @@ export const FEATURES = [
   findMyToken,
   movementHistoryReset,
   defeatedTokens,
+  tokenStatusIcons,
   pauseControl,
   liveTokenDrag,
   filePickerPreview,
   tokenArtPicker,
+  tokenFormation,
   savageAttacker,
   weaponMastery,
-  chatExport
+  rsrAttackTargets,
+  chatExport,
+  tahLayer
 ];

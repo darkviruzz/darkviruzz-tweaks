@@ -31,7 +31,7 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
 
 1. **Target platform.** Always build for **Foundry VTT v14+**. System-specific features
    target the **dnd5e** system (D&D 2024 / "5.5e"): support **5.3.x and 6.x** — the table
-   runs 5.3.3 as of 2026-10 and plans to move to 6. A feature is either dnd5e-specific
+   moved to **Foundry 14.369 + dnd5e 6.0.6 + RSReforged 6.0.2 on 2026-10-27** (before: 5.3.3). A feature is either dnd5e-specific
    (`requiresSystem: "dnd5e"`) or **system-agnostic** (no `requiresSystem`, must not assume
    any system). Never declare `relationships.systems` in module.json — that would hide the
    module from worlds of other systems.
@@ -58,7 +58,11 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
    repo, but **an installed Foundry ships its real source**: readable client code in
    `<install>/client/**/*.mjs` and the (minified) server in `<install>/dist/`. On the dev
    machine a v14 install (build 14.364) lives in `Documents/foundryuserdata/foundry` — grep it
-   first; it beats every other source. Otherwise use the v14 API docs
+   first; it beats every other source. The bundled sources of the systems and modules the table
+   runs are in the data snapshots under `C:\Users\nogar\Programme\Claude\foundry\`:
+   `foundryuserdata-v6-prod/Data/systems/dnd5e/dnd5e.mjs` (dnd5e **6.0.6**, + `templates/`,
+   `lang/`), `foundryuserdata/Data/systems/dnd5e` (**5.3.3**), and `…/Data/modules/<id>/`
+   (RSReforged 6.0.2 `src/utils/native-*.js`, Token Action HUD Core 2.1.2 `dist/*.min.mjs`, …). Otherwise use the v14 API docs
    (https://foundryvtt.com/api/), release notes, the League `foundry-vtt-types` repo, a v13
    client-source mirror for implementation details (mark those "v14 impl unverified"), and
    modules verified on v14. Record confirmed facts in
@@ -86,12 +90,19 @@ scripts/
     token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
     savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
     weapon-mastery.js           dnd5e: weapon mastery line + GM tray on attack cards — effects, macros (world/GM; module socket)
+    chat-export.js              chat export by time range, detailed or Foundry format (world/GM, optional for players)
+    token-status-icons.js       token icons: overlay by priority list, dynamic icon size, ignored effects (world; display only)
+    token-formation.js          arrange selected tokens: block / hex / ring / crowd with canvas preview (world + user HUD entry)
+    rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
+    tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
     attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
     rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
+    token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette)
+    formations.js               pure formation geometry (block, hex, ring, crowd; spacing, order, walls via callback)
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -179,6 +190,12 @@ socket in `scripts/lib/socket.js`: `onSocketMessage(featureId, handler)` in `ini
 `module.json` has `"socket": true` (the validator checks it whenever a script listens on
 `game.socket`).
 
+Features that act on selected tokens and want a Token HUD button register a tool with
+`registerTokenTool({id, order, icon, label, visible(token), onClick(token)})` from
+`scripts/lib/token-tools.js` instead of adding their own button: the HUD then shows only the
+tools whose `visible()` is true — one as its own button, several behind one "Token Tools"
+button with a palette (the user's wish: no extra submenu when only one tool applies).
+
 ## Tooling
 
 `npm run validate` (= `node tools/validate.mjs`, Node 20+, no dependencies) fails on:
@@ -224,6 +241,20 @@ CI on every PR and before every release.
    flaky (resets/404 right after publishing) — retry before concluding something is wrong.
 
 Compatibility note: the install/manifest mechanism requires the **repo to stay public**.
+
+### Unreleased work in another clone (found 2026-11-06)
+
+Version 1.8.0 was developed and deployed to the table from a SECOND local clone
+(`C:\Users\nogar\Programme\darkviruzz-tweaks`, branch `claude/integration-1.8.0`) and never
+pushed, while `main` on GitHub stayed at 1.7.0. Before starting new work, compare the module
+version the table runs (`foundry\darkviruzz-tweaks-*.tar.gz`, the data snapshots) with
+`origin/main`, and look at the other clone's branches; build on the newest state.
+
+### Windows line endings
+
+Python's text mode on Windows writes CRLF. `.gitattributes` (`* text=auto eol=lf`) normalises
+commits, but keep the working tree LF too: `open(p, "w", newline="\n")`. Long `python - <<'EOF'`
+heredocs in the Bash tool can break on quoting — write the script to the scratchpad and run it.
 
 ### Squash-merge conflict gotcha
 
@@ -840,6 +871,81 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   sets `element.style.zIndex = 20` on every right-click of a group (`sendHudToBottom`) — then it
   falls below layer 30 until the next reload.
 
+### Token effect icons (feature *Token Status Icons*, verified 2026-11-06 against core 14.364 `client/canvas/placeables/token.mjs`)
+
+- `Token#_drawEffects` (async, via `drawEffects()` → `_partialDraw`): clears `token.effects`, adds
+  `effects.bg` (PIXI.Graphics, zIndex -1), takes `actor.appliedEffects` with `showIcon === ALWAYS`
+  or (`CONDITIONAL` and `isTemporary`) (`CONST.ACTIVE_EFFECT_SHOW_ICON` NONE 0 / CONDITIONAL 1 /
+  ALWAYS 2), draws one PIXI.Sprite per effect (`_drawEffect(img, tint)`, skipped without img) and
+  sets `sprite.zIndex = index in that list`; the overlay is `findLast(e => e.flags.core?.overlay)`
+  (`_drawOverlay`: alpha 0.8, `effects.overlay = sprite`). `effects.renderable` is false while
+  drawing; at the end `sortChildren()` and the render flag `refreshEffects`.
+- `Token#_refreshEffects`: size `20 × canvas.dimensions.uiScale`, `rows = floor(document.getSize()
+  .height / size)`, columns from the top left, `bg` rounded rect (inset 1 × uiScale, radius 2 ×
+  uiScale) behind each small icon; the overlay `min(width, height) × 0.6`, anchor 0.5, at
+  `document.getCenterPoint({x: 0, y: 0})`. Small icons' anchors are never reset.
+- `PlaceableObject#applyRenderFlags` calls `_applyRenderFlags(flags)` and then synchronously
+  `Hooks.callAll("refreshToken", token, flags)` — re-laying sprites there (when
+  `flags.refreshEffects`) shows no frame of core's layout. Force a redraw with
+  `token.renderFlags.set({redrawEffects: true})`.
+- `CONFIG.statusEffects` entries `{id, name (i18n key), img}`; v14 object keyed by id.
+
+### Token movement & formations (feature *Token Formations*, verified 2026-11-06 against core 14.364)
+
+- A plain `TokenDocument#update({x, y})` IS a movement in v14: `#preUpdateMovement` infers the
+  waypoints, method `"api"` (others: config, hud, dragging, keyboard, paste, undo) and — for a
+  rendered token — `constrainMovementPath` stops it at walls (`constrainOptions: {ignoreWalls,
+  ignoreCost}` to bypass). `Scene#moveTokens({[id]: {destination: {x, y} | waypoints, method,
+  autoRotate, showRuler, constrainOptions, …}}, options)` moves several tokens in ONE update;
+  `TokenDocument#move(waypoints, options)` wraps it for one token.
+- `Token#checkCollision(centre, {origin, type: "move", mode: "any"})` (centre points; origin
+  defaults to the token's movement origin) → boolean for mode any. `TokenDocument#getSize()`
+  → px `{width, height}`, `#getSnappedPosition({x, y})` (top-left), `#getCenterPoint(data)`,
+  `#getMovementOrigin(data)` (centre + half depth as elevation). `Token#texture`, `Token#center`.
+- `canvas.controls` (ControlsLayer) is a PIXI container in the interface group — a preview
+  container added there with `eventMode = "none"` doesn't catch clicks.
+  `canvas.dimensions.sceneRect.contains(x, y)`; `CONST.GRID_TYPES.GRIDLESS = 0`.
+
+### dnd5e 6 targets on usage vs. attack cards (feature *Attack Targets on RSReforged Cards*, verified 2026-11-06 against dnd5e 6.0.6 and RSReforged 6.0.2)
+
+- Activity `metadata.targetPhase`: attack `"post"`, save / check `"pre"`, utility/base `""`.
+  `UsageMessageData#_prepareContext`: `showTargets = targetPhase !== "post" && (effects.length ||
+  targetPhase === "pre")` → `<recorded-targets>` on the usage card for saves/checks and for
+  cards with effects ("No Targets" pill when empty), never for attacks.
+- `attack-card.hbs` renders the targets row `section.icon-row > ul.unlist.targets.pills > li >
+  target-pill[data-hit|data-miss][data-value=AC]` from `AttackMessageData#_prepareTargetsContext`
+  (empty unless `isContentVisible`; `showAC = isGM || attackRollVisibility === "all"`,
+  `showResult = isGM || visibility !== "none"`, hits first). `message.system.render(options)` →
+  the card's HTML string (template + `_prepareContext`); styles `.dnd5e2 .pills target-pill.pill`.
+- RSReforged 6.0.2 `native-card.js` `_attackSection` puts only the roll (+ advantage overlay,
+  bonus button) into `.rsr-section-attack` — no targets. Its green check / red X comes from the
+  roll's `options.target`, which `native-workflow.js` sets only with exactly ONE target.
+
+### Chat message data for the export (verified 2026-11-06 against dnd5e 6.0.6)
+
+- 6.x `CONFIG.ChatMessage.dataModels`: attack, bastionAttack/Order/Turn, check, damage, generic,
+  healing, hitDie, hitPoints, item, prompt, recharge, request, rest, save, timePassed, turn,
+  usage. `RollMessageData` (base of attack/check/damage/save…): `activity` / `item` =
+  SourceReference `{id, img, name, type, uuid}`, `origin` (parent message), `targets`.
+  Check: `ability, skill, tool, type`. Save: `ability, outcome (broken|death|revive|stable),
+  resisted, type (ability|concentration|death)`. Damage: `onSave (none|half|full)`. Usage:
+  `activity {chatFlavor, …}`, `buttons`, `concentration`, `effects` (effect ids of the item),
+  `scaling`. `message.content` of these cards is EMPTY — the card is rendered from `system`,
+  which is why core's `ChatMessage#export()` writes only the header line for them.
+- `ChatMessage5e#getAssociatedActivity()/Item()/Actor()/Token()/Rolls()`. D20Roll getters
+  `hasAdvantage`, `hasDisadvantage`, `isCritical`, `isFumble`; `options.target` = AC / DC;
+  `isSuccess` needs a target. DamageRoll `options.type` → `CONFIG.DND5E.damageTypes[type].label`
+  (or `healingTypes`).
+
+### Token Action HUD (feature *Token Action HUD Layer*, verified 2026-11-06 against Token Action HUD Core 2.1.2)
+
+- `game.tokenActionHud` = the HUD app, id `token-action-hud-app`, ApplicationV2 with
+  `window.frame: false`, `position.zIndex` = DEFAULT_ZINDEX. `addContextMenuListener` binds
+  `sendHudToBottom()` → `game.tokenActionHud.element.style.zIndex = 20` to every group's
+  `contextmenu`; `clickGroup` calls `bringToFront()`, which does nothing for frameless apps — so
+  the HUD stays at 20 until a reload. `renderApplicationV2(app, element)` fires for it (class
+  chain). Our fix pins the inline z-index with a MutationObserver on its `style` attribute.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -854,5 +960,9 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
 | Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<row>.<mastery>` (true / "requested" / false = undone) + `weaponMastery.undo.<row>.<mastery>` (revert data; row = `t#` or the flag-safe token UUID of a selected token) — once per row, GM Undo in the tray; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |
-| Chat Export by Time Range | `chatExport` | `features/chat-export.js` | any | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); API `api.exportChat({hours} \| {days} \| {from, to})` |
-| Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
+| Chat Export by Time Range | `chatExport` | `features/chat-export.js` (+ `lib/attack-roll.js`) | any (dnd5e 5.3/6.x details) | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); dialog: range (hours / days / from–to / all) + format (detailed default / foundry); API `api.exportChat({hours} \| {days} \| {from, to} \| {all: true}, {format})` |
+| Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`, `lib/token-tools.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
+| Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
+| Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
+| Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
+| Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
