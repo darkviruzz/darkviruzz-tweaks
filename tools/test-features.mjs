@@ -2101,4 +2101,211 @@ await test("TAH layer: pinned to the chosen z-index, re-applied after TAH's righ
   delete globalThis.MutationObserver;
 });
 
+/* ---------- Template Auto-Targeting ---------- */
+const area = await import(pathToFileURL(join(ROOT, "scripts/lib/area-coverage.js")).href);
+const ttModule = await import(pathToFileURL(join(ROOT, "scripts/features/template-targeting.js")).href);
+ttModule.default.init();
+const sq = (i, j, s = 100) => [{ x: i * s, y: j * s }, { x: (i + 1) * s, y: j * s }, { x: (i + 1) * s, y: (j + 1) * s }, { x: i * s, y: (j + 1) * s }];
+
+await test("area coverage: a square counts from half covered (DMG), any part (XGtE) or its centre", () => {
+  const cell = sq(0, 0);
+  assert.equal(area.gridSpaceAffected(cell, x => x <= 50, "half"), true, "exactly half → affected");
+  assert.equal(area.gridSpaceAffected(cell, x => x <= 40, "half"), false);
+  assert.equal(area.gridSpaceAffected(cell, x => x <= 40, "any"), true);
+  assert.equal(area.gridSpaceAffected(cell, x => x <= 40, "center"), false);
+  assert.equal(area.gridSpaceAffected(cell, x => x <= 55, "center"), true);
+  assert.equal(area.gridSpaceAffected(cell, () => false, "any"), false, "touching the edge isn't enough");
+  const hex = [{ x: 50, y: 0 }, { x: 100, y: 25 }, { x: 100, y: 75 }, { x: 50, y: 100 }, { x: 0, y: 75 }, { x: 0, y: 25 }];
+  assert.equal(area.gridSpaceAffected(hex, x => x <= 50, "half", 10), true, "hex split through the middle");
+  assert.equal(area.gridSpaceAffected(hex, x => x <= 35, "half", 10), false);
+});
+await test("area coverage: gridless bases split into 5-ft sections (Large 2×2, Huge 3×3, Medium/Tiny 1)", () => {
+  assert.equal(area.baseSections({ x: 0, y: 0, width: 200, height: 200, ellipse: true }, 100).length, 4);
+  assert.equal(area.baseSections({ x: 0, y: 0, width: 300, height: 300 }, 100).length, 9);
+  assert.equal(area.baseSections({ x: 0, y: 0, width: 100, height: 100, ellipse: true }, 100).length, 1);
+  assert.equal(area.baseSections({ x: 0, y: 0, width: 50, height: 50 }, 100).length, 1);
+  const huge = area.baseSections({ x: 0, y: 0, width: 300, height: 300 }, 100);
+  assert.equal(area.baseAffected(huge, x => x <= 56, "half"), true, "half of the left sections");
+  assert.equal(area.baseAffected(huge, x => x <= 44, "half"), false, "a 2-ft graze of a Huge creature");
+  assert.equal(area.baseAffected(huge, x => x <= 44, "any"), true);
+  assert.equal(area.baseAffected(huge, x => x <= 44, "center"), false);
+  const medium = area.baseSections({ x: 0, y: 0, width: 100, height: 100, ellipse: true }, 100);
+  assert.equal(area.baseAffected(medium, x => x <= 40, "half"), false, "less than half of a round base");
+  assert.equal(area.baseAffected(medium, x => x <= 60, "half"), true);
+});
+
+// canvas with a 100 px square grid; regions are "x ≤ edge" half-planes
+const ttScene = { id: "scene" };
+const ttSavedCanvas = globalThis.canvas;
+const ttSavedUser = game.user;
+globalThis.CONST = { ...(globalThis.CONST ?? {}), TOKEN_SHAPES: { ELLIPSE_1: 0, ELLIPSE_2: 1, TRAPEZOID_1: 2, TRAPEZOID_2: 3, RECTANGLE_1: 4, RECTANGLE_2: 5 } };
+const ttGrid = { size: 100, isGridless: false, isHexagonal: false, getVertices: ({ i, j }) => sq(i, j) };
+const ttTokens = [];
+globalThis.canvas = { ready: true, scene: ttScene, grid: ttGrid, tokens: { placeables: ttTokens } };
+const ttUser = { id: "me", isGM: false, targets: new Set() };
+game.user = ttUser;
+const ttToken = (id, x, y, size = 1, extra = {}) => {
+  const t = {
+    name: id, visible: true, actor: { statuses: new Set(), uuid: `Actor.${id}` },
+    document: {
+      id, uuid: `Scene.scene.Token.${id}`, name: id, x, y, width: size, height: size, elevation: 0, hidden: false, shape: 4,
+      texture: { src: `${id}.webp` },
+      getSize: () => ({ width: size * 100, height: size * 100 }),
+      getOccupiedGridSpaceOffsets() {
+        if (ttGrid.isGridless) return [];
+        const out = [];
+        for (let i = 0; i < Math.max(1, size); i++) for (let j = 0; j < Math.max(1, size); j++) out.push({ i: Math.floor(x / 100) + i, j: Math.floor(y / 100) + j, k: 0 });
+        return out;
+      }
+    },
+    setTarget(on) { if (on) ttUser.targets.add(t); else ttUser.targets.delete(t); }
+  };
+  t.document.actor = t.actor;
+  Object.assign(t, extra);
+  ttTokens.push(t);
+  return t;
+};
+const ttRegion = (edge, extra = {}) => ({
+  documentName: "Region", parent: ttScene, flags: { core: { MeasuredTemplate: true } }, shapes: [{ type: "circle" }],
+  bounds: { x: -1000, y: -1000, width: 1000 + edge, height: 3000 },
+  testPoint: ({ x }) => x <= edge, ...extra
+});
+const targeted = () => [...ttUser.targets].map(t => t.name).sort();
+const place = async (region, userId = "me") => { hooks.createRegion.forEach(h => h(region, {}, userId)); await tick(1); };
+Object.assign(settings, { templateTargetEnabled: true, templateTargetGridRule: "half", templateTargetGridlessRule: "half", templateTargetHidden: false, templateTargetDefeated: false });
+
+const tIn = ttToken("inside", 100, 100);
+const tHalf = ttToken("halfCol4", 400, 100);       // column 4 = 400…500
+const tOut = ttToken("outside", 700, 100);
+const tLarge = ttToken("large", 400, 400, 2);      // columns 4+5
+const tOld = ttToken("oldTarget", 900, 900);
+
+await test("template targeting: on a square grid creatures in squares at least half covered become MY targets, old targets are released", async () => {
+  tOld.setTarget(true);
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"]);
+});
+await test("template targeting: grid rules any / centre / half at 40 % of a square", async () => {
+  await place(ttRegion(440));
+  assert.deepEqual(targeted(), ["inside"], "half: 40 % of column 4 is not enough");
+  settings.templateTargetGridRule = "any";
+  await place(ttRegion(440));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"]);
+  settings.templateTargetGridRule = "center";
+  await place(ttRegion(440));
+  assert.deepEqual(targeted(), ["inside"]);
+  await place(ttRegion(460));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"]);
+  settings.templateTargetGridRule = "half";
+});
+await test("template targeting: guards — someone else's template, switched off, a non-template Region", async () => {
+  await place(ttRegion(150));
+  assert.deepEqual(targeted(), ["inside"]);
+  await place(ttRegion(1000), "otherUser");
+  assert.deepEqual(targeted(), ["inside"], "another user's template doesn't touch my targets");
+  settings.templateTargetEnabled = false;
+  await place(ttRegion(1000));
+  assert.deepEqual(targeted(), ["inside"]);
+  settings.templateTargetEnabled = true;
+  await place(ttRegion(1000, { flags: {} }));
+  assert.deepEqual(targeted(), ["inside"], "a plain Region is no template");
+  await place(ttRegion(450, { flags: { dnd5e: { activity: "Actor.a.Item.i.Activity.x" } } }));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"], "dnd5e's template Regions carry only flags.dnd5e");
+});
+await test("template targeting: several Regions of one placement are combined, the next placement starts over", async () => {
+  hooks.createRegion.forEach(h => h(ttRegion(150), {}, "me"));
+  hooks.createRegion.forEach(h => h(ttRegion(800, { testPoint: ({ x }) => x >= 700 && x <= 800 }), {}, "me"));
+  assert.deepEqual(targeted(), ["inside", "outside"]);
+  await tick(1);
+  await place(ttRegion(150));
+  assert.deepEqual(targeted(), ["inside"]);
+});
+await test("template targeting: hidden / unseen / defeated creatures and the origin of an emanation are left out", async () => {
+  tIn.document.hidden = true;
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "large"], "player: hidden tokens never");
+  ttUser.isGM = true;
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "large"], "GM: hidden only with the setting");
+  settings.templateTargetHidden = true;
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"]);
+  tIn.document.hidden = false; settings.templateTargetHidden = false; ttUser.isGM = false;
+  tHalf.visible = false;
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["inside", "large"], "players only target what they see");
+  tHalf.visible = true;
+  tLarge.actor.statuses.add("dead");
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "inside"]);
+  settings.templateTargetDefeated = true;
+  await place(ttRegion(450));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"]);
+  tLarge.actor.statuses.delete("dead"); settings.templateTargetDefeated = false;
+  await place(ttRegion(450, { shapes: [{ type: "emanation" }], attachment: { token: "large" } }));
+  assert.deepEqual(targeted(), ["halfCol4", "inside"], "an emanation leaves out its origin creature");
+  await place(ttRegion(450, { shapes: [{ type: "emanation" }], flags: { dnd5e: { activity: "x", origin: "Scene.scene.Token.inside" } } }));
+  assert.deepEqual(targeted(), ["halfCol4", "large"], "stationary dnd5e emanation: origin from flags.dnd5e.origin");
+  await place(ttRegion(450, { shapes: [{ type: "circle" }], attachment: { token: "large" } }));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"], "other shapes are pure geometry");
+});
+await test("template targeting: gridless — half of a 5-ft section of the base, round bases, Xanathar's any part", async () => {
+  ttGrid.isGridless = true;
+  ttTokens.length = 0;
+  const huge = ttToken("huge", 400, 0, 3);
+  const med = ttToken("medium", 400, 500, 1, {}); med.document.shape = 0; // ellipse
+  await place(ttRegion(460));
+  assert.deepEqual(targeted(), ["huge", "medium"], "60 % of the Huge creature's left sections; more than half of the round base");
+  await place(ttRegion(440));
+  assert.deepEqual(targeted(), [], "40 px into both: not half of any section");
+  settings.templateTargetGridlessRule = "any";
+  await place(ttRegion(440));
+  assert.deepEqual(targeted(), ["huge", "medium"]);
+  settings.templateTargetGridlessRule = "half";
+  ttGrid.isGridless = false;
+});
+
+await test("template targeting: dnd5e 6 — the usage card's recorded targets are replaced (locally at once, then in the database)", async () => {
+  ttTokens.length = 0;
+  ttToken("goblin", 100, 100);
+  ttToken("ogre", 800, 100);
+  globalThis.dnd5e = { dataModels: { chatMessage: { fields: { TargetsField: { getDescriptors: tokens => [...tokens].map(t => ({ token: t.document.uuid, name: t.name })) } } } } };
+  const calls = [];
+  const card = {
+    type: "usage", isAuthor: true, system: { targets: [] },
+    updateSource(d) { calls.push(["source", d]); },
+    update(d, o) { calls.push(["update", d, o]); return Promise.resolve(); }
+  };
+  const activity = { uuid: "Actor.a.Item.i.Activity.fireball" };
+  hooks["dnd5e.postCreateUsageMessage"].forEach(h => h(activity, card));
+  const region = ttRegion(450, { flags: { dnd5e: { activity: activity.uuid } } });
+  hooks["dnd5e.postCreateMeasuredTemplate"].forEach(h => h(activity, [region]));
+  const want = [{ token: "Scene.scene.Token.goblin", name: "goblin" }];
+  assert.deepEqual(calls, [["source", { "system.targets": want }], ["update", { "system.targets": want }, { diff: false }]]);
+
+  calls.length = 0;
+  const later = { uuid: "Actor.a.Item.i.Activity.later" };
+  const oldCard = { ...card, getAssociatedActivity: () => later };
+  game.messages = { contents: [{ type: "usage", isAuthor: true, getAssociatedActivity: () => ({ uuid: "other" }) }, oldCard] };
+  hooks["dnd5e.postCreateMeasuredTemplate"].forEach(h => h(later, [region]));
+  assert.equal(calls.length, 2, "a template placed later from the card's button finds the card");
+
+  calls.length = 0;
+  const fresh = { uuid: "Actor.a.Item.i.Activity.fresh" };
+  hooks["dnd5e.postCreateUsageMessage"].forEach(h => h(fresh, { ...card, isAuthor: false }));
+  hooks["dnd5e.postCreateMeasuredTemplate"].forEach(h => h(fresh, [region]));
+  assert.equal(calls.length, 0, "someone else's card is left alone (players)");
+  hooks["dnd5e.postCreateUsageMessage"].forEach(h => h(fresh, { ...card, system: { targets: undefined } }));
+  hooks["dnd5e.postCreateMeasuredTemplate"].forEach(h => h(fresh, [region]));
+  assert.equal(calls.length, 0, "not a dnd5e 6 usage card");
+  settings.templateTargetEnabled = false;
+  hooks["dnd5e.postCreateUsageMessage"].forEach(h => h(fresh, card));
+  hooks["dnd5e.postCreateMeasuredTemplate"].forEach(h => h(fresh, [region]));
+  assert.equal(calls.length, 0, "switched off");
+  settings.templateTargetEnabled = true;
+  delete globalThis.dnd5e;
+});
+globalThis.canvas = ttSavedCanvas;
+game.user = ttSavedUser;
+
 console.log(`\ntest-features: ${passed} passed`);

@@ -420,7 +420,51 @@ both — so the HUD doesn't fill up.
 
 ---
 
-### 12. Savage Attacker  ·  *dnd5e · world (GM)*
+### 12. Template Auto-Targeting  ·  *any system (chat cards: dnd5e 6) · world (GM)*
+
+Place a template — every creature in it is targeted.
+
+**How it works:** when you place a template (a spell's area from the chat card, or one drawn with
+the Region tool's *Measured Template Mode*), your targets are replaced by the creatures in its
+area. Only the person who places it gets the targets; nothing else in the world changes. With
+**D&D 5e 6** the spell's chat card gets the same targets (dnd5e records them before the template
+is placed), so the GM's *Roll Save* button and the damage roll use them.
+
+Which creatures count follows the D&D rules for areas of effect:
+
+- **On square and hex grids** (DMG 2024, p. 44): *"If an area of effect covers at least half a
+  square or hex, the entire square or hex is affected."* A creature is in the area if one of the
+  squares it occupies is affected — a Large creature has 4 squares, a Huge one 9, so bigger
+  creatures are caught more easily, as on the table.
+- **On gridless maps** there is no official rule except Xanathar's (*"any part of the miniature's
+  base is overlapped by the template"*), which hits big creatures at the slightest touch. The
+  default therefore carries the grid rule over: the creature's base is split into **5-foot
+  sections** (Large 2×2, Huge 3×3, Medium or smaller one section), and the creature is in the area
+  if the template covers **at least half of one section**. A Medium creature must be half
+  covered; a Huge one is hit once half of any one of its nine sections is covered (e.g. 2½ ft
+  deep along one of its edges) — not by a graze, and not only when its centre is inside.
+  Xanathar's rule and a centre rule are selectable.
+- **Emanations** (e.g. *Spirit Guardians*) leave out the creature they come from (rules glossary:
+  *"An Emanation's origin … isn't included in the area of effect unless its creator decides
+  otherwise"*); untarget allies yourself. Cones, cubes, lines, spheres and cylinders are pure
+  geometry — a caster inside their own *Fireball* is targeted.
+- **Walls** count as Foundry draws the template (dnd5e cuts template areas off at walls).
+  **Elevation** only counts if the template itself has an elevation range — a creature flying
+  above a *Fireball* is targeted too; untarget it.
+- Players target only creatures they can see; hidden tokens are left out (for the GM too, unless
+  switched on — their names would show up on the chat card); defeated creatures are left out.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Target Creatures in Placed Templates** | off | World switch (GM): placing a template replaces your targets with the creatures in it. |
+| **Rule on Square and Hex Grids** | at least half of the square (DMG 2024) | Or *any part of the square* (Xanathar's templates) or *the square's centre* (exactly the squares Foundry highlights). |
+| **Rule on Gridless Maps** | at least half of a 5-foot section of the base | Or *any part of the base* (Xanathar's) or *the centre of a 5-foot section*. |
+| **GM Also Targets Hidden Tokens** | off | Hidden tokens in the area are targeted for the GM too. |
+| **Also Target Defeated Creatures** | off | Creatures with the *Defeated* / *Dead* status are targeted too. |
+
+---
+
+### 13. Savage Attacker  ·  *dnd5e · world (GM)*
 
 Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
 roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
@@ -453,7 +497,7 @@ not damage).
 
 ---
 
-### 13. Weapon Mastery  ·  *dnd5e · world (GM)*
+### 14. Weapon Mastery  ·  *dnd5e · world (GM)*
 
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this
@@ -532,7 +576,7 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
 | **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
 | **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
 
-### 14. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
+### 15. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
 
 See whom an attack was rolled against when you use **RSReforged**.
 
@@ -548,7 +592,7 @@ clickable target pills, sorted hits first. Who sees AC and hit/miss follows dnd5
 |---|---|---|
 | **Show Attack Targets on RSReforged Cards** | off | Adds the targets row to RSReforged's attack section (RSReforged on dnd5e 6). |
 
-### 15. Chat Export by Time Range  ·  *any system · world (GM)*
+### 16. Chat Export by Time Range  ·  *any system · world (GM)*
 
 Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
 chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
@@ -589,7 +633,7 @@ timestamps); a second argument `{ format: "foundry" }` writes Foundry's format.
 | **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
 | **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
 
-### 16. Token Action HUD Layer  ·  *any system · world (GM)*
+### 17. Token Action HUD Layer  ·  *any system · world (GM)*
 
 Keeps **Token Action HUD** visible above the interface.
 
