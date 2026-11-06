@@ -4,6 +4,18 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.10.0] — 2026-11-06
+
+### Added
+- **Template Auto-Targeting** (any system; chat cards with D&D 5e 6): place a template and every
+  creature in its area becomes your target. On square and hex grids by the DMG 2024 rule (a square
+  counts if the area covers at least half of it; a creature is in the area if one of its squares
+  counts — Large creatures have 4, Huge ones 9). On gridless maps the creature's base is split into
+  5-foot sections and the same rule applies per section, so big creatures are neither hit by a mere
+  graze nor only when their centre is inside. Emanations leave out the creature they come from.
+  With D&D 5e 6 the spell's chat card gets the targets too, so *Roll Save* and damage use them.
+  Xanathar's "any part" rule and a centre rule are selectable. Off by default.
+
 ## [1.9.1] — 2026-11-06
 
 ### Fixed

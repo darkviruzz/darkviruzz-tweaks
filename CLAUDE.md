@@ -93,6 +93,7 @@ scripts/
     chat-export.js              chat export by time range, detailed or Foundry format (world/GM, optional for players)
     token-status-icons.js       token icons: overlay by priority list, dynamic icon size, ignored effects (world; display only)
     token-formation.js          arrange selected tokens: block / hex / ring / crowd with canvas preview (world + user HUD entry)
+    template-targeting.js       target the creatures in a placed template by D&D area rules; dnd5e 6 card targets (world)
     rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
     tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
   lib/
@@ -103,6 +104,7 @@ scripts/
     rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
     token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette)
     formations.js               pure formation geometry (block, hex, ring, crowd; spacing, order, walls via callback)
+    area-coverage.js            pure AoE coverage: grid space / creature-base sections vs. an inside(x, y) callback
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -954,6 +956,71 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   the HUD stays at 20 until a reload. `renderApplicationV2(app, element)` fires for it (class
   chain). Our fix pins the inline z-index with a MutationObserver on its `style` attribute.
 
+### Template Regions & D&D area rules (feature *Template Auto-Targeting*, verified 2026-11-06)
+
+Sources: dnd5e 6.0.6 / 5.3.3 (`release-*` clones), Foundry v14 API docs (foundryvtt.com/api, v14),
+the v14 release notes in the public repo `foundryvtt/foundryvtt` (`releases/notes-14.*.html` —
+readable via raw.githubusercontent.com), and the rules texts below. Core implementation details of
+Regions are **v14 impl unverified** (no client source in the cloud session — grep the local
+install when on the dev machine).
+
+- **Measured Templates are gone in v14** (notes 14.356/14.359: "the first time that we have ever
+  eliminated one of the fundamental types of data"); templates are **Regions**. Core's "Measured
+  Template Mode" of the Region tools marks them with `flags.core.MeasuredTemplate` (assumed from
+  dnd5e mirroring it; unverified). dnd5e 6.0.6 sets that flag ONLY on its placement previews; the
+  Regions it creates carry `flags.dnd5e.{activity, item, origin (usage token uuid), dimensions,
+  spellLevel}` — detect a template by either flag.
+- **dnd5e 6 `TemplatePlacement.fromActivity`** (`module/canvas/template-placement.mjs`):
+  `canvas.regions.placeRegions(data, {attachToToken, create: false, onRotate, preConfirm})` for the
+  preview, then `scene.createEmbeddedDocuments("Region", regionData)` with `shapes` (types
+  `circle`, `cone` (angle `CONFIG.MeasuredTemplate.defaults.angle`), `emanation` `{base: {type:
+  "token", x, y, width, height, shape}, radius}`, `line`, `rectangle`, `ring`; sizes in px),
+  `levels: [canvas.level.id]`, `restriction: {enabled: true, type: "move"}` (walls cut the area),
+  `attachment.token` (non-stationary emanations), `visibility: ALWAYS`, `highlightMode:
+  "coverage"`. Hooks: `dnd5e.preCreateMeasuredTemplate(activity, config)` and
+  `dnd5e.createMeasuredTemplate(activity, regionData)` (return false cancels),
+  `dnd5e.postCreateMeasuredTemplate(activity, createdRegions)`. The activity's chat button "Place
+  Template" calls the same `#placeTemplate()` later (no `postCreateUsageMessage` then).
+- **Targets are recorded BEFORE the template exists:** `Activity#use` builds the usage message
+  with `system.targets: TargetsField.getDescriptors()` (the user's targets at that moment), creates
+  it, then `_finalizeUsage` places the template, then `dnd5e.postUseActivity`. Readers of those
+  targets: `UsageMessageData#evaluatedTargets` (Roll Save / check buttons; recorded targets the
+  user owns, or controlled tokens in "selected" mode) and the damage buttons
+  (`rollDamage(…, {data: {system: {targets: message.system.targets}}})`). So auto-targeting must
+  also rewrite the card's `system.targets` — `dnd5e.dataModels.chatMessage.fields.TargetsField
+  .getDescriptors(tokens)`; we `updateSource` it at once (postUseActivity listeners like
+  RSReforged run before a database round trip) and `update(…, {diff: false})` (the default diff
+  against the already changed source would send nothing).
+- dnd5e **5.3.3** is verified for Foundry 14 but still places `MeasuredTemplate` documents
+  (`AbilityTemplate`, hook `dnd5e.createActivityTemplate`) — whether that works on v14 is
+  unverified; we only handle Regions.
+- **Core containment (notes 14.353, #13625):** all grid-space centre points of a token's shape
+  are tested for visibility, occlusion and Region containment (before: only the centre). The
+  highlight mode *Covered Grid Spaces* shows "the grid spaces on which a 1×1 Token would be
+  contained" = the **centre rule**, NOT the DMG's "at least half". 14.349 (#13273): shapes except
+  polygons can be grid-based (follow the grid's metric).
+- API (v14 docs): `RegionDocument#testPoint(ElevatedPoint)`, `#polygonTree`
+  (`PolygonTree#testPoint(point, distance = 0)`), `#bounds`, `#tokens`, `#levels`;
+  `TokenDocument#testInsideRegion(region, data)`, `#getContainmentTestPoints(data)`,
+  `#getOccupiedGridSpaceOffsets(data)` → `GridOffset3D[]` (walls/surfaces considered; EMPTY on
+  gridless); `BaseGrid#getVertices({i, j})` (empty on gridless), `#getCenterPoint`, `isGridless`,
+  `isHexagonal`; `Token#setTarget(targeted = true, {releaseOthers})` (no user/groupSelection
+  arguments any more); `User#targets: Set<Token>`; `TokenLayer#targetObjects(rect,
+  {releaseOthers})`; `Token#shape`; `DatabaseUpdateOperation.diff`.
+- **Rules texts** (5etools data `book-xdmg/xge/dmg/xphb.json` on raw.githubusercontent.com
+  `5etools-mirror-3/5etools-src`, SRD 5.2 in dnd5e's `packs/_source/content24`):
+  DMG 2024 p. 44 *Areas of Effect*: "If the area has a point of origin, choose an intersection of
+  squares or hexes … If an area of effect covers at least half a square or hex, the entire square
+  or hex is affected." DMG 2014: same, but only "If an area of effect is circular". XGtE p. 86
+  template method: any part of a square under the template counts, being adjacent isn't enough, "If
+  a creature's miniature is in an affected square, that creature is in the area"; without a grid
+  "a creature is included … if any part of the miniature's base is overlapped by the template";
+  token method: squares instead of circles. SRD 5.2 glossary: origin included for Sphere and
+  Cylinder, NOT for Cone, Cube, Line and Emanation ("unless its creator decides otherwise"); an
+  Emanation extends from a creature and moves with it. Creature space DMG 2024: Large 2×2 (3
+  hexes), Huge 3×3 (7), Gargantuan 4×4+ (12+). Sage Advice could not be checked (sageadvice.eu,
+  dndbeyond.com and wizards.com are not reachable from the cloud session).
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -972,5 +1039,6 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`, `lib/token-tools.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
 | Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
 | Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
+| Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
