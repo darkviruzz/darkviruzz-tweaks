@@ -4,6 +4,15 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.9.1] — 2026-11-06
+
+### Fixed
+- **All texts of the module showed as raw keys** (`DT.Settings.…`, `DT.Categories.…`) — in the
+  settings window, dialogs and buttons, in English and German. A few entries of the language files
+  (Chat Export, Token Formations) were structured in a way Foundry can't read, and Foundry then
+  ignores the whole language file. Affected 1.8.0 and 1.9.0; nothing in your world or settings was
+  changed, only the display.
+
 ## [1.9.0] — 2026-11-06
 
 ### Added

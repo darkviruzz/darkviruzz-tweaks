@@ -392,14 +392,14 @@ function dialogContent() {
   const group = (mode, label, input) =>
     `<div class="form-group" data-dt-mode="${mode}"><label>${localize(label)}</label><div class="form-fields">${input}</div></div>`;
   return `<div class="${BUTTON_CLASS}-dialog">
-    <div class="form-group"><label>${localize("DT.ChatExport.Mode")}</label><div class="form-fields">
+    <div class="form-group"><label>${localize("DT.ChatExport.Mode.Label")}</label><div class="form-fields">
       <select name="mode">
         <option value="hours" selected>${localize("DT.ChatExport.Mode.Hours")}</option>
         <option value="days">${localize("DT.ChatExport.Mode.Days")}</option>
         <option value="range">${localize("DT.ChatExport.Mode.Range")}</option>
         <option value="all">${localize("DT.ChatExport.Mode.All")}</option>
       </select></div></div>
-    <div class="form-group"><label>${localize("DT.ChatExport.Format")}</label><div class="form-fields">
+    <div class="form-group"><label>${localize("DT.ChatExport.Format.Label")}</label><div class="form-fields">
       <select name="format">
         <option value="detailed" selected>${localize("DT.ChatExport.Format.Detailed")}</option>
         <option value="foundry">${localize("DT.ChatExport.Format.Foundry")}</option>

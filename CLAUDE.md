@@ -203,7 +203,7 @@ module.json inconsistencies (version format, `download` must be
 `<url>/releases/download/v<version>/module.zip`, stable `manifest`, referenced files exist,
 every `styles/*.css` listed, MODULE_ID match, `compatibility.minimum` ≥ 14, no
 `relationships.systems`); syntax errors in any script; i18n keys used in scripts but missing
-from en.json; en/de key or `{placeholder}` mismatch; feature-contract violations (ids,
+from en.json; en/de key or `{placeholder}` mismatch; a lang key that is both a string and the parent of another key (Foundry would drop the whole file); feature-contract violations (ids,
 duplicate keys/actions, missing i18n keys, Boolean default ≠ false, bound keybindings, init()
 throwing against stubbed globals, a feature touching Foundry globals at import time); README
 not mentioning a setting/keybinding name; a feature id missing from this file; no CHANGELOG
@@ -283,6 +283,14 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   `[name="<MODULE_ID>.<key>"]`, `.closest(".form-group")`,
   `insertAdjacentElement("beforebegin", header)` — idempotent, degrade gracefully.
 - **Localization:** `game.i18n.has(key, fallback = true)`, `localize(key)`, `format(key, data)`.
+- **GOTCHA — a lang key must never be both a string and a parent** (`"DT.A.B"` next to
+  `"DT.A.B.C"`). Foundry loads a language file with `expandObject()`; `setProperty` then runs
+  `"C" in "<string>"` → TypeError, `Localization#_loadTranslationFile` catches it, logs *"Unable to
+  parse localization file …"* and uses `{}` — the WHOLE file is dropped and every `DT.*` key shows
+  raw (v1.8.0/1.9.0, found 2026-11-06 from the user's settings screenshot; reproduced with the v13
+  `expandObject`/`setProperty` source — v14 impl unverified, but the symptom matches). If the child
+  comes first, the string silently overwrites the subtree instead. Name it `"DT.A.B.Label"`;
+  `tools/validate.mjs` fails on such pairs.
 - **Keybindings:** `game.keybindings.register(ns, action, {name, hint, editable, uneditable,
   onDown, onUp, repeat, reservedModifiers, restricted, precedence})`; `editable: []` = no
   default key; registering after `init` throws. `onDown` returning true consumes the event.

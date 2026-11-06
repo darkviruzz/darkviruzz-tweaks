@@ -10,7 +10,8 @@
  *   - every script parses; feature files can be imported without Foundry globals
  *   - the feature contract holds (unique ids/keys, i18n keys exist, Boolean settings
  *     default to false, keybindings ship unbound)
- *   - en/de localisation files have the same keys and the same {placeholders}
+ *   - en/de localisation files have the same keys and the same {placeholders}, and no key
+ *     is both a string and the parent of another key (Foundry would drop the whole file)
  *   - README documents every setting/keybinding, CLAUDE.md lists every feature, and
  *     CHANGELOG.md has a section for the current version
  *   - each feature's init() runs without throwing against stubbed Foundry globals
@@ -126,6 +127,26 @@ for (const [lang, dict] of Object.entries(langs)) {
   }
   for (const key of Object.keys(dict)) {
     if (!(key in en)) fail(`lang/${lang}.json has "${key}", which en.json lacks`);
+  }
+}
+
+// Foundry expands the flat keys into nested objects when it loads a language file
+// (Localization#_loadTranslationFile → foundry.utils.expandObject). A key that is a string AND
+// the parent of other keys ("A.B" next to "A.B.C") makes that throw — Foundry then logs
+// "Unable to parse localization file" and drops the WHOLE file, so every DT.* key shows raw
+// (v1.8.0/1.9.0). Use "A.B.Label" + "A.B.C" instead. Values must be strings.
+for (const [lang, dict] of Object.entries(langs)) {
+  const keys = new Set(Object.keys(dict));
+  for (const key of keys) {
+    if (typeof dict[key] !== "string") fail(`lang/${lang}.json "${key}" must be a string`);
+    const parts = key.split(".");
+    for (let i = 1; i < parts.length; i++) {
+      const parent = parts.slice(0, i).join(".");
+      if (keys.has(parent)) {
+        fail(`lang/${lang}.json "${parent}" is a string but also the parent of "${key}" — Foundry ` +
+          `can't expand that and ignores the whole file; rename it to "${parent}.Label"`);
+      }
+    }
   }
 }
 

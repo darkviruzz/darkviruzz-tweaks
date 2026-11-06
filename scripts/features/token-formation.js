@@ -43,10 +43,10 @@ const TYPE_ICONS = {
   crowd: "fa-solid fa-people-group"
 };
 const TYPE_LABELS = {
-  block: "DT.Formation.Type.Block",
-  hex: "DT.Formation.Type.Hex",
-  circle: "DT.Formation.Type.Circle",
-  crowd: "DT.Formation.Type.Crowd"
+  block: "DT.Formation.Type.Block.Label",
+  hex: "DT.Formation.Type.Hex.Label",
+  circle: "DT.Formation.Type.Circle.Label",
+  crowd: "DT.Formation.Type.Crowd.Label"
 };
 const TYPE_HINTS = {
   block: "DT.Formation.Type.Block.Hint",
@@ -251,7 +251,7 @@ function formationClass() {
         range("columns", "DT.Formation.Columns", 0, Math.max(1, n), 1, Math.min(o.columns, n), "block"),
         range("rotation", "DT.Formation.Rotation", 0, 345, 15, o.rotation),
         make("div", { class: "form-group dt-formation__row" }, [
-          make("label", { for: "dt-formation-order" }, [localize("DT.Formation.Order")]),
+          make("label", { for: "dt-formation-order" }, [localize("DT.Formation.Order.Label")]),
           make("div", { class: "form-fields" }, [order])
         ]),
         isGridless() ? "" : make("div", { class: "form-group dt-formation__row" }, [
