@@ -1,0 +1,68 @@
+/*
+ * Feature: Token Status Icons — the sortable priority list in the settings window.
+ */
+
+.dt-status-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.dt-status-order__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dt-status-order__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: 4px;
+  cursor: grab;
+}
+
+.dt-status-order__item.dragging {
+  opacity: 0.5;
+}
+
+.dt-status-order__grip {
+  opacity: 0.6;
+}
+
+.dt-status-order__rank {
+  min-width: 1.2em;
+  text-align: right;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-status-order__item img {
+  width: 20px;
+  height: 20px;
+  border: none;
+  flex: 0 0 auto;
+}
+
+.dt-status-order__label {
+  flex: 1 1 auto;
+}
+
+.dt-status-order__button {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  line-height: 22px;
+}
+
+.dt-status-order__button i {
+  margin: 0;
+}

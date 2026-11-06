@@ -4,6 +4,45 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.9.0] — 2026-11-06
+
+### Added
+- **Token Status Icons** (any system, GM): clearer condition icons on tokens — only the display
+  changes, nothing in the world.
+  - **Large Overlay by Priority**: chosen conditions are shown as the big picture across the token,
+    even when set from the Token HUD. Default list *Dead*, *Unconscious*; the first active one wins
+    (a dead creature shows *Dead*, not *Unconscious*). You sort the list by drag & drop right in the
+    settings window and add any condition of your system. The big one isn't repeated as a small icon.
+  - **Larger Status Icons When There Are Few**: one or two icons at double size on a Medium token,
+    getting smaller with more icons, never below Foundry's normal size (maximum adjustable).
+  - **Ignored effects** (e.g. *Bloodied*, *Concentrating*): don't make the other icons smaller —
+    either shown at normal size or hidden on the token.
+- **Token Formations** (any system): select several tokens and arrange them as a **block**
+  (rows, as square as possible, width adjustable — also a line or a column), a **hex** honeycomb,
+  a **ring** or a random **crowd** without overlap. Sliders for spacing (0.5 = crowded, 1 =
+  touching, up to 5; larger creatures keep more distance) and facing; who goes where (least
+  movement, or larger creatures in the middle / outside). A live preview on the canvas shows every
+  new place; places behind walls are skipped. Made for gridless maps; on grids optionally snapped.
+  Open it from the Token HUD, a keybinding or a macro. Off by default.
+- **Token Tools in the Token HUD**: the Token HUD shows only the tools that apply — one tool gets its
+  own button, several share one *Token Tools* button with a small menu (Formation, Token Art Picker).
+- **Attack Targets on RSReforged Cards** (D&D 5e 6, GM): with RSReforged, attack cards showed no
+  target — dnd5e 6 lists the targets of an attack only on its own attack card, which RSReforged
+  hides (saves like *Stunning Strike* show them on the usage card, that's why those did). This
+  puts dnd5e's target row — name, AC and hit/miss for the GM — back into RSReforged's attack part.
+  Off by default.
+- **Token Action HUD Layer** (any system, GM): keeps *Token Action HUD* above the docked interface —
+  it used to slip behind the Carousel combat tracker after a right-click on one of its groups until
+  the next reload. Off by default.
+
+### Changed
+- **Chat Export by Time Range** now writes a **detailed** log by default: item and activity of every
+  card, every roll with its d20s (advantage, critical, natural 1), damage per type and in total,
+  targets with AC and hit/miss, save DCs with success/failure, offered effects, whispers. The old
+  export left dnd5e 6 cards empty. Foundry's compact format can still be chosen, and there is a new
+  range **whole chat log**.
+- **Token Art Picker**: its Token HUD button is now part of the Token Tools (same option).
+
 ## [1.8.0] — 2026-10-25
 
 ### Added

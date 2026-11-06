@@ -1,0 +1,20 @@
+/*
+ * Feature: Attack Targets on RSReforged Cards — dnd5e's targets row inside RSReforged's attack section
+ * (fallback layout; dnd5e's own `.dnd5e2 .pills target-pill` styles apply to the pills).
+ */
+
+.rsr-section-attack .dt-rsr-targets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rsr-section-attack .dt-rsr-targets > ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

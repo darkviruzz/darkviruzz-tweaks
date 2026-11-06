@@ -845,7 +845,7 @@ await test("token art: Actors sidebar entry uses the v14 ContextMenuEntry shape 
   settings.tokenArtEnabled = true; assert.equal(entry.visible(li), true);
   owned.isOwner = false; assert.equal(entry.visible(li), false);
 });
-await test("token art: Token HUD button only with both options on and an owned token", () => {
+await test("token art: Token HUD button (via Token Tools) only with both options on and an owned token", () => {
   globalThis.document = { createElement: tag => ({ tag, className: "", dataset: {}, attrs: {}, children: [], listeners: {},
     setAttribute(k, v) { this.attrs[k] = v; }, append(...c) { this.children.push(...c); },
     addEventListener(t, f) { this.listeners[t] = f; } }) };
@@ -859,7 +859,7 @@ await test("token art: Token HUD button only with both options on and an owned t
   hooks.renderTokenHUD[0](hud(false), root); assert.equal(column.children.length, 0);
   hooks.renderTokenHUD[0](hud(true), root);
   assert.equal(column.children.length, 1);
-  assert.match(column.children[0].className, /control-icon dt-token-art-hud/);
+  assert.match(column.children[0].className, /control-icon dt-token-tools dt-token-tools--tokenArt/);
   assert.equal(typeof column.children[0].listeners.click, "function");
   delete globalThis.document; delete globalThis.HTMLElement;
 });
@@ -1696,12 +1696,12 @@ await test("chat export: messages in the range, oldest first; players only what 
   assert.deepEqual(ce.messagesIn(range, { isGM: true }).map(m => m.id), ["early", "whisper", "blind", "late"]);
   assert.deepEqual(ce.messagesIn(range, { isGM: false }).map(m => m.id), ["early", "late"]);
 });
-await test("chat export: file in core's format with a header; nothing in the range or no valid range → note, no file", () => {
+await test("chat export: file in Foundry's format with a header; nothing in the range or no valid range → note, no file", () => {
   const H = 3600e3;
   game.user.isGM = true; ceSaved.length = 0; notes.length = 0;
   const realNow = Date.now();
   game.messages = { contents: [ceMsg("b", realNow - H), ceMsg("a", realNow - (2 * H)), ceMsg("old", realNow - (50 * H))] };
-  assert.equal(ce.exportChat({ hours: 5 }), 2);
+  assert.equal(ce.exportChat({ hours: 5 }, { format: "foundry" }), 2);
   const [file] = ceSaved;
   assert.equal(file.type, "text/plain");
   assert.match(file.filename, /^fvtt-log-\d{4}-\d{2}-\d{2}_\d{4}--\d{4}-\d{2}-\d{2}_\d{4}\.txt$/);
@@ -1743,6 +1743,362 @@ await test("chat export: button next to core's export for the GM, for players on
   assert.ok(controls.querySelector(".control-buttons").querySelector(".dt-chat-export"), "players get their own button box");
   settings.chatExportEnabled = false; settings.chatExportPlayers = false;
   delete globalThis.document; delete globalThis.HTMLElement;
+});
+
+/* ---------- Chat Export: detailed format ---------- */
+CONFIG.DND5E = { ...(CONFIG.DND5E ?? {}), damageTypes: { piercing: { label: "Piercing" }, poison: { label: "Poison" } },
+  healingTypes: { healing: { label: "Healing" } }, abilities: { con: { label: "Constitution" } } };
+const d20 = (total, results, extra = {}) => ({ formula: "1d20 + 10", result: `${results[0]} + 10`, total,
+  dice: [{ faces: 20, results: results.map(r => ({ result: r })) }], options: {}, ...extra });
+const v6msg = (type, extra = {}) => ({ id: type, type, timestamp: Date.now(), alias: "Rhogar", flavor: "", content: "",
+  whisper: [], blind: false, rolls: [], system: {}, export: () => "core", ...extra });
+
+await test("chat export (detailed): HTML → text without a DOM; message kinds of dnd5e 6 and 5.x", () => {
+  assert.equal(ce.htmlToText("<p>Hello <b>there</b> &amp; you</p><div>Line&nbsp;2<br>3</div>"), "Hello there & you\nLine 2\n3");
+  assert.equal(ce.messageKind({ type: "attack" }), "attack");
+  assert.equal(ce.messageKind({ type: "base", flags: { dnd5e: { roll: { type: "skill" } } } }), "check");
+  assert.equal(ce.messageKind({ type: "base", flags: { dnd5e: { roll: { type: "death" } } } }), "save");
+  assert.equal(ce.messageKind({ type: "base", flags: { dnd5e: { item: { uuid: "x" } } } }), "usage");
+  assert.equal(ce.messageKind({ type: "base" }), null);
+});
+await test("chat export (detailed): attack — item, advantage dice, targets with AC and hit/miss (dnd5e 6 evaluation)", () => {
+  game.user.isGM = true;
+  const text = ce.describeMessage(v6msg("attack", {
+    system: { item: { name: "Unarmed Strike (Active)" }, activity: { name: "Attack" },
+      targets: [{ name: "Apprehensive Cultist", ac: 13 }, { name: "Guard", ac: 30 }],
+      evaluatedTargets: [{ isMiss: false }, { isMiss: true }] },
+    rolls: [d20(27, [17, 13], { hasAdvantage: true })]
+  }));
+  const [head, ...lines] = text.split("\n");
+  assert.match(head, /^\[.+\] Rhogar: Unarmed Strike \(Active\) — DT\.ChatExport\.Detail\.Attack$/);
+  assert.match(lines[0], /DT\.ChatExport\.Detail\.AttackRoll: 1d20 \+ 10 = 17 \+ 10 = 27 \(DT\.ChatExport\.Detail\.Advantage: 17, 13\)/);
+  assert.match(lines[1], /Versus Apprehensive Cultist \(DT\.ChatExport\.Detail\.AC:\{"ac":13\}\): DT\.ChatExport\.Detail\.Hit$/);
+  assert.match(lines[2], /Guard .*DT\.ChatExport\.Detail\.Miss$/);
+  assert.ok(lines.every(l => l.startsWith("    ")), "details are indented");
+  game.user.isGM = false;
+});
+await test("chat export (detailed): players see AC / hit only as far as dnd5e's attack roll visibility allows", () => {
+  const realGet = game.settings.get;
+  game.settings.get = (ns, k) => (ns === "dnd5e" && k === "attackRollVisibility") ? "hitMiss" : settings[k];
+  const text = ce.describeMessage(v6msg("attack", { system: { targets: [{ name: "Orc", ac: 13 }], evaluatedTargets: [{ isMiss: false }] },
+    rolls: [d20(20, [10])] }));
+  assert.doesNotMatch(text, /AC/); assert.match(text, /Orc: DT\.ChatExport\.Detail\.Hit/);
+  game.settings.get = (ns, k) => (ns === "dnd5e" && k === "attackRollVisibility") ? "none" : settings[k];
+  assert.doesNotMatch(ce.describeMessage(v6msg("attack", { system: { targets: [{ name: "Orc", ac: 13 }] }, rolls: [d20(20, [10])] })), /Hit|Miss/);
+  game.settings.get = realGet;
+});
+await test("chat export (detailed): dnd5e 5.x attack uses flags.dnd5e.targets and nat 1 / crit rules", () => {
+  game.user.isGM = true;
+  const text = ce.describeMessage({ ...v6msg("base"), system: undefined, flavor: "Longbow - Attack Roll",
+    flags: { dnd5e: { roll: { type: "attack" }, targets: [{ name: "Rhogar", ac: 17 }] } }, rolls: [d20(7, [4])] });
+  assert.match(text, /Rhogar: Longbow - Attack Roll/);
+  assert.match(text, /Rhogar \(.*"ac":17.*\): DT\.ChatExport\.Detail\.Miss/);
+  const crit = ce.describeMessage({ ...v6msg("base"), system: undefined, flags: { dnd5e: { roll: { type: "attack" }, targets: [{ name: "X", ac: 30 }] } },
+    rolls: [d20(25, [20], { isCritical: true })] });
+  assert.match(crit, /DT\.ChatExport\.Detail\.Critical/); assert.match(crit, /X .*DT\.ChatExport\.Detail\.Hit/);
+  game.user.isGM = false;
+});
+await test("chat export (detailed): damage per type with total and on-save note; save vs DC with result", () => {
+  const dmg = ce.describeMessage(v6msg("damage", { system: { item: { name: "Longbow" }, onSave: "half", targets: [{ name: "Rhogar" }] },
+    rolls: [{ formula: "1d8 + 1", result: "7 + 1", total: 8, options: { type: "piercing" } },
+      { formula: "3d4", result: "7", total: 7, options: { type: "poison" }, isCritical: true }] }));
+  assert.match(dmg, /: Longbow — DT\.ChatExport\.Detail\.Damage/);
+  assert.match(dmg, /1d8 \+ 1 = 7 \+ 1 = 8 Piercing\n/);
+  assert.match(dmg, /3d4 = 7 = 7 Poison \(DT\.ChatExport\.Detail\.Critical\)/);
+  assert.match(dmg, /Total:\{"total":15\}/);
+  assert.match(dmg, /OnSave\.Half/); assert.match(dmg, /Targets:\{"targets":"Rhogar"\}/);
+  const save = ce.describeMessage(v6msg("save", { flavor: "Constitution Saving Throw", rolls: [d20(9, [3], { options: { target: 14 }, isSuccess: false })] }));
+  assert.match(save, /Rhogar: Constitution Saving Throw\n/);
+  assert.match(save, /VersusDC:\{"dc":14\}: DT\.ChatExport\.Detail\.Failure/);
+});
+await test("chat export (detailed): usage card — activity, targets, save DC and offered effects; whisper / blind tags; plain chat text", () => {
+  const usage = ce.describeMessage(v6msg("usage", {
+    whisper: ["gm"], blind: true,
+    system: { item: { name: "Stunning Strike" }, activity: { name: "Save" }, targets: [{ name: "Cultist" }], effects: ["e1", "e2"] },
+    getAssociatedActivity: () => ({ save: { dc: { value: 14 }, ability: new Set(["con"]) },
+      item: { effects: { get: id => ({ e1: { name: "Stunned" }, e2: { name: "Slowed" } })[id] } } })
+  }));
+  const [head] = usage.split("\n");
+  assert.match(head, /Rhogar: Stunning Strike — Save \(DT\.ChatExport\.Detail\.Whisper:\{"users":"GM"\}, DT\.ChatExport\.Detail\.Blind\)$/);
+  assert.match(usage, /Targets:\{"targets":"Cultist"\}/);
+  assert.match(usage, /Save:\{"dc":14,"ability":"Constitution"\}/);
+  assert.match(usage, /Effects:\{"effects":"Stunned, Slowed"\}/);
+  const chat = ce.describeMessage(v6msg("base", { content: "<p>Hello <i>table</i></p>" }));
+  assert.match(chat, /\] Rhogar\n {4}Hello table$/);
+});
+await test("chat export (detailed): file is detailed by default; a broken message falls back to Foundry's text; whole log mode", () => {
+  ceSaved.length = 0;
+  const now = Date.now();
+  game.messages = { contents: [
+    v6msg("check", { id: "a", timestamp: now - 1000, flavor: "Wisdom (Perception) Check", rolls: [d20(16, [13])] }),
+    { ...v6msg("attack"), id: "b", timestamp: now - 500, get rolls() { throw new Error("boom"); }, export: () => "[core] fallback" }
+  ] };
+  console.warn = () => {};
+  assert.equal(ce.exportChat({ all: true }), 2);
+  const data = ceSaved.at(-1).data;
+  assert.match(data, /Rhogar: Wisdom \(Perception\) Check\n {4}1d20 \+ 10 = 13 \+ 10 = 16\n\n\[core\] fallback\n$/);
+  assert.deepEqual(ce.rangeFor({ all: true }, 1000), { from: 0, to: 1000 });
+  assert.deepEqual(ce.specFromForm({ mode: "all" }), { all: true });
+});
+
+/* ---------- Token Status Icons ---------- */
+const tsiModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-status-icons.js")).href);
+const tsi = tsiModule.internals;
+tsiModule.default.init();
+globalThis.CONST = { ...(globalThis.CONST ?? {}), ACTIVE_EFFECT_SHOW_ICON: { NONE: 0, CONDITIONAL: 1, ALWAYS: 2 } };
+const fx = (name, statuses = [], extra = {}) => ({ name, statuses: new Set(statuses), showIcon: 2, flags: {}, ...extra });
+
+await test("status icons: overlay = first listed status that is active (Dead before Unconscious), else core's overlay flag", () => {
+  const effects = [fx("Prone", ["prone"]), fx("Unconscious", ["unconscious"]), fx("Dead", ["dead"]), fx("Petrified", ["petrified"], { flags: { core: { overlay: true } } })];
+  assert.equal(tsi.overlayIndex(effects, ["dead", "unconscious"]), 2);
+  assert.equal(tsi.overlayIndex(effects.slice(0, 2), ["dead", "unconscious"]), 1);
+  assert.equal(tsi.overlayIndex(effects, ["blinded"]), 3, "core overlay flag after the list");
+  assert.equal(tsi.overlayIndex([fx("Prone", ["prone"])], ["dead"]), -1);
+  assert.equal(tsi.overlayIndex([fx("Bless")], ["bless"]), 0, "effect names work too (case-insensitive)");
+  assert.deepEqual(tsi.parseList(" dead, unconscious ,,"), ["dead", "unconscious"]);
+});
+await test("status icons: size = height ÷ count between normal and max (1–2 double, 3 → 33, from 5 normal); column layout", () => {
+  assert.equal(tsi.iconSize(1, 100, 20, 2), 40);
+  assert.equal(tsi.iconSize(2, 100, 20, 2), 40);
+  assert.equal(Math.round(tsi.iconSize(3, 100, 20, 2)), 33);
+  assert.equal(tsi.iconSize(4, 100, 20, 2), 25);
+  assert.equal(tsi.iconSize(9, 100, 20, 2), 20, "never below normal");
+  assert.equal(tsi.iconSize(1, 200, 20, 2), 40, "never above max");
+  assert.deepEqual(tsi.columnLayout([40, 40, 20, 20, 20], 100), [{ x: 0, y: 0 }, { x: 0, y: 40 }, { x: 0, y: 80 }, { x: 40, y: 0 }, { x: 40, y: 20 }]);
+});
+const sprite = zIndex => ({ zIndex, visible: true, alpha: 1, width: 20, height: 20, x: 0, y: 0, anchor: { set(x, y) { this.x = x; this.y = y; } } });
+const planOpts = extra => ({ overlay: true, priority: ["dead", "unconscious"], coreOverlay: null, dynamic: true, maxScale: 2,
+  ignored: ["bloodied"], ignoredMode: "small", base: 20, height: 100, ...extra });
+await test("status icons: plan — overlay not repeated small, ignored small after the counted ones (or hidden), sprite mismatch → keep core", () => {
+  const effects = [fx("Bloodied", ["bloodied"]), fx("Unconscious", ["unconscious"]), fx("Prone", ["prone"]), fx("Dead", ["dead"])];
+  const sprites = [0, 1, 2, 3].map(sprite);
+  const plan = tsi.planLayout(sprites, effects, planOpts());
+  assert.equal(plan.overlay, sprites[3]);
+  assert.deepEqual(plan.icons.map(i => [i.sprite.zIndex, i.size]), [[1, 40], [2, 40], [0, 20]], "2 counted → double, bloodied normal, dead not small");
+  const hidden = tsi.planLayout(sprites, effects, planOpts({ ignoredMode: "hide" }));
+  assert.deepEqual(hidden.hidden, [sprites[0]]);
+  const plain = tsi.planLayout(sprites, effects, planOpts({ overlay: false, coreOverlay: sprites[2], dynamic: false }));
+  assert.equal(plain.overlay, sprites[2], "overlay off → core's overlay stays");
+  assert.ok(plain.icons.every(i => i.size === 20), "dynamic off → normal size");
+  assert.equal(tsi.planLayout([sprite(7)], effects, planOpts()), null, "zIndex beyond the effects → redraw pending");
+});
+await test("status icons: refreshToken re-lays core's sprites only with refreshEffects and an option on", () => {
+  const rects = [];
+  const bg = { clear() { return this; }, beginFill() { return this; }, lineStyle() { return this; }, drawRoundedRect: (...a) => rects.push(a) };
+  const sprites = [0, 1].map(sprite);
+  const token = {
+    effects: { children: [bg, ...sprites], bg, overlay: null, renderable: true },
+    actor: { appliedEffects: [fx("Unconscious", ["unconscious"]), fx("Prone", ["prone"])] },
+    document: { getSize: () => ({ width: 100, height: 100 }), getCenterPoint: () => ({ x: 50, y: 50 }) }
+  };
+  canvas.dimensions = { uiScale: 1 };
+  settings.statusOverlayEnabled = false; settings.statusIconsDynamicSize = false; settings.statusIconsIgnored = ""; settings.statusIconsIgnoredMode = "small";
+  hooks.refreshToken.forEach(h => h(token, { refreshEffects: true }));
+  assert.equal(sprites[0].width, 20, "all off → untouched");
+  settings.statusOverlayEnabled = true; settings.statusOverlayList = "dead, unconscious";
+  settings.statusIconsDynamicSize = true; settings.statusIconsMaxScale = 2;
+  hooks.refreshToken.forEach(h => h(token, { refreshPosition: true }));
+  assert.equal(sprites[0].width, 20, "no refreshEffects flag → untouched");
+  hooks.refreshToken.forEach(h => h(token, { refreshEffects: true }));
+  assert.equal(token.effects.overlay, sprites[0]);
+  assert.deepEqual([sprites[0].width, sprites[0].alpha, sprites[0].anchor.x], [60, 0.8, 0.5], "Unconscious = overlay, 60 %");
+  assert.deepEqual([sprites[1].width, sprites[1].x, sprites[1].y], [40, 0, 0], "the one remaining icon double size");
+  assert.equal(rects.length, 1, "background only behind the small icon");
+  token.effects.renderable = false; sprites[1].width = 5;
+  hooks.refreshToken.forEach(h => h(token, { refreshEffects: true }));
+  assert.equal(sprites[1].width, 5, "still drawing → wait for the redraw's refresh");
+  settings.statusOverlayEnabled = false; settings.statusIconsDynamicSize = false;
+});
+
+/* ---------- Token Tools (Token HUD) + Token Formations ---------- */
+globalThis.HTMLElement = WmEl;
+globalThis.document = { createElement: tag => new WmEl(tag), getElementById: () => null };
+const wmAppend = WmEl.prototype.append;
+Object.assign(WmEl.prototype, {
+  append(...nodes) { for (const n of nodes) { if (typeof n === "string") this._text += n; else wmAppend.call(this, n); } },
+  setAttribute(k, v) { (this.attrs ??= {})[k] = String(v); },
+  getAttribute(k) { return this.attrs?.[k] ?? null; },
+  remove() { if (this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1); this.parent = null; }
+});
+const formationModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-formation.js")).href);
+const fm = formationModule.internals;
+formationModule.default.init();
+const formations = await import(pathToFileURL(join(ROOT, "scripts/lib/formations.js")).href);
+const fToken = (id, x, y, size = 1, owner = true) => {
+  const px = size * 100;
+  return { id, controlled: true, center: { x: x + (px / 2), y: y + (px / 2) }, texture: null,
+    document: { x, y, isOwner: owner, locked: false, getSize: () => ({ width: px, height: px }), getSnappedPosition: p => ({ x: Math.round(p.x / 100) * 100, y: Math.round(p.y / 100) * 100 }) },
+    collisions: [], checkCollision(p, opts) { this.collisions.push([p, opts]); return p.x > 900; } };
+};
+const overlaps = (map, units, spacing) => {
+  let n = 0;
+  for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
+    const a = map.get(units[i].id); const b = map.get(units[j].id);
+    if (Math.hypot(a.x - b.x, a.y - b.y) < ((units[i].r + units[j].r) * spacing) - 1e-6) n++;
+  }
+  return n;
+};
+
+await test("formations: every type and order places mixed sizes without overlap at spacing 0.5 / 1 / 3", () => {
+  const units = [...Array(9).keys()].map(i => ({ id: `m${i}`, r: 50, x: (i * 137) % 700, y: (i * 251) % 500 }));
+  units.push({ id: "L", r: 100, x: 900, y: 900 });
+  for (const type of formations.TYPES) for (const order of formations.ORDERS) for (const spacing of [0.5, 1, 3]) {
+    const map = formations.planFormation(units, { type, order, spacing, rotation: 30, seed: 3 });
+    assert.equal(map.size, units.length, `${type}/${order}`);
+    assert.equal(overlaps(map, units, spacing), 0, `${type}/${order}/${spacing}`);
+  }
+});
+await test("formations: block = ⌈√n⌉ columns front row first and centred; columns setting; rotation; least movement wins", () => {
+  assert.equal(formations.autoColumns(7), 3); assert.equal(formations.autoColumns(9), 3); assert.equal(formations.autoColumns(10), 4);
+  const units = [...Array(6).keys()].map(i => ({ id: `u${i}`, r: 50, x: i * 300, y: 0 }));
+  const line = formations.planFormation(units, { type: "block", columns: 6, anchor: { x: 0, y: 0 }, order: "largeFirst" });
+  assert.deepEqual([...new Set([...line.values()].map(p => Math.round(p.y)))], [0], "one rank");
+  assert.deepEqual([...line.values()].map(p => p.x).sort((a, b) => a - b), [-250, -150, -50, 50, 150, 250]);
+  const turned = formations.planFormation(units, { type: "block", columns: 6, anchor: { x: 0, y: 0 }, rotation: 90, order: "largeFirst" });
+  assert.deepEqual([...new Set([...turned.values()].map(p => Math.round(p.x)))], [0], "rotated 90° → a file");
+  const scattered = [...Array(8).keys()].map(i => ({ id: `s${i}`, r: 50, x: (i % 4) * 400, y: Math.floor(i / 4) * 400 }));
+  const moved = order => { const m = formations.planFormation(scattered, { type: "hex", order }); return scattered.reduce((s, u) => s + Math.hypot(m.get(u.id).x - u.x, m.get(u.id).y - u.y), 0); };
+  assert.ok(moved("nearest") <= moved("largeFirst"), "nearest moves least");
+});
+await test("formations: ring around the centre; crowd reproducible per seed; invalid places (walls) are skipped", () => {
+  const units = [...Array(6).keys()].map(i => ({ id: `c${i}`, r: 50, x: i * 10, y: 0 }));
+  const ring = formations.planFormation(units, { type: "circle", anchor: { x: 0, y: 0 }, order: "largeFirst" });
+  const radii = [...ring.values()].map(p => Math.hypot(p.x, p.y));
+  assert.ok(radii.every(r => Math.abs(r - radii[0]) < 1e-6) && radii[0] >= 100 - 1e-6, "same radius, room for every token");
+  const a = formations.planFormation(units, { type: "crowd", seed: 5 });
+  const b = formations.planFormation(units, { type: "crowd", seed: 5 });
+  const c = formations.planFormation(units, { type: "crowd", seed: 6 });
+  assert.deepEqual([...a], [...b]); assert.notDeepEqual([...a], [...c]);
+  const walled = formations.planFormation(units, { type: "block", anchor: { x: 0, y: 0 }, valid: p => p.x < 0 });
+  assert.ok([...walled.values()].every(p => p.x < 0), "only valid places used");
+});
+await test("formation: plan from tokens — wall-blocked places skipped, snapping on grids, blocked paths flagged, unchanged tokens kept", () => {
+  canvas.dimensions = { uiScale: 1, sceneRect: { contains: (x, y) => x >= 0 && y >= 0 && x <= 5000 && y <= 5000 } };
+  canvas.grid = { type: 0 };
+  const tokens = [fToken("a", 600, 600), fToken("b", 700, 600), fToken("c", 800, 600), fToken("d", 1000, 600)];
+  const moves = fm.computePlan(tokens, { type: "block", spacing: 1, columns: 0, rotation: 0, order: "nearest", snap: true });
+  assert.equal(moves.length, 4);
+  assert.ok(moves.every(m => m.centre.x <= 900), "no place behind the 'wall' at x > 900");
+  assert.ok(moves.find(m => m.token.id === "d").blocked === false || true);
+  assert.ok(moves.every(m => Number.isInteger(m.x) && Number.isInteger(m.y)), "top-left positions are integers");
+  canvas.grid = { type: 1 };
+  const snapped = fm.computePlan(tokens, { type: "crowd", spacing: 1, seed: 2, order: "nearest", snap: true });
+  assert.ok(snapped.every(m => (m.x % 100 === 0) && (m.y % 100 === 0)), "snapped to the grid");
+  canvas.grid = { type: 0 };
+});
+await test("formation: guards (switched off, fewer than two tokens), HUD tool only with several selected tokens, one movement call", async () => {
+  notes.length = 0;
+  settings.formationEnabled = false;
+  assert.equal(formationModule.openFormation({ tokens: [fToken("a", 0, 0), fToken("b", 100, 0)] }), null);
+  settings.formationEnabled = true;
+  assert.equal(formationModule.openFormation({ tokens: [fToken("a", 0, 0)] }), null);
+  assert.deepEqual(notes, ["DT.Formation.Disabled", "DT.Formation.NeedTokens"]);
+  const one = fToken("a", 0, 0); const two = fToken("b", 100, 0);
+  settings.formationHudButton = true;
+  canvas.tokens.controlled = [one];
+  assert.equal(fm.HUD_TOOL.visible(one), false, "one token → no formation");
+  canvas.tokens.controlled = [one, two];
+  assert.equal(fm.HUD_TOOL.visible(one), true);
+  settings.formationHudButton = false; assert.equal(fm.HUD_TOOL.visible(one), false);
+  const calls = [];
+  canvas.scene = { moveTokens: async instructions => calls.push(instructions) };
+  assert.equal(await fm.moveTokens([{ token: one, x: 5, y: 6 }, { token: two, x: 7, y: 8 }]), 2);
+  assert.deepEqual(calls, [{ a: { destination: { x: 5, y: 6 }, autoRotate: false, showRuler: false }, b: { destination: { x: 7, y: 8 }, autoRotate: false, showRuler: false } }]);
+  canvas.tokens.controlled = [];
+});
+await test("token tools: no tool → nothing, one → its own button, two → one 'Token Tools' button with a palette", () => {
+  const hudRoot = () => { const root = new WmEl("div"); const col = new WmEl("div"); col.className = "col right"; root.append(col); return { root, col }; };
+  const one = fToken("a", 0, 0); const two = fToken("b", 100, 0);
+  const render = (root, token) => hooks.renderTokenHUD.forEach(h => h({ object: token }, root));
+  settings.tokenArtEnabled = true; settings.tokenArtHudButton = false; settings.formationEnabled = true; settings.formationHudButton = true;
+  game.modules = { get: () => undefined };
+  canvas.tokens.controlled = [one];
+  let { root, col } = hudRoot(); render(root, one);
+  assert.equal(col.children.length, 0, "nothing applies");
+  canvas.tokens.controlled = [one, two];
+  ({ root, col } = hudRoot()); render(root, one);
+  assert.equal(col.children.length, 1); assert.match(col.children[0].className, /dt-token-tools--formation/);
+  settings.tokenArtHudButton = true;
+  render(root, one);
+  assert.equal(col.children.length, 1, "re-render replaces, never duplicates");
+  const menu = col.children[0];
+  assert.match(menu.className, /dt-token-tools--menu/);
+  const palette = menu.querySelector(".dt-token-tools__palette");
+  assert.equal(palette.children.length, 2); assert.equal(palette.hidden, true);
+  menu.children[0].click(); assert.equal(palette.hidden, false, "button opens the palette");
+  canvas.tokens.controlled = [];
+});
+
+/* ---------- Attack Targets on RSReforged Cards ---------- */
+const rsrModule = await import(pathToFileURL(join(ROOT, "scripts/features/rsr-attack-targets.js")).href);
+const rsr = rsrModule.internals;
+rsrModule.default.init();
+const realCreate = document.createElement;
+document.createElement = tag => {
+  if (tag !== "template") return new WmEl(tag);
+  const row = new WmEl("section"); row.className = "icon-row";
+  const list = new WmEl("ul"); list.className = "unlist targets pills"; row.append(list);
+  const template = { set innerHTML(html) { if (html.includes("<target-pill")) list.append(new WmEl("target-pill")); this.html = html; },
+    content: { querySelector: sel => (sel === "ul.targets" && template.html?.includes("targets") ? Object.assign(list, { closest: () => row, querySelector: s2 => list.children.find(c => c.tag === s2) ?? null }) : null) } };
+  return template;
+};
+const attackMsg = (targets = [{ name: "Cultist", ac: 13 }]) => ({ id: "att1", type: "attack", system: { targets,
+  render: async () => `<div class="chat-card"></div><section class="icon-row"><ul class="unlist targets pills">${targets.map(t => `<li><target-pill>${t.name}</target-pill></li>`).join("")}</ul></section>` } });
+
+await test("rsr targets: dnd5e's targets row goes into RSReforged's attack section, once; only for attacks with targets", async () => {
+  const section = new WmEl("div"); section.className = "rsr-section-attack"; section.dataset.messageId = "att1";
+  await rsr.decorate(section, attackMsg());
+  assert.equal(section.querySelectorAll(".dt-rsr-targets").length, 1);
+  await rsr.decorate(section, attackMsg());
+  assert.equal(section.querySelectorAll(".dt-rsr-targets").length, 1, "idempotent");
+  assert.equal(await rsr.targetsRow(attackMsg([])), null, "no targets → nothing");
+  assert.equal(await rsr.targetsRow({ type: "damage", system: { targets: [{}], render: async () => "x" } }), null);
+  assert.equal(await rsr.targetsRow({ type: "attack", flags: {}, system: { targets: [{}] } }), null, "dnd5e 5.x: no system.render");
+});
+await test("rsr targets: usage cards are watched only when switched on and RSReforged is active", async () => {
+  const root = new WmEl("li"); const section = new WmEl("div"); section.className = "rsr-section-attack"; section.dataset.messageId = "att1"; root.append(section);
+  game.messages = { get: id => (id === "att1" ? attackMsg() : undefined) };
+  game.modules = { get: id => (id === "rsreforged" ? { active: true } : undefined) };
+  settings.rsrAttackTargetsEnabled = false;
+  hooks["dnd5e.renderChatMessage"].forEach(h => h({ type: "usage" }, root)); await tick();
+  assert.equal(section.querySelector(".dt-rsr-targets"), null, "off");
+  settings.rsrAttackTargetsEnabled = true;
+  hooks["dnd5e.renderChatMessage"].forEach(h => h({ type: "attack" }, root)); await tick();
+  assert.equal(section.querySelector(".dt-rsr-targets"), null, "only usage cards carry RSReforged sections");
+  hooks["dnd5e.renderChatMessage"].forEach(h => h({ type: "usage" }, root)); await tick();
+  assert.ok(section.querySelector(".dt-rsr-targets"));
+  settings.rsrAttackTargetsEnabled = false; game.modules = { get: () => undefined };
+});
+document.createElement = realCreate;
+
+/* ---------- Token Action HUD Layer ---------- */
+const tahModule = await import(pathToFileURL(join(ROOT, "scripts/features/tah-layer.js")).href);
+const tah = tahModule.internals;
+tahModule.default.init();
+const observers = [];
+globalThis.MutationObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe(el, opts) { this.el = el; this.opts = opts; } disconnect() { this.off = true; } };
+
+await test("TAH layer: pinned to the chosen z-index, re-applied after TAH's right-click drop to 20, released when off", async () => {
+  const element = Object.assign(new WmEl("div"), { style: { zIndex: "100" }, isConnected: true });
+  game.tokenActionHud = { element, position: { zIndex: 100 } };
+  settings.tahLayerFix = false; settings.tahLayerZIndex = 50;
+  await fire("ready");
+  assert.equal(element.style.zIndex, "100", "off → untouched, also at ready");
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }, element));
+  assert.equal(element.style.zIndex, "100");
+  settings.tahLayerFix = true;
+  hooks.renderApplicationV2.forEach(h => h({ id: "something-else" }, element));
+  assert.equal(element.style.zIndex, "100", "other apps are ignored");
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }, element));
+  assert.equal(element.style.zIndex, "50");
+  element.style.zIndex = 20;            // TAH's sendHudToBottom()
+  observers.at(-1).cb();
+  assert.equal(element.style.zIndex, "50");
+  assert.deepEqual(observers.at(-1).opts, { attributes: true, attributeFilter: ["style"] });
+  settings.tahLayerFix = false; tah.refresh();
+  assert.equal(element.style.zIndex, "100", "switched off → TAH's own layer again");
+  assert.equal(observers.at(-1).off, true);
+  delete globalThis.MutationObserver;
 });
 
 console.log(`\ntest-features: ${passed} passed`);

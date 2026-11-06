@@ -1,0 +1,58 @@
+/*
+ * Token Tools (lib/token-tools.js) — the shared Token HUD entry (Token Art Picker, Token Formations).
+ */
+
+/* ----- Token HUD: "Token Tools" button with its palette ----- */
+
+#token-hud .dt-token-tools--menu {
+  position: relative;
+}
+
+#token-hud .dt-token-tools__palette {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.5));
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  pointer-events: all;
+}
+
+#token-hud .dt-token-tools__palette[hidden] {
+  display: none !important;
+}
+
+#token-hud .dt-token-tools__entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-light-highlight, #f0f0e0);
+  font-size: var(--font-size-14, 14px);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#token-hud .dt-token-tools__entry:hover,
+#token-hud .dt-token-tools__entry:focus-visible {
+  border-color: var(--color-warm-2, #ff6400);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#token-hud .dt-token-tools__entry i {
+  width: 1.25em;
+  text-align: center;
+}
