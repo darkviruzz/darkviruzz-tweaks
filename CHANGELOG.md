@@ -4,7 +4,7 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
-## [Unreleased]
+## [1.10.0] — 2026-11-06
 
 ### Added
 - **Template Auto-Targeting** (any system; chat cards with D&D 5e 6): place a template and every
