@@ -1008,6 +1008,16 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   `dnd5e.createMeasuredTemplate(activity, regionData)` (return false cancels),
   `dnd5e.postCreateMeasuredTemplate(activity, createdRegions)`. The activity's chat button "Place
   Template" calls the same `#placeTemplate()` later (no `postCreateUsageMessage` then).
+- **Emanation size = the base the Region gets, not the caster's size** (verified 2026-11-12, dnd5e 6.0.6
+  `TemplatePlacement#createShapeData` + core 14.370 `RegionLayer#attachPlacementToToken`): dnd5e
+  always builds the emanation base as `{type: "token", width: 1, height: 1}` and places with
+  `attachToToken: true`. Core adopts the token's `x, y, width, height, shape` (and sets
+  `attachment.token`) ONLY while the mouse hovers a token during placement (`canvas.tokens.hover`);
+  confirmed elsewhere, the base stays 1×1, so a Large caster gets a Medium-sized emanation that is
+  also not attached. A hand-drawn emanation (Region tool) always has a 1×1 base (`shapeData` of the
+  tool) and never attaches. Our targeting just follows the Region's geometry (`testPoint`), so the
+  area size is never our bug. (Reported by Markus 2026-11-12: "emanation bei large creatures sollte
+  größer sein".)
 - **Targets are recorded BEFORE the template exists:** `Activity#use` builds the usage message
   with `system.targets: TargetsField.getDescriptors()` (the user's targets at that moment), creates
   it, then `_finalizeUsage` places the template, then `dnd5e.postUseActivity`. Readers of those
