@@ -2212,6 +2212,46 @@ await test("template targeting: guards — someone else's template, switched off
   await place(ttRegion(450, { flags: { dnd5e: { activity: "Actor.a.Item.i.Activity.x" } } }));
   assert.deepEqual(targeted(), ["halfCol4", "inside", "large"], "dnd5e's template Regions carry only flags.dnd5e");
 });
+await test("template targeting: hand-drawn templates (14.370 Measured Template Mode) get our marker via CONFIG.Region.templateModeConfig.flags", async () => {
+  const { syncTemplateModeMarker } = ttModule.internals;
+  const onChange = ttModule.default.settings.find(s => s.key === "templateTargetEnabled").options.onChange;
+  const savedRegion = CONFIG.Region;
+  // 14.370 core config: no flags at all → the Region layer copies `undefined`
+  CONFIG.Region = { templateModeConfig: { shapeTypes: ["circle", "grid"], highlightMode: "coverage" } };
+  const readyHandlers = hooks.ready ?? [];
+  const before = JSON.stringify(CONFIG.Region);
+  for (const h of readyHandlers) if (String(h).includes("syncTemplateModeMarker")) h();
+  assert.notEqual(JSON.stringify(CONFIG.Region), before, "a ready hook syncs the marker");
+  assert.deepEqual(CONFIG.Region.templateModeConfig.flags, { "darkviruzz-tweaks": { template: true } });
+  const drawn = flags => ttRegion(450, { flags: structuredClone(flags ?? {}) });
+  await place(ttRegion(150));
+  await place(drawn(CONFIG.Region.templateModeConfig.flags));
+  assert.deepEqual(targeted(), ["halfCol4", "inside", "large"], "a Region drawn in template mode is a template");
+
+  // switched off: marker gone, a system's own flags stay; a drawn Region is a plain Region again
+  CONFIG.Region.templateModeConfig.flags.mysys = { keep: 1 };
+  settings.templateTargetEnabled = false;
+  onChange(false);
+  assert.deepEqual(CONFIG.Region.templateModeConfig.flags, { mysys: { keep: 1 } });
+  settings.templateTargetEnabled = true;
+  await place(ttRegion(150));
+  await place(drawn(CONFIG.Region.templateModeConfig.flags));
+  assert.deepEqual(targeted(), ["inside"], "without the marker a hand-drawn Region is ignored");
+
+  // switched on again: merged next to the system's flags, never replacing them
+  onChange(true);
+  assert.deepEqual(CONFIG.Region.templateModeConfig.flags, { mysys: { keep: 1 }, "darkviruzz-tweaks": { template: true } });
+  syncTemplateModeMarker();
+  assert.deepEqual(CONFIG.Region.templateModeConfig.flags, { mysys: { keep: 1 }, "darkviruzz-tweaks": { template: true } }, "idempotent");
+
+  // Foundry ≤ 14.369: no templateModeConfig → nothing to do, no error
+  CONFIG.Region = {};
+  syncTemplateModeMarker();
+  delete CONFIG.Region;
+  syncTemplateModeMarker();
+  assert.equal(CONFIG.Region, undefined);
+  if (savedRegion !== undefined) CONFIG.Region = savedRegion;
+});
 await test("template targeting: several Regions of one placement are combined, the next placement starts over", async () => {
   hooks.createRegion.forEach(h => h(ttRegion(150), {}, "me"));
   hooks.createRegion.forEach(h => h(ttRegion(800, { testPoint: ({ x }) => x >= 700 && x <= 800 }), {}, "me"));

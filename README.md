@@ -425,8 +425,8 @@ both — so the HUD doesn't fill up.
 Place a template — every creature in it is targeted.
 
 **How it works:** when you place a template (a spell's area from the chat card, or one drawn with
-the Region tool's *Measured Template Mode*), your targets are replaced by the creatures in its
-area. Only the person who places it gets the targets; nothing else in the world changes. With
+the Region tool's *Measured Template Mode* — the latter needs Foundry 14.370 or newer), your
+targets are replaced by the creatures in its area. Only the person who places it gets the targets; nothing else in the world changes. With
 **D&D 5e 6** the spell's chat card gets the same targets (dnd5e records them before the template
 is placed), so the GM's *Roll Save* button and the damage roll use them.
 

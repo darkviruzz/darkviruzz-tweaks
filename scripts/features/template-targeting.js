@@ -3,10 +3,18 @@
  * -----------------------------------------------------------------------------
  * Foundry VTT v14+ · any system
  *
- * When you place a template (v14: a Region — from the Region layer's "Measured Template Mode"
- * (`flags.core.MeasuredTemplate`) or dnd5e's TemplatePlacement (`flags.dnd5e.activity`)), every creature
- * in its area becomes YOUR target — your previous targets are released. Which creatures count
- * follows the D&D rules (see lib/area-coverage.js for the sources):
+ * When you place a template (v14: a Region — drawn with the Region layer's "Measured Template Mode",
+ * placed by dnd5e's TemplatePlacement (`flags.dnd5e.activity`) or created through the deprecated
+ * MeasuredTemplateDocument API (`flags.core.MeasuredTemplate`)), every creature in its area becomes
+ * YOUR target — your previous targets are released.
+ *
+ * Core marks NOTHING on Regions drawn in Measured Template Mode (verified in the 14.364 and 14.370
+ * client source, `RegionLayer` creation data). Since 14.370 it copies
+ * `CONFIG.Region.templateModeConfig.flags` into them, so while the feature is on we merge our own
+ * marker `flags.<MODULE_ID>.template` in there (and take it out again when it is switched off).
+ * Foundry ≤ 14.369 has no such config: hand-drawn templates are not recognised there.
+ *
+ * Which creatures count follows the D&D rules (see lib/area-coverage.js for the sources):
  *   - Square / hex grid (default "half", DMG 2024 p. 44): a space is affected if the area
  *     covers at least half of it; a creature is in the area if one of its spaces is affected
  *     (`TokenDocument#getOccupiedGridSpaceOffsets`, so Large = 4 squares, Huge = 9, …).
@@ -59,12 +67,40 @@ let cards = new WeakMap();
 /** Regions created by this user in the current task (one placement may create several). */
 let batch = null;
 
+/** Our marker on Regions drawn in core's Measured Template Mode (see syncTemplateModeMarker). */
+const MARKER = "template";
+
 /**
- * A template Region: core's marker, or dnd5e's — dnd5e 6.0.6 sets `flags.core.MeasuredTemplate`
- * only on the placement previews; the Regions it creates carry `flags.dnd5e.activity` instead.
+ * A template Region: our marker (hand-drawn in Measured Template Mode, 14.370+), core's marker
+ * (deprecated MeasuredTemplateDocument API), or dnd5e's — dnd5e 6.0.6 sets
+ * `flags.core.MeasuredTemplate` only on the placement previews; the Regions it creates carry
+ * `flags.dnd5e.activity` instead.
  */
-const isTemplate = region => !!(getProperty(region, "flags.core.MeasuredTemplate")
+const isTemplate = region => !!(getProperty(region, `flags.${MODULE_ID}.${MARKER}`)
+  || getProperty(region, "flags.core.MeasuredTemplate")
   || getProperty(region, "flags.dnd5e.activity"));
+
+/**
+ * Core's Region layer copies `CONFIG.Region.templateModeConfig.flags` into every Region drawn in
+ * Measured Template Mode (Foundry 14.370+, `RegionLayer` creation data; core leaves `flags`
+ * undefined). While the feature is on, merge our marker in there — a system may have put its own
+ * flags in, so never replace the object — and take it out again when the feature is switched off.
+ * No-op on builds without `templateModeConfig`.
+ */
+function syncTemplateModeMarker(on = enabled()) {
+  const config = globalThis.CONFIG?.Region?.templateModeConfig;
+  if (!config || typeof config !== "object") return;
+  if (on) {
+    config.flags ??= {};
+    config.flags[MODULE_ID] ??= {};
+    config.flags[MODULE_ID][MARKER] = true;
+    return;
+  }
+  const ours = config.flags?.[MODULE_ID];
+  if (!ours) return;
+  delete ours[MARKER];
+  if (!Object.keys(ours).length) delete config.flags[MODULE_ID];
+}
 
 /** Emanations exclude their origin creature (the attached token or dnd5e's usage token). */
 function excludedTokenIds(region) {
@@ -236,7 +272,7 @@ function onPostCreateMeasuredTemplate(activity, regions) {
 
 /** For tools/test-features.mjs only. */
 export const internals = {
-  tokensInRegions, tokenInRegion, excludedTokenIds,
+  tokensInRegions, tokenInRegion, excludedTokenIds, isTemplate, syncTemplateModeMarker,
   reset() { cards = new WeakMap(); batch = null; }
 };
 
@@ -261,7 +297,8 @@ export default {
         scope: "world",
         config: true,
         type: Boolean,
-        default: false
+        default: false,
+        onChange: value => syncTemplateModeMarker(!!value)
       }
     },
     {
@@ -312,6 +349,7 @@ export default {
     }
   ],
   init() {
+    Hooks.once("ready", () => syncTemplateModeMarker());   // world settings are readable by then
     Hooks.on("createRegion", onCreateRegion);
     Hooks.on("dnd5e.postCreateUsageMessage", onPostCreateUsageMessage);
     Hooks.on("dnd5e.postCreateMeasuredTemplate", onPostCreateMeasuredTemplate);

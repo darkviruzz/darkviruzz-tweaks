@@ -31,7 +31,9 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
 
 1. **Target platform.** Always build for **Foundry VTT v14+**. System-specific features
    target the **dnd5e** system (D&D 2024 / "5.5e"): support **5.3.x and 6.x** — the table
-   moved to **Foundry 14.369 + dnd5e 6.0.6 + RSReforged 6.0.2 on 2026-10-27** (before: 5.3.3). A feature is either dnd5e-specific
+   moved to **Foundry 14.369 + dnd5e 6.0.6 + RSReforged 6.0.2 on 2026-10-27** (before: 5.3.3) and to
+   **Foundry 14.370 (Node 24.22.3) + RSReforged 6.0.5 + Tidy 14.4.2 on 2026-11-12**; dnd5e stays on 6.0.6
+   (locked) until Tidy ships dnd5e 6.1 support. A feature is either dnd5e-specific
    (`requiresSystem: "dnd5e"`) or **system-agnostic** (no `requiresSystem`, must not assume
    any system). Never declare `relationships.systems` in module.json — that would hide the
    module from worlds of other systems.
@@ -57,8 +59,10 @@ All of these except 7 are checked by `tools/validate.mjs` (see *Tooling*).
    dnd5e: clone `foundryvtt/dnd5e` at the `release-x.y.z` tag. Foundry has no public source
    repo, but **an installed Foundry ships its real source**: readable client code in
    `<install>/client/**/*.mjs` and the (minified) server in `<install>/dist/`. On the dev
-   machine a v14 install (build 14.364) lives in `Documents/foundryuserdata/foundry` — grep it
-   first; it beats every other source. The bundled sources of the systems and modules the table
+   machine a v14 install lives in `Documents/foundryuserdata/foundry` — **build 14.370** since
+   2026-11-12 (= what the table runs; the previous 14.364 copy sits next to it as `foundry-14.364`,
+   handy for diffs) — grep it first; it beats every other source. Facts below marked "14.364" were
+   verified against the older build. The bundled sources of the systems and modules the table
    runs are in the data snapshots under `C:\Users\nogar\Programme\Claude\foundry\`:
    `foundryuserdata-v6-prod/Data/systems/dnd5e/dnd5e.mjs` (dnd5e **6.0.6**, + `templates/`,
    `lang/`), `foundryuserdata/Data/systems/dnd5e` (**5.3.3**), and `…/Data/modules/<id>/`
@@ -800,6 +804,11 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   names in the Images view but not in Tiles. The *Asset Grid Size* field
   `input[name="tileSize"]` exists only when the picker is opened with `tileSize: true` (Tile
   Browser); a dropped tile covers `naturalWidth / tileSize` grid squares.
+- **14.370 source (`client/applications/apps/file-picker.mjs` `#onDragStart`):** the drag data is
+  `{type: "Tile", texture: {src: li.dataset.path}, fromFilePicker: true, tileSize}`; the first
+  `<img>` of the row only sizes the drag PREVIEW (`naturalWidth * gridSize / tileSize`), and since
+  14.370 the dropped tile uses the realized texture size (#14917). The rule below still holds — a
+  foreign `<img>` or swapped `src` would at least distort the preview, and on ≤ 14.369 the tile.
 - **DRAG GOTCHA:** core rebinds its DragDrop to `li[data-file]` on every body render, and its
   drag start reads `li.querySelector("img").naturalWidth` to size the dropped tile. Never put
   an `<img>` into a row, never replace rows, never swap core's `img.src` for a thumbnail (a
@@ -960,16 +969,34 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 
 Sources: dnd5e 6.0.6 / 5.3.3 (`release-*` clones), Foundry v14 API docs (foundryvtt.com/api, v14),
 the v14 release notes in the public repo `foundryvtt/foundryvtt` (`releases/notes-14.*.html` —
-readable via raw.githubusercontent.com), and the rules texts below. Core implementation details of
-Regions are **v14 impl unverified** (no client source in the cloud session — grep the local
-install when on the dev machine).
+readable via raw.githubusercontent.com), and the rules texts below. Core details marked below
+were re-checked on 2026-11-12 against the local client source of 14.370 (and 14.364 for comparison).
+First real test on the table (2026-11-12): works for templates placed by a dnd5e activity (Fireball).
 
 - **Measured Templates are gone in v14** (notes 14.356/14.359: "the first time that we have ever
-  eliminated one of the fundamental types of data"); templates are **Regions**. Core's "Measured
-  Template Mode" of the Region tools marks them with `flags.core.MeasuredTemplate` (assumed from
-  dnd5e mirroring it; unverified). dnd5e 6.0.6 sets that flag ONLY on its placement previews; the
+  eliminated one of the fundamental types of data"); templates are **Regions**.
+- **CORRECTED 2026-11-12 — core's "Measured Template Mode" does NOT set `flags.core.MeasuredTemplate`.**
+  The earlier note assumed it (from dnd5e mirroring the flag). The source disproves it:
+  `RegionLayer` creation data in template mode (14.364 and 14.370 `client/canvas/layers/regions.mjs`)
+  sets only color, levels, restriction `{enabled: true, type: "move"}`, visibility ALWAYS,
+  highlightMode `"coverage"`, displayMeasurements and owner ownership — in 14.370 taken from the new
+  `CONFIG.Region.templateModeConfig` (`shapeTypes` incl. the new `"grid"` shape, `coneAngle`,
+  `coneCurvature`, `ringAlignment`, `gridBased`, …), plus `data.flags = deepClone(templateModeConfig.flags)`,
+  which core leaves UNDEFINED. Only the deprecated `MeasuredTemplateDocument.createDocuments` shim
+  (`client/documents/measured-template.mjs`, old API used by modules) sets the core flag. So hand-drawn
+  template-mode Regions carried no marker and Template Auto-Targeting ignored them up to 1.10.0.
+  **Fixed in 1.10.1:** while the feature is on, `syncTemplateModeMarker()` (on `ready` and in the
+  setting's `onChange`) merges `flags.darkviruzz-tweaks.template = true` into
+  `CONFIG.Region.templateModeConfig.flags` (never replacing the object — a system may set its own) and
+  removes it when switched off; `isTemplate()` accepts that marker. Foundry ≤ 14.369 has no
+  `templateModeConfig` → hand-drawn templates stay unrecognised there. Untested on the table so far.
+  dnd5e 6.0.6 sets `flags.core.MeasuredTemplate` ONLY on its placement previews; the
   Regions it creates carry `flags.dnd5e.{activity, item, origin (usage token uuid), dimensions,
-  spellLevel}` — detect a template by either flag.
+  spellLevel}` — that is what we detect.
+- `RegionDocument#testPoint(point)` (14.370 source) = `#testElevation(point.elevation) &&
+  polygonTree.testPoint(point)` — the polygon tree is built from all of the Region's shapes, so holes
+  and the new 14.370 grid-space shapes (e.g. a "Careful Fireball" hole) should be respected by our
+  `inside()` callback (tree construction not traced line by line; untested on the table).
 - **dnd5e 6 `TemplatePlacement.fromActivity`** (`module/canvas/template-placement.mjs`):
   `canvas.regions.placeRegions(data, {attachToToken, create: false, onRotate, preConfirm})` for the
   preview, then `scene.createEmbeddedDocuments("Region", regionData)` with `shapes` (types
@@ -1039,6 +1066,6 @@ install when on the dev machine).
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`, `lib/token-tools.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
 | Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
 | Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
-| Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off) |
+| Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |

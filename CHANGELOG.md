@@ -4,6 +4,14 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.10.1] — 2026-11-12
+
+### Fixed
+- **Template Auto-Targeting now also works for templates you draw yourself** with the Region tool's
+  *Measured Template Mode*. Until now only templates placed from a spell's or feature's chat card
+  were recognised, because Foundry doesn't mark hand-drawn templates as templates. Needs Foundry
+  14.370 or newer; on older versions only chat-card templates are recognised, as before.
+
 ## [1.10.0] — 2026-11-06
 
 ### Added
