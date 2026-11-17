@@ -1103,6 +1103,12 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   `pack.getDocument(id)`, `deleteDocuments(ids, {pack})`). The data is a JSON string in a flag so the database never
   interprets keys with dots or operators inside actor data. Whether `ownership` is honoured on creation is unverified
   (League notes a core issue #13354 around compendium ownership settings).
+- **Re-saving noise (table, 2026-11-17, 1.11.1):** items saved again after the snapshot showed `null` for a field the
+  snapshot didn't have (new schema field filled on save) and HTML re-formatted by the editor (`Your background…` →
+  `<p>Your background…</p>`, a blockquote with different markup). `sameValue()` now treats null ≡ missing and HTML strings
+  with the same visible text (`htmlText()`: tags dropped, common entities decoded, whitespace collapsed) as equal. Real
+  rows that remain and are legit: dnd5e's `flags.dnd5e.last.<activityId>.*` (remembered attack options), `active` of the
+  combat (another combat was activated meanwhile).
 - "All player characters" = `hasPlayerOwner && type === "character"` or a user's assigned character — the user's world had
   40 player-owned actors, half of them NPCs (hirelings, bastion defenders).
 - **Unverified against the v14 source** (no install in the cloud session — check on the dev machine): `keepId` for

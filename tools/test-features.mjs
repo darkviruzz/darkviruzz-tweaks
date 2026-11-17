@@ -2370,6 +2370,13 @@ game.user = ttSavedUser;
     assert.deepEqual(lib.normalizeData(live), { flags: { dnd5e: { keep: 1 } }, list: [{}] });
     const stored = JSON.parse(JSON.stringify(live));
     assert.deepEqual(lib.diffFields(lib.normalizeData(live), lib.normalizeData(stored)), [], "the 1.11.0 noise: no differences");
+    // re-saving noise (table, 2026-11-17): editor HTML normalisation and null for new schema fields
+    assert.deepEqual(lib.diffFields(
+      { d: "<p>Your background allows you</p>", e: "<blockquote>\n<p>A&nbsp;ranger</p></blockquote>", n: null },
+      { d: "Your background allows you", e: "<blockquote><p class=\"x\">A ranger</p>\n</blockquote>" }), []);
+    assert.deepEqual(lib.diffFields({ d: "<p>Old text</p>", n: 0 }, { d: "<p>New text</p>" }).map(r => r.path), ["d", "n"],
+      "real text changes and real values (0 ≠ missing) still count");
+    assert.equal(lib.htmlText("<p>a &amp; b</p><p>c</p>"), "a & b c");
     assert.equal(lib.formatDuration(3725), "1 h 2 min 5 s");
     assert.equal(lib.formatDuration(-60), "−1 min");
     const coll = lib.diffCollection([{ _id: "a" }, { _id: "b" }], [{ _id: "b" }, { _id: "c" }]);
