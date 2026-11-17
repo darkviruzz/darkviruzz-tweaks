@@ -4,6 +4,18 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.11.1] — 2026-11-17
+
+### Fixed
+- **Combat Snapshots listed hundreds of differences that weren't there** — two lines for almost every
+  item (`flags.dnd5e.riders`), caused by a leftover marker D&D 5e keeps in item data. They are gone.
+- **Snapshots no longer slow down logging in:** they were stored in a world setting, which every
+  player downloads at login (several MB per snapshot). They now live in a world compendium
+  *Combat Snapshots*, loaded only when the GM opens it. Snapshots saved with 1.11.0 move there
+  automatically.
+- *Include all player characters* now means player characters only — not every NPC a player owns
+  (hirelings, bastion defenders).
+
 ## [1.11.0] — 2026-11-17
 
 ### Added

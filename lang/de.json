@@ -404,7 +404,7 @@
   "DT.CombatSnapshot.NameLabel": "Name",
   "DT.CombatSnapshot.NamePlaceholder": "Szene — Runde (Standard)",
   "DT.CombatSnapshot.IncludePCs": "Alle Spielercharaktere einbeziehen",
-  "DT.CombatSnapshot.IncludePCsHint": "Sichert zusätzlich alle Akteure mit Spielerbesitz, die nicht im Kampf sind — auch deren Effekte laufen woanders weiter.",
+  "DT.CombatSnapshot.IncludePCsHint": "Sichert zusätzlich alle Spielercharaktere (Typ „character“ oder einem Spieler zugewiesen), die nicht im Kampf sind — auch deren Effekte laufen woanders weiter.",
   "DT.CombatSnapshot.Save": "Snapshot sichern",
   "DT.CombatSnapshot.Import": "Importieren",
   "DT.CombatSnapshot.ListHeading": "Gespeicherte Snapshots",
@@ -435,5 +435,6 @@
   "DT.CombatSnapshot.Row.KeepOthers": "Andere Akteure behalten ihre Effektdauer",
   "DT.CombatSnapshot.Row.KeepOthersCount": "{count} laufende Effekte",
   "DT.CombatSnapshot.Row.KeepOthersShift": "Startzeit {time}",
-  "DT.CombatSnapshot.Row.KeepOthersHint": "Laufende Effekte mit Dauer aller Akteure und Tokens außerhalb des Snapshots werden mit der Weltzeit verschoben, die Rückstellung verlängert oder verkürzt sie also nicht. Nur zusammen mit der Weltzeit."
+  "DT.CombatSnapshot.Row.KeepOthersHint": "Laufende Effekte mit Dauer aller Akteure und Tokens außerhalb des Snapshots werden mit der Weltzeit verschoben, die Rückstellung verlängert oder verkürzt sie also nicht. Nur zusammen mit der Weltzeit.",
+  "DT.CombatSnapshot.PackLabel": "Kampf-Snapshots"
 }

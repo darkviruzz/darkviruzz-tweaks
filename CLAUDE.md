@@ -1088,10 +1088,26 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   string), visible, onClick(event, target)}`; `name`/`callback`/`condition` are deprecated since v14 (until v16).
   `app.viewed` = the encounter shown. Source: League `foundry-vtt-types` at 14.370 (`combat-tracker.d.mts`,
   `context-menu.d.mts`, 2026-11-17) — not the client source itself.
+- **Found on the table 2026-11-17 (1.11.0, user's export):** dnd5e 6.0.6 items carry a leftover `ForcedDeletion`
+  OPERATOR in their source (`flags.dnd5e.riders`, 290× in one snapshot). `toObject()` returns it as a class instance,
+  `JSON.stringify` as `{"__$OPERATOR$__": "ForcedDeletion"}` → every item showed two phantom rows. Fix: `normalizeData()`
+  (JSON round trip dropping operator markers) on live data AND snapshots. **v14 data operators** (League types 14.370,
+  `common/data/operators.d.mts`): `foundry.data.operators.ForcedDeletion` / `ForcedReplacement` (`.create()`),
+  serialised with the key `__$OPERATOR$__`; the `-=key` / `==key` syntax is deprecated ("legacy deletion keys") — we
+  delete with `ForcedDeletion.create()` and fall back to `-=` only when the class is missing.
+- **Don't put MB of data in a world setting:** world settings are part of the world data every client receives at login.
+  A snapshot with all player characters was 4.3 MB (characters are 100–600 KB each, item descriptions only ~15 %).
+  Snapshots live in a world compendium instead (`CompendiumCollection.createCompendium({type, label, name, ownership})`
+  — League types 14.370: only `type`/`label` required, `name` slugified from the label, only `flags` and `ownership`
+  respected besides; documents via `documentClass.create(data, {pack: pack.collection})`, `pack.getIndex({fields})`,
+  `pack.getDocument(id)`, `deleteDocuments(ids, {pack})`). The data is a JSON string in a flag so the database never
+  interprets keys with dots or operators inside actor data. Whether `ownership` is honoured on creation is unverified
+  (League notes a core issue #13354 around compendium ownership settings).
+- "All player characters" = `hasPlayerOwner && type === "character"` or a user's assigned character — the user's world had
+  40 player-owned actors, half of them NPCs (hirelings, bastion defenders).
 - **Unverified against the v14 source** (no install in the cloud session — check on the dev machine): `keepId` for
   `createEmbeddedDocuments` on an unlinked token's synthetic actor (should route into the ActorDelta); that embedded
-  `_id`s in `Combat.create(data, {keepId: true})` are kept; `game.time.advance()` with a negative value; the `-=key`
-  deletion syntax in v14 (v14 may prefer `foundry.data.operators.ForcedDeletion`); that `Combat#update({round, turn})`
+  `_id`s in `Combat.create(data, {keepId: true})` are kept; `game.time.advance()` with a negative value; that `Combat#update({round, turn})`
   without `advanceTime` leaves the world time alone; whether core un-expires an effect (`duration.expired`) when the
   clock goes back — the restore writes `duration.expired` itself for the snapshot's effects; whether dnd5e 6's pseudo
   expiries ("out of combat any world-time advance expires them") also fire on a NEGATIVE time change, which would end
@@ -1119,4 +1135,4 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
-| Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload), hidden `combatSnapshotData` (world, `{snapshots: [...]}`); API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |
+| Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload); storage: world compendium `world.dt-combat-snapshots` (JournalEntry, one entry per snapshot, `flags.<id>.meta` + `flags.<id>.snapshot` = JSON string); hidden `combatSnapshotData` (world) = 1.11.0 storage, migrated into the pack and emptied; API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |

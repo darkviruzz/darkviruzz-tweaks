@@ -404,7 +404,7 @@
   "DT.CombatSnapshot.NameLabel": "Name",
   "DT.CombatSnapshot.NamePlaceholder": "Scene — round (default)",
   "DT.CombatSnapshot.IncludePCs": "Include all player characters",
-  "DT.CombatSnapshot.IncludePCsHint": "Also saves every player-owned actor that isn't in this fight — their effects keep running elsewhere too.",
+  "DT.CombatSnapshot.IncludePCsHint": "Also saves every player character (type \"character\" or assigned to a player) that isn't in this fight — their effects keep running elsewhere too.",
   "DT.CombatSnapshot.Save": "Save snapshot",
   "DT.CombatSnapshot.Import": "Import",
   "DT.CombatSnapshot.ListHeading": "Saved snapshots",
@@ -435,5 +435,6 @@
   "DT.CombatSnapshot.Row.KeepOthers": "Other actors keep their effect durations",
   "DT.CombatSnapshot.Row.KeepOthersCount": "{count} running effects",
   "DT.CombatSnapshot.Row.KeepOthersShift": "start time {time}",
-  "DT.CombatSnapshot.Row.KeepOthersHint": "Running timed effects of every actor and token that is not in the snapshot are moved along with the world time, so the rewind neither extends nor shortens them. Only applied together with the world time."
+  "DT.CombatSnapshot.Row.KeepOthersHint": "Running timed effects of every actor and token that is not in the snapshot are moved along with the world time, so the rewind neither extends nor shortens them. Only applied together with the world time.",
+  "DT.CombatSnapshot.PackLabel": "Combat Snapshots"
 }
