@@ -4,6 +4,14 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.11.3] — 2026-11-17
+
+### Fixed
+- **Combat Snapshots: restoring could fail with "id … does not exist in the EmbeddedCollection".**
+  Keeping the other actors' effect durations tried to change effects that unlinked tokens only
+  inherit from their actor; those are now adjusted on the actor itself. A failing step no longer
+  stops the remaining adjustments, and the error message names what failed.
+
 ## [1.11.2] — 2026-11-17
 
 ### Fixed

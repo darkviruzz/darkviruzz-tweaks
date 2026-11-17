@@ -425,7 +425,7 @@
   "DT.CombatSnapshot.NothingSelected": "Nothing selected.",
   "DT.CombatSnapshot.RestoreTitle": "Restore snapshot",
   "DT.CombatSnapshot.RestoreConfirm": "Write {count} selected differences from \"{name}\" back into the world?",
-  "DT.CombatSnapshot.RestoreErrors": "{count} restore steps failed — see the console (F12). The list shows what is still different.",
+  "DT.CombatSnapshot.RestoreErrors": "{count} restore steps failed ({names}) — details in the console (F12). The list shows what is still different.",
   "DT.CombatSnapshot.Restored": "{count} differences restored.",
   "DT.CombatSnapshot.ImportInvalid": "That file is not a combat snapshot.",
   "DT.CombatSnapshot.Imported": "Combat snapshot \"{name}\" imported.",

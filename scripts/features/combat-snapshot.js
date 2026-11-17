@@ -343,11 +343,19 @@ function otherActors(exclude) {
 
 /** Running timed effects of an actor and its items: `[{parent, id, time}]`. */
 function runningEffects(actor) {
-  const parents = [actor, ...(actor.items ?? [])];
+  // An unlinked token's synthetic actor also lists the items and effects it inherits from its base
+  // actor; those are not in the token's ActorDelta, and updating them through the token fails
+  // ("id … does not exist in the EmbeddedCollection", table 2026-11-17). They are shifted through
+  // the base actor (a world actor, handled on its own); here only what the delta itself holds.
+  const delta = actor.isToken ? actor.token?.delta : null;
+  if (actor.isToken && !delta) return [];
+  const owns = (collection, id) => !delta || !!collection?.has?.(id);
+  const items = [...(actor.items ?? [])].filter(item => owns(delta?.items, item.id));
   const out = [];
-  for (const parent of parents) {
+  for (const parent of [actor, ...items]) {
     for (const effect of parent.effects ?? []) {
       const data = effect.toObject();
+      if (parent === actor && !owns(delta?.effects, data._id)) continue;
       if (typeof data.start?.time !== "number") continue;
       if (data.duration?.value === null || data.duration?.value === undefined || data.duration?.expired) continue;
       out.push({ parent, id: data._id, time: data.start.time });
@@ -497,14 +505,18 @@ async function applyUpdate(ref, data) {
 const forcedDeletion = () => foundry.data?.operators?.ForcedDeletion?.create?.();
 
 /** Shift the start time of every running effect of the actors outside the snapshot. */
-async function keepOthers(snapshot, seconds) {
+async function keepOthers(snapshot, seconds, run) {
   const batches = new Map();
   for (const { parent, id, time } of othersEffects(snapshot)) {
     const list = batches.get(parent) ?? [];
     list.push({ _id: id, "start.time": time + seconds });
     batches.set(parent, list);
   }
-  for (const [parent, updates] of batches) await parent.updateEmbeddedDocuments("ActiveEffect", updates);
+  // One step per document: a failure must not stop the other actors' shifts.
+  for (const [parent, updates] of batches) {
+    const owner = parent.documentName === "Item" ? `${parent.parent?.name} › ${parent.name}` : parent.name;
+    await run(() => parent.updateEmbeddedDocuments("ActiveEffect", updates), `${localize("DT.CombatSnapshot.Row.KeepOthers")}: ${owner}`);
+  }
 }
 
 /** Order matters: parents before children, deletions before creations before updates. */
@@ -520,43 +532,46 @@ const STEPS = [
  * @returns {Promise<{errors: Error[]}>}
  */
 async function applyRows(rows, snapshot) {
+  /** @type {{label: string, error: Error}[]} */
   const errors = [];
-  const run = async fn => {
+  const run = async (fn, label) => {
     try {
       await fn();
-    } catch (err) {
-      errors.push(err);
-      console.error(`${MODULE_ID} | combat snapshot restore step failed`, err);
+    } catch (error) {
+      errors.push({ label, error });
+      console.error(`${MODULE_ID} | combat snapshot restore step failed: ${label}`, error);
     }
   };
-  const ops = rows.map(row => row.op);
   const updates = new Map();
   const embedded = { create: new Map(), delete: new Map() };
-  for (const op of ops) {
+  for (const { op, label } of rows) {
     if (op.type === "update") {
-      const entry = updates.get(refKey(op.ref)) ?? { ref: op.ref, changes: [] };
+      const entry = updates.get(refKey(op.ref)) ?? { ref: op.ref, changes: [], labels: [] };
       entry.changes.push({ path: op.path, value: op.value });
+      entry.labels.push(label);
       updates.set(refKey(op.ref), entry);
     } else if (op.type === "create" || op.type === "delete") {
       const key = `${refKey(op.parent)}|${op.embedded}`;
-      const entry = embedded[op.type].get(key) ?? { parent: op.parent, embedded: op.embedded, items: [] };
+      const entry = embedded[op.type].get(key) ?? { parent: op.parent, embedded: op.embedded, items: [], labels: [] };
       entry.items.push(op.type === "create" ? op.data : op.id);
+      entry.labels.push(label);
       embedded[op.type].set(key, entry);
     }
   }
+  const joined = labels => (labels.length > 2 ? `${labels.slice(0, 2).join(", ")} …` : labels.join(", "));
 
-  const time = ops.find(o => o.type === "time");
-  if (time) await run(() => game.time.advance(time.seconds));
+  const time = rows.find(r => r.op.type === "time");
+  if (time) await run(() => game.time.advance(time.op.seconds), time.label);
   // Only together with the rewind, and only after it (see the header comment).
-  const keep = ops.find(o => o.type === "keepOthers");
-  if (keep && time && snapshot) await run(() => keepOthers(snapshot, keep.seconds));
-  for (const op of ops.filter(o => o.type === "createTop")) {
-    await run(() => CONFIG[op.documentName].documentClass.create(clone(op.data), { keepId: true }));
+  const keep = rows.find(r => r.op.type === "keepOthers");
+  if (keep && time && snapshot) await keepOthers(snapshot, keep.op.seconds, run);
+  for (const { op, label } of rows.filter(r => r.op.type === "createTop")) {
+    await run(() => CONFIG[op.documentName].documentClass.create(clone(op.data), { keepId: true }), label);
   }
   for (const [kind, type] of STEPS) {
     if (kind === "update") {
-      for (const { ref, changes } of updates.values()) {
-        if (ref.type === type) await run(() => applyUpdate(ref, updateData(changes, { deletion: forcedDeletion })));
+      for (const { ref, changes, labels } of updates.values()) {
+        if (ref.type === type) await run(() => applyUpdate(ref, updateData(changes, { deletion: forcedDeletion })), joined(labels));
       }
       continue;
     }
@@ -567,7 +582,7 @@ async function applyRows(rows, snapshot) {
         if (!parent) throw new Error(`${MODULE_ID} | combat snapshot: parent not found ${refKey(entry.parent)}`);
         if (kind === "create") await parent.createEmbeddedDocuments(entry.embedded, clone(entry.items), { keepId: true });
         else await parent.deleteEmbeddedDocuments(entry.embedded, entry.items);
-      });
+      }, joined(entry.labels));
     }
   }
   return { errors };
@@ -827,7 +842,10 @@ function appClass() {
       this.busy = true;
       try {
         const { errors } = await applyRows(rows, snapshot);
-        if (errors.length) ui.notifications.error(format("DT.CombatSnapshot.RestoreErrors", { count: errors.length }));
+        if (errors.length) {
+          const names = errors.slice(0, 3).map(e => e.label).join("; ") + (errors.length > 3 ? " …" : "");
+          ui.notifications.error(format("DT.CombatSnapshot.RestoreErrors", { count: errors.length, names }));
+        }
         else ui.notifications.info(format("DT.CombatSnapshot.Restored", { count: rows.length }));
       } finally {
         this.busy = false;

@@ -1109,6 +1109,19 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   with the same visible text (`htmlText()`: tags dropped, common entities decoded, whitespace collapsed) as equal. Real
   rows that remain and are legit: dnd5e's `flags.dnd5e.last.<activityId>.*` (remembered attack options), `active` of the
   combat (another combat was activated meanwhile).
+- **dnd5e 6 DELETES expired effects out of combat** (verified 6.0.6 `ActiveEffect5e#_onUpdate`): on the active GM, when an
+  update sets `duration.expired` and the effect has no `dependentOn`, it is deleted unless the actor has a combatant in
+  `start.combat ?? game.combat`; deleting a concentration effect deletes its dependents too (`_onDeleteOperation`,
+  `flags.dnd5e.dependents` via `modifyBatch`). Seen on the table 2026-11-17: an extra PC's "Concentrating: Hunter's Mark"
+  ran out during the one-shot and was gone (restore re-creates it; the target's dependent effect only comes back if that
+  actor is in the snapshot too). So "keep others" can only protect effects that still exist.
+- **Unlinked tokens' inherited embedded documents** (table 2026-11-17, 1.11.2): the restore step "keep others" failed with
+  `undefined id [x] does not exist in the EmbeddedCollection collection` (from `#preUpdateDocumentArray`) — the id was in
+  no snapshot document, so it came from the live "others" scan. Inferred (not traced in the source): a synthetic actor's
+  `effects`/`items` include what it inherits from the base actor, but `updateEmbeddedDocuments` on it goes to the token's
+  ActorDelta, which doesn't hold those. Fix: for `actor.isToken`, shift only what `actor.token.delta.effects/items` holds
+  (`has(id)`); inherited ones are shifted through the base world actor. Every document is its own restore step now, and
+  failures carry the row labels (notification + console).
 - "All player characters" = `hasPlayerOwner && type === "character"` or a user's assigned character — the user's world had
   40 player-owned actors, half of them NPCs (hirelings, bastion defenders).
 - **Unverified against the v14 source** (no install in the cloud session — check on the dev machine): `keepId` for
