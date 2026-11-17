@@ -4,6 +4,17 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.11.0] — 2026-11-17
+
+### Added
+- **Combat Snapshots** (any system): before you use the world for something else, save the running
+  fight from the Combat Tracker's ⋮ menu. Later the snapshot shows everything that changed — HP,
+  spell slots, used items, effects that ran out, moved tokens, missing combatants, the world time —
+  and you tick what to put back. The world time goes back to the fight's time, while everybody
+  else's effects keep their remaining duration; missing things come back with their old IDs, so
+  concentration and other links keep working. Saving changes nothing. Snapshots can be exported and
+  imported as files. GM only, off by default.
+
 ## [1.10.1] — 2026-11-12
 
 ### Fixed

@@ -648,6 +648,49 @@ HUD behaves as the module made it.
 | **Keep Token Action HUD Above the Interface** | off | Pin the HUD to the layer below. |
 | **Token Action HUD: Layer (z-index)** | 50 | 31–99; 50 = above the Carousel (30), below windows (100+). |
 
+### 18. Combat Snapshots  ·  *any system · world (GM)*
+
+Pause a fight between sessions, use the same world for something else (a one-shot), and afterwards
+check — and if needed restore — the fight exactly as you left it.
+
+**Why:** the combat itself survives (bind it to its scene with *Link to Scene* in the Combat
+Tracker's ⋮ menu, so it isn't shown, or ended, on other scenes). Its surroundings don't: every
+round of another fight moves the world clock by 6 seconds (and the GM may set the clock), so
+time-based effects of the paused combatants run out — also on characters who aren't on that
+scene — and anybody may touch an actor, a token or an item in between.
+
+**How it works:** two entries in the Combat Tracker's encounter menu (⋮), GM only:
+
+- **Save combat snapshot** stores the encounter the tracker shows: the combat (round, turn,
+  initiative, combatants), the token of every combatant (position, hidden …), the actor of every
+  combatant with all its items and effects (for monsters with unlinked tokens: that token's own
+  state), every player character, and the world time. Saving only reads — nothing in the world
+  changes and Foundry keeps running as usual (effects keep counting down).
+- **Combat snapshots…** opens the window: save with a name, list, export / import as JSON, delete,
+  and **Compare**. Compare lists every difference between now and the snapshot, grouped by world
+  time, combat, tokens and actor, each with a checkbox (all ticked): HP 5 → 20, *Potion* missing,
+  effect *Poisoned* new, *Bless* expired, combatant missing, token moved …
+- **Restore selected** writes the ticked differences back, in this order:
+  1. **World time** back to the time of the snapshot.
+  2. **Other actors keep their effect durations:** running timed effects of every actor and token
+     that is not in the snapshot (e.g. the one-shot's characters) move along with the clock, so
+     the rewind neither extends nor shortens them. Only together with step 1.
+  3. **The fight:** missing items, effects, combatants, tokens, actors or the whole combat are
+     re-created **with their old IDs**, so everything that pointed at them (concentration, effect
+     origins, combatant → token) works again; things that are new since the snapshot are deleted;
+     tokens are put back without walls in the way; round and turn are set without triggering
+     start-of-turn effects. This comes last, so the clock change can't alter what is restored.
+
+  Afterwards the list is shown again — what remains is what couldn't be restored.
+- Snapshots are stored in the world, so a world backup contains them.
+
+For macros: `game.modules.get("darkviruzz-tweaks").api.saveCombatSnapshot(combat, { name,
+includePCs })` and `.openCombatSnapshots()`.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Combat Snapshots** | off | The two entries in the Combat Tracker's encounter menu (GMs only). World setting (GM). |
+
 ## Already built in (no tweak needed)
 
 - **GM: move tokens through walls and other tokens** — the GM's *unconstrained movement*

@@ -27,6 +27,7 @@ import tokenFormation from "./token-formation.js";
 import templateTargeting from "./template-targeting.js";
 import rsrAttackTargets from "./rsr-attack-targets.js";
 import tahLayer from "./tah-layer.js";
+import combatSnapshot from "./combat-snapshot.js";
 
 export const FEATURES = [
   abilityScoreProminence,
@@ -36,6 +37,7 @@ export const FEATURES = [
   defeatedTokens,
   tokenStatusIcons,
   pauseControl,
+  combatSnapshot,
   liveTokenDrag,
   filePickerPreview,
   tokenArtPicker,
