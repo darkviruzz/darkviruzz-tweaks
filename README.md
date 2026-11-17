@@ -664,7 +664,8 @@ scene — and anybody may touch an actor, a token or an item in between.
 - **Save combat snapshot** stores the encounter the tracker shows: the combat (round, turn,
   initiative, combatants), the token of every combatant (position, hidden …), the actor of every
   combatant with all its items and effects (for monsters with unlinked tokens: that token's own
-  state), every player character, and the world time. Saving only reads — nothing in the world
+  state), every player character (type *character* or assigned to a player — not NPCs that merely
+  belong to a player, like hirelings), and the world time. Saving only reads — nothing in the world
   changes and Foundry keeps running as usual (effects keep counting down).
 - **Combat snapshots…** opens the window: save with a name, list, export / import as JSON, delete,
   and **Compare**. Compare lists every difference between now and the snapshot, grouped by world
@@ -682,7 +683,11 @@ scene — and anybody may touch an actor, a token or an item in between.
      start-of-turn effects. This comes last, so the clock change can't alter what is restored.
 
   Afterwards the list is shown again — what remains is what couldn't be restored.
-- Snapshots are stored in the world, so a world backup contains them.
+- Snapshots are stored in a world compendium **Combat Snapshots** (created on the first save, one
+  entry per snapshot, players have no access). It is loaded only when you open it — a snapshot with
+  all player characters easily has several MB, which must not be sent to every player at login —
+  and it belongs to the world, so a world backup contains it. Deleting a snapshot in the window
+  deletes its entry.
 
 For macros: `game.modules.get("darkviruzz-tweaks").api.saveCombatSnapshot(combat, { name,
 includePCs })` and `.openCombatSnapshots()`.

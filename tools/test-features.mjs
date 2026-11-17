@@ -2352,7 +2352,7 @@ game.user = ttSavedUser;
 {
   const lib = await import(pathToFileURL(join(ROOT, "scripts/lib/snapshot-diff.js")).href);
   const cs = await import(pathToFileURL(join(ROOT, "scripts/features/combat-snapshot.js")).href);
-  const { buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, loadSnapshots, onGetCombatContextOptions } = cs.internals;
+  const { buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, listSnapshots, getSnapshot, deleteSnapshot, onGetCombatContextOptions } = cs.internals;
   const clone = v => JSON.parse(JSON.stringify(v));
 
   await test("snapshot-diff: flatten / diffFields / updateData / formatDuration", () => {
@@ -2361,7 +2361,15 @@ game.user = ttSavedUser;
       [{ path: "b.c", from: 2, to: 3 }]);
     assert.deepEqual(lib.diffFields({ system: { x: 1 }, items: [1] }, { system: { x: 1 }, items: [2] }, { keys: ["system"] }), []);
     assert.deepEqual(lib.updateData([{ path: "a.b", value: 1 }, { path: "flags.dt.x", value: undefined }, { path: "top", value: undefined }]),
-      { "a.b": 1, "flags.dt.-=x": null, "-=top": null });
+      { "a.b": 1, "flags.dt.-=x": null, "-=top": null }, "legacy deletion keys without a v14 operator");
+    const DEL = { del: true };
+    assert.deepEqual(lib.updateData([{ path: "flags.dt.x", value: undefined }], { deletion: () => DEL }), { "flags.dt.x": DEL }, "v14: ForcedDeletion value");
+    // dnd5e 6 leaves ForcedDeletion operators in item sources; live = class instance, stored = marker object
+    class ForcedDeletion { toJSON() { return { "__$OPERATOR$__": "ForcedDeletion" }; } }
+    const live = { flags: { dnd5e: { riders: new ForcedDeletion(), keep: 1 } }, list: [{ a: new ForcedDeletion() }] };
+    assert.deepEqual(lib.normalizeData(live), { flags: { dnd5e: { keep: 1 } }, list: [{}] });
+    const stored = JSON.parse(JSON.stringify(live));
+    assert.deepEqual(lib.diffFields(lib.normalizeData(live), lib.normalizeData(stored)), [], "the 1.11.0 noise: no differences");
     assert.equal(lib.formatDuration(3725), "1 h 2 min 5 s");
     assert.equal(lib.formatDuration(-60), "−1 min");
     const coll = lib.diffCollection([{ _id: "a" }, { _id: "b" }], [{ _id: "b" }, { _id: "c" }]);
@@ -2451,6 +2459,22 @@ game.user = ttSavedUser;
   foundry.utils.saveDataToFile = () => {};
   ui.notifications.error = m => notes.push(m);
 
+  // world compendium stub (JournalEntry pack)
+  let pack = null;
+  const packCalls = [];
+  const makePack = meta => ({
+    collection: `world.${meta.name}`, meta, docs: new Map(),
+    async getIndex({ fields }) { packCalls.push(["index", fields]); return [...this.docs.values()].map(d => ({ _id: d._id, name: d.name, flags: { [MODULE_ID]: { meta: d.flags[MODULE_ID].meta } } })); },
+    async getDocument(id) { const d = this.docs.get(id); return d && { name: d.name, flags: clone(d.flags) }; }
+  });
+  game.packs = { get: id => (pack && id === pack.collection ? pack : undefined) };
+  foundry.documents = { collections: { CompendiumCollection: { createCompendium: async meta => { packCalls.push(["createCompendium", meta]); pack = makePack(meta); return pack; } } } };
+  let jid = 0;
+  CONFIG.JournalEntry = { documentClass: {
+    create: async (data, opts) => { assert.equal(opts.pack, pack.collection); const d = { ...clone(data), _id: `j${++jid}` }; pack.docs.set(d._id, d); return { id: d._id }; },
+    deleteDocuments: async (ids, opts) => { assert.equal(opts.pack, pack.collection); ids.forEach(id => pack.docs.delete(id)); }
+  } };
+
   const liveCombat = () => {
     const scene = { id: "s1", name: "Cave" };
     const token = id => {
@@ -2478,6 +2502,23 @@ game.user = ttSavedUser;
     ], "PCs are included by default — this one is a combatant, so it isn't added twice; the NPC has no player owner");
     assert.equal(snap.name, "Cave — DT.CombatSnapshot.Round:{\"round\":2}");
     assert.equal(snap.actors[0].data.effects[0].name, "Bless");
+  });
+
+  await test("Combat Snapshot: 'player characters' = type character with a player owner, or assigned to a user", () => {
+    const actors = [
+      doc("Actor", { _id: "pcX", name: "PC", type: "character", items: [], effects: [] }, { hasPlayerOwner: true, type: "character" }),
+      doc("Actor", { _id: "hire", name: "Hireling", type: "npc", items: [], effects: [] }, { hasPlayerOwner: true, type: "npc" }),
+      doc("Actor", { _id: "fam", name: "Familiar", type: "npc", items: [], effects: [] }, { hasPlayerOwner: true, type: "npc" }),
+      doc("Actor", { _id: "tmpl", name: "Template", type: "character", items: [], effects: [] }, { hasPlayerOwner: false, type: "character" })
+    ];
+    const saved = Object.getOwnPropertyDescriptor(game, "actors");
+    Object.defineProperty(game, "actors", { configurable: true, get: () => Object.assign(actors.slice(), { get: id => actors.find(a => a.id === id) }) });
+    const savedUsers = Object.getOwnPropertyDescriptor(game, "users");
+    Object.defineProperty(game, "users", { configurable: true, get: () => [{ character: { id: "fam" } }, { character: null }] });
+    const snap = buildSnapshot({ ...liveCombat(), combatants: [] });
+    assert.deepEqual(snap.actors.map(a => a.data._id).sort(), ["fam", "pcX"], "the hireling and the unowned template are left out");
+    Object.defineProperty(game, "users", savedUsers);
+    Object.defineProperty(game, "actors", saved);
   });
 
   await test("Combat Snapshot: an unchanged world shows no differences", () => {
@@ -2611,8 +2652,9 @@ game.user = ttSavedUser;
     settings.combatSnapshotData = {};
     game.settings.set = async (ns, key, value) => { settings[key] = value; };
     await save.onClick();
-    assert.equal(loadSnapshots().at(-1).combat._id, "c1");
-    assert.equal(loadSnapshots().at(-1).worldTime, 1000);
+    const [entry] = await listSnapshots();
+    assert.equal((await getSnapshot(entry.id)).combat._id, "c1");
+    assert.equal(entry.worldTime, 1000);
     game.user = savedUser;
     settings.combatSnapshotEnabled = false;
   });
@@ -2627,19 +2669,33 @@ game.user = ttSavedUser;
     game.user = { isGM: false };
     assert.equal(await saveSnapshot(liveCombat()), null, "players can't");
     game.user = { isGM: true };
-    let stored = {};
-    settings.combatSnapshotData = stored;
+    pack = null; packCalls.length = 0;
+    // a 1.11.0 snapshot in the world setting is moved into the pack on first access
+    const legacy = buildSnapshot(liveCombat(), { name: "Old one" });
+    settings.combatSnapshotData = { snapshots: [legacy] };
     game.settings.set = async (ns, key, value) => { settings[key] = value; };
+    let list = await listSnapshots();
+    assert.deepEqual(list.map(s => s.name), ["Old one"]);
+    assert.deepEqual(settings.combatSnapshotData, {}, "the setting is emptied (no MB of data sent to every client)");
+    const created = packCalls.find(c => c[0] === "createCompendium")[1];
+    assert.deepEqual([created.type, created.name, created.ownership.PLAYER], ["JournalEntry", "dt-combat-snapshots", "NONE"]);
+    assert.equal(typeof pack.docs.get(list[0].id).flags[MODULE_ID].snapshot, "string", "data stored as a JSON string");
+    assert.deepEqual(packCalls.find(c => c[0] === "index")[1], [`flags.${MODULE_ID}.meta`], "the list reads only the small meta");
+
     const snap = await saveSnapshot(liveCombat(), { name: "Cave fight" });
-    assert.equal(loadSnapshots().length, 1);
-    assert.equal(loadSnapshots()[0].name, "Cave fight");
+    list = await listSnapshots();
+    assert.equal(list.length, 2);
+    assert.equal(list.find(s => s.id === snap.id).name, "Cave fight");
+    assert.equal((await getSnapshot(snap.id)).actors.length, snap.actors.length);
     notes.length = 0;
     assert.equal(await importSnapshot("{nope"), null);
     assert.equal(await importSnapshot(JSON.stringify({ format: 99 })), null);
     assert.equal(notes.length, 2);
     const imported = await importSnapshot(JSON.stringify(snap));
-    assert.notEqual(imported.id, snap.id, "a duplicate id gets a new one");
-    assert.equal(loadSnapshots().length, 2);
+    assert.notEqual(imported.id, snap.id, "an import gets its own entry");
+    assert.equal((await listSnapshots()).length, 3);
+    await deleteSnapshot(imported.id);
+    assert.equal((await listSnapshots()).length, 2);
     game.user = savedUser;
     settings.combatSnapshotEnabled = false;
   });

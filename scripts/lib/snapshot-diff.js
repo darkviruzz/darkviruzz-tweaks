@@ -3,8 +3,8 @@
  * Combat Snapshot feature. No Foundry globals: tested in plain Node.
  *
  * Objects are flattened to dot paths; arrays and primitives are leaves (an array is compared
- * and restored as a whole). A path present now but missing in the snapshot is restored with
- * Foundry's deletion key `parent.-=leaf`.
+ * and restored as a whole). A path present now but missing in the snapshot is deleted
+ * (`ForcedDeletion` in v14, else the legacy `parent.-=leaf` key).
  */
 
 const isPlainObject = value => {
@@ -70,12 +70,35 @@ export function diffCollection(current = [], saved = []) {
   };
 }
 
-/** `[{path, value}]` → a flat Foundry update object (`undefined` = delete the key). */
-export function updateData(changes) {
+const OPERATOR_KEY = "__$OPERATOR$__";
+
+/**
+ * Plain, JSON-safe copy of document data without Foundry's data operators. dnd5e 6 leaves
+ * `ForcedDeletion` operators in item sources (`flags.dnd5e.riders`); `toObject()` returns them as
+ * class instances, JSON as `{"__$OPERATOR$__": "ForcedDeletion"}` — both are dropped here, so live
+ * data and a stored snapshot compare equal.
+ */
+export function normalizeData(data) {
+  if (data === undefined) return undefined;
+  return JSON.parse(JSON.stringify(data), (key, value) =>
+    (value && typeof value === "object" && !Array.isArray(value) && OPERATOR_KEY in value ? undefined : value));
+}
+
+/**
+ * `[{path, value}]` → a flat Foundry update object; `undefined` = delete the key. `deletion()` returns
+ * the v14 deletion value (`ForcedDeletion.create()`); without it the legacy `-=key` syntax is used
+ * (deprecated in v14).
+ */
+export function updateData(changes, { deletion } = {}) {
   const out = {};
   for (const { path, value } of changes) {
     if (value !== undefined) {
       out[path] = value;
+      continue;
+    }
+    const operator = deletion?.();
+    if (operator !== undefined) {
+      out[path] = operator;
       continue;
     }
     const cut = path.lastIndexOf(".");

@@ -44,11 +44,12 @@
 
 import { MODULE_ID } from "../constants.js";
 import {
-  diffFields, diffCollection, updateData, formatValue, formatDuration
+  diffFields, diffCollection, updateData, formatValue, formatDuration, normalizeData
 } from "../lib/snapshot-diff.js";
 
 const KEY_ENABLED = "combatSnapshotEnabled";
-const KEY_DATA = "combatSnapshotData";
+const KEY_DATA = "combatSnapshotData";      // 1.11.0 storage, migrated into the pack
+const PACK_NAME = "dt-combat-snapshots";
 const FORMAT = 1;
 
 const ACTOR_KEYS = ["name", "img", "system", "flags"];
@@ -85,13 +86,79 @@ const mayUse = () => isEnabled() && !!game.user?.isGM;
 /*  Storage                                     */
 /* -------------------------------------------- */
 
-function loadSnapshots() {
-  const data = game.settings.get(MODULE_ID, KEY_DATA);
-  return Array.isArray(data?.snapshots) ? data.snapshots : [];
+/*
+ * Snapshots live in a world compendium (JournalEntry pack `world.dt-combat-snapshots`), one entry
+ * per snapshot: `flags[MODULE_ID].meta` (small, read via the pack index) and
+ * `flags[MODULE_ID].snapshot` (the data as a JSON STRING — keys with dots and data operators inside
+ * actor data must not be interpreted by the database). Compendium content is loaded on demand,
+ * unlike world settings, which every client receives at login (a snapshot with all player
+ * characters is several MB). The pack belongs to the world, so a world backup contains it.
+ */
+const packId = () => `world.${PACK_NAME}`;
+
+async function snapshotPack({ create = false } = {}) {
+  const existing = game.packs?.get(packId());
+  if (existing || !create) return existing ?? null;
+  const Collection = foundry.documents?.collections?.CompendiumCollection ?? globalThis.CompendiumCollection;
+  return Collection.createCompendium({
+    type: "JournalEntry",
+    label: localize("DT.CombatSnapshot.PackLabel"),
+    name: PACK_NAME,
+    ownership: { PLAYER: "NONE", TRUSTED: "NONE", ASSISTANT: "OWNER" }
+  });
 }
 
-async function storeSnapshots(snapshots) {
-  await game.settings.set(MODULE_ID, KEY_DATA, { snapshots });
+const metaOf = snapshot => ({
+  created: snapshot.created, round: snapshot.round ?? 0, actors: snapshot.actors?.length ?? 0,
+  sceneName: snapshot.sceneName ?? null, worldTime: snapshot.worldTime ?? 0
+});
+
+async function addSnapshot(snapshot) {
+  const pack = await snapshotPack({ create: true });
+  const data = { ...snapshot };
+  delete data.id;
+  const doc = await CONFIG.JournalEntry.documentClass.create({
+    name: snapshot.name,
+    flags: { [MODULE_ID]: { meta: metaOf(snapshot), snapshot: JSON.stringify(data) } }
+  }, { pack: pack.collection });
+  return doc?.id ?? null;
+}
+
+/** `[{id, name, created, round, actors, sceneName, worldTime}]`, newest first. */
+async function listSnapshots() {
+  await migrateLegacy();
+  const pack = await snapshotPack();
+  if (!pack) return [];
+  const index = await pack.getIndex({ fields: [`flags.${MODULE_ID}.meta`] });
+  return [...index]
+    .map(entry => ({ ...(entry.flags?.[MODULE_ID]?.meta ?? {}), id: entry._id, name: entry.name }))
+    .sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
+}
+
+async function getSnapshot(id) {
+  const pack = await snapshotPack();
+  const doc = await pack?.getDocument(id);
+  const text = doc?.flags?.[MODULE_ID]?.snapshot;
+  if (typeof text !== "string") return null;
+  return { ...JSON.parse(text), id, name: doc.name };
+}
+
+async function deleteSnapshot(id) {
+  const pack = await snapshotPack();
+  if (pack) await CONFIG.JournalEntry.documentClass.deleteDocuments([id], { pack: pack.collection });
+}
+
+/** Snapshots saved by 1.11.0 sit in the world setting — move them into the pack once. */
+let migrating = null;
+function migrateLegacy() {
+  if (!game.user?.isGM) return Promise.resolve();
+  migrating ??= (async () => {
+    const legacy = game.settings.get(MODULE_ID, KEY_DATA)?.snapshots;
+    if (!Array.isArray(legacy) || !legacy.length) return;
+    for (const snapshot of legacy) await addSnapshot(snapshot);
+    await game.settings.set(MODULE_ID, KEY_DATA, {});
+  })().finally(() => { migrating = null; });
+  return migrating;
 }
 
 /* -------------------------------------------- */
@@ -137,24 +204,34 @@ function combatLabel(combat) {
   return `${scene} — ${format("DT.CombatSnapshot.Round", { round: combat.round ?? 0 })}`;
 }
 
+const plain = doc => normalizeData(doc.toObject());
+
+/**
+ * A player character: a player owns it and it is of the "character" type (dnd5e and most systems),
+ * or a user has it assigned. NPCs merely owned by a player (hirelings) are left out.
+ */
+function isPlayerCharacter(actor, assigned) {
+  return assigned.has(actor.id) || (actor.hasPlayerOwner && actor.type === "character");
+}
+
 function buildSnapshot(combat, { name, includePCs = true } = {}) {
   const tokens = new Map();
   const actors = new Map();
   for (const combatant of combat.combatants ?? []) {
     const token = combatant.token;
-    if (token) tokens.set(`${token.parent?.id}.${token.id}`, { sceneId: token.parent?.id, data: token.toObject() });
+    if (token) tokens.set(`${token.parent?.id}.${token.id}`, { sceneId: token.parent?.id, data: plain(token) });
     const ref = actorRefFor(combatant);
     const actor = combatant.actor;
     if (ref && actor && !actors.has(actorKey(ref))) {
-      actors.set(actorKey(ref), { ref, name: token?.name ?? actor.name, extra: false, data: actor.toObject() });
+      actors.set(actorKey(ref), { ref, name: token?.name ?? actor.name, extra: false, data: plain(actor) });
     }
   }
   if (includePCs) {
+    const assigned = new Set([...(game.users ?? [])].map(user => user.character?.id).filter(Boolean));
     for (const actor of game.actors ?? []) {
       const ref = { kind: "actor", id: actor.id };
-      if (actor.hasPlayerOwner && !actors.has(actorKey(ref))) {
-        actors.set(actorKey(ref), { ref, name: actor.name, extra: true, data: actor.toObject() });
-      }
+      if (!isPlayerCharacter(actor, assigned) || actors.has(actorKey(ref))) continue;
+      actors.set(actorKey(ref), { ref, name: actor.name, extra: true, data: plain(actor) });
     }
   }
   return {
@@ -169,7 +246,7 @@ function buildSnapshot(combat, { name, includePCs = true } = {}) {
     round: combat.round ?? 0,
     turn: combat.turn ?? null,
     sceneName: combat.scene?.name ?? null,
-    combat: combat.toObject(),
+    combat: plain(combat),
     tokens: [...tokens.values()],
     actors: [...actors.values()]
   };
@@ -182,7 +259,7 @@ async function saveSnapshot(combat = game.combat, options = {}) {
     return null;
   }
   const snapshot = buildSnapshot(combat, options);
-  await storeSnapshots([...loadSnapshots(), snapshot]);
+  snapshot.id = await addSnapshot(snapshot);
   ui.notifications.info(format("DT.CombatSnapshot.Saved", { name: snapshot.name, actors: snapshot.actors.length }));
   return snapshot;
 }
@@ -287,7 +364,8 @@ const othersEffects = snapshot => otherActors(snapshotKeys(snapshot)).flatMap(ru
  * @returns {{groups: {title, icon, note?, rows}[], warnings: string[], delta: number}}
  *   delta = world time now − world time of the snapshot (seconds)
  */
-function compareSnapshot(snapshot) {
+function compareSnapshot(input) {
+  const snapshot = normalizeData(input);
   const groups = [];
   const warnings = [];
   const delta = (Number(game.time?.worldTime) || 0) - (Number(snapshot.worldTime) || 0);
@@ -324,7 +402,7 @@ function compareSnapshot(snapshot) {
       localize("DT.CombatSnapshot.State.Missing"), localize("DT.CombatSnapshot.State.Recreate"),
       { type: "createTop", documentName: "Combat", data: saved }));
   } else {
-    const now = combat.toObject();
+    const now = plain(combat);
     const ref = { type: "combat", id: combat.id };
     combatRows.push(...fieldRows(diffFields(now, saved, { exclude: ["combatants"], skipPrivate: true }), ref));
     combatRows.push(...embeddedRows(now.combatants, saved.combatants, ref, "Combatant",
@@ -348,7 +426,7 @@ function compareSnapshot(snapshot) {
         localize("DT.CombatSnapshot.State.Missing"), localize("DT.CombatSnapshot.State.Recreate"),
         { type: "create", parent: { type: "scene", id: sceneId }, embedded: "Token", data }));
     } else {
-      tokenRows.push(...fieldRows(diffFields(token.toObject(), data, { exclude: ["delta"], skipPrivate: true }),
+      tokenRows.push(...fieldRows(diffFields(plain(token), data, { exclude: ["delta"], skipPrivate: true }),
         { type: "token", sceneId, id: data._id }, data.name));
     }
   }
@@ -369,7 +447,7 @@ function compareSnapshot(snapshot) {
       groups.push(group);
       continue;
     }
-    const now = actor.toObject();
+    const now = plain(actor);
     const aref = { type: "actor", actor: entry.ref };
     group.rows.push(...fieldRows(diffFields(now, then, { keys: ACTOR_KEYS }), aref, "", extra));
     group.rows.push(...embeddedRows(now.items, then.items, aref, "Item", "DT.CombatSnapshot.Row.Item", extra,
@@ -414,6 +492,9 @@ async function applyUpdate(ref, data) {
   if (ref.type === "combat") return doc.update(data, { turnEvents: false });
   return doc.update(data);
 }
+
+/** v14 deletion value; undefined before v14 (then updateData falls back to "-=key"). */
+const forcedDeletion = () => foundry.data?.operators?.ForcedDeletion?.create?.();
 
 /** Shift the start time of every running effect of the actors outside the snapshot. */
 async function keepOthers(snapshot, seconds) {
@@ -475,7 +556,7 @@ async function applyRows(rows, snapshot) {
   for (const [kind, type] of STEPS) {
     if (kind === "update") {
       for (const { ref, changes } of updates.values()) {
-        if (ref.type === type) await run(() => applyUpdate(ref, updateData(changes)));
+        if (ref.type === type) await run(() => applyUpdate(ref, updateData(changes, { deletion: forcedDeletion })));
       }
       continue;
     }
@@ -554,8 +635,16 @@ function appClass() {
       return localize("DT.CombatSnapshot.Title");
     }
 
+    /** the snapshot data shown in the compare view (loaded once per snapshot) */
+    snapshot = null;
+
     async _renderHTML() {
-      return this.view === "compare" ? this.#renderCompare() : this.#renderList();
+      if (this.view === "compare") {
+        if (this.snapshot?.id !== this.snapshotId) this.snapshot = await getSnapshot(this.snapshotId);
+        if (this.snapshot) return this.#renderCompare(this.snapshot);
+        this.view = "list";
+      }
+      return this.#renderList(await listSnapshots());
     }
 
     _replaceHTML(result, content) {
@@ -567,7 +656,7 @@ function appClass() {
       if (current === this) current = null;
     }
 
-    #renderList() {
+    #renderList(snapshots) {
       const combats = game.combats?.contents ?? [];
       const select = make("select", { name: "combat" }, combats.map(c => make("option", {
         value: c.id, selected: c === game.combat
@@ -586,7 +675,7 @@ function appClass() {
         this.render();
       });
 
-      const list = loadSnapshots().slice().sort((a, b) => b.created - a.created).map(snapshot => make("li", { class: "dt-csnap__item" }, [
+      const list = snapshots.map(snapshot => make("li", { class: "dt-csnap__item" }, [
         make("div", { class: "dt-csnap__item-text" }, [
           make("strong", {}, [snapshot.name]),
           make("span", { class: "hint" }, [format("DT.CombatSnapshot.Meta", {
@@ -602,10 +691,10 @@ function appClass() {
             this.choices.clear();
             this.render();
           }),
-          button("fa-solid fa-file-export", "", () => exportSnapshot(snapshot), { "data-tooltip": localize("DT.CombatSnapshot.Export"), "aria-label": localize("DT.CombatSnapshot.Export") }),
+          button("fa-solid fa-file-export", "", async () => exportSnapshot(await getSnapshot(snapshot.id)), { "data-tooltip": localize("DT.CombatSnapshot.Export"), "aria-label": localize("DT.CombatSnapshot.Export") }),
           button("fa-solid fa-trash", "", async () => {
             if (!await confirm("DT.CombatSnapshot.DeleteTitle", format("DT.CombatSnapshot.DeleteConfirm", { name: snapshot.name }))) return;
-            await storeSnapshots(loadSnapshots().filter(s => s.id !== snapshot.id));
+            await deleteSnapshot(snapshot.id);
             this.render();
           }, { "data-tooltip": localize("DT.CombatSnapshot.Delete"), "aria-label": localize("DT.CombatSnapshot.Delete") })
         ])
@@ -638,12 +727,7 @@ function appClass() {
       return this.choices.get(row.key) ?? true;
     }
 
-    #renderCompare() {
-      const snapshot = loadSnapshots().find(s => s.id === this.snapshotId);
-      if (!snapshot) {
-        this.view = "list";
-        return this.#renderList();
-      }
+    #renderCompare(snapshot) {
       const { groups, warnings, delta } = compareSnapshot(snapshot);
       this.rows = groups.flatMap(g => g.rows);
 
@@ -786,9 +870,7 @@ async function importSnapshot(text) {
     ui.notifications.error(localize("DT.CombatSnapshot.ImportInvalid"));
     return null;
   }
-  const list = loadSnapshots();
-  if (list.some(s => s.id === snapshot.id)) snapshot.id = foundry.utils.randomID();
-  await storeSnapshots([...list, snapshot]);
+  snapshot.id = await addSnapshot(snapshot);
   ui.notifications.info(format("DT.CombatSnapshot.Imported", { name: snapshot.name }));
   return snapshot;
 }
@@ -823,7 +905,8 @@ function onGetCombatContextOptions(app, menuItems) {
 
 /** For tools/test-features.mjs only. */
 export const internals = {
-  buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, loadSnapshots, openCombatSnapshots,
+  buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, listSnapshots, getSnapshot, deleteSnapshot,
+  openCombatSnapshots,
   onGetCombatContextOptions
 };
 
