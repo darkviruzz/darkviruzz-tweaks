@@ -671,6 +671,8 @@ scene — and anybody may touch an actor, a token or an item in between.
   and **Compare**. Compare lists every difference between now and the snapshot, grouped by world
   time, combat, tokens and actor, each with a checkbox (all ticked): HP 5 → 20, *Potion* missing,
   effect *Poisoned* new, *Bless* expired, combatant missing, token moved …
+  Changes that are only re-saving — the same description text with different formatting, empty
+  fields Foundry adds when a document is saved again — are not listed.
 - **Restore selected** writes the ticked differences back, in this order:
   1. **World time** back to the time of the snapshot.
   2. **Other actors keep their effect durations:** running timed effects of every actor and token

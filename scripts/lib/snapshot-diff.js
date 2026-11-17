@@ -24,8 +24,29 @@ export function flatten(object, prefix = "", out = {}) {
   return out;
 }
 
+const HTML_TAG = /<\/?[a-z][^>]*>/gi;
+const ENTITIES = { "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'" };
+
+/** The visible text of an HTML string: tags dropped, common entities decoded, whitespace collapsed. */
+export function htmlText(value) {
+  return value.replace(HTML_TAG, " ").replace(/&(nbsp|amp|lt|gt|quot|#39);/g, m => ENTITIES[m]).replace(/\s+/g, " ").trim();
+}
+
+const looksLikeHtml = value => typeof value === "string" && /<\/?[a-z]/i.test(value);
+
+/**
+ * Equal for the snapshot comparison. Besides real equality, two cases that are only re-saving noise
+ * count as equal (found on the table: items re-saved after the snapshot):
+ *   - `null` vs. missing — saving a document fills new schema fields with null;
+ *   - HTML strings with the same visible text — the text editor wraps plain text in `<p>`, re-orders
+ *     attributes, changes whitespace.
+ */
 export function sameValue(a, b) {
   if (a === b) return true;
+  if ((a === null || a === undefined) && (b === null || b === undefined)) return true;
+  if (typeof a === "string" && typeof b === "string" && (looksLikeHtml(a) || looksLikeHtml(b))) {
+    return htmlText(a) === htmlText(b);
+  }
   return JSON.stringify(a) === JSON.stringify(b);
 }
 

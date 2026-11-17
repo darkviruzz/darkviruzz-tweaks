@@ -4,6 +4,13 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [1.11.2] — 2026-11-17
+
+### Fixed
+- **Combat Snapshots no longer list changes that are only re-saving:** a description whose text is the
+  same but whose formatting changed (Foundry's text editor wraps text in paragraphs, reorders
+  markup), and empty fields Foundry adds when an item is saved again. Real text changes still show.
+
 ## [1.11.1] — 2026-11-17
 
 ### Fixed
