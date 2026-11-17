@@ -425,7 +425,7 @@
   "DT.CombatSnapshot.NothingSelected": "Nichts ausgewählt.",
   "DT.CombatSnapshot.RestoreTitle": "Snapshot wiederherstellen",
   "DT.CombatSnapshot.RestoreConfirm": "{count} ausgewählte Unterschiede aus „{name}“ in die Welt zurückschreiben?",
-  "DT.CombatSnapshot.RestoreErrors": "{count} Wiederherstellungsschritte sind fehlgeschlagen — siehe Konsole (F12). Die Liste zeigt, was noch abweicht.",
+  "DT.CombatSnapshot.RestoreErrors": "{count} Wiederherstellungsschritte sind fehlgeschlagen ({names}) — Details in der Konsole (F12). Die Liste zeigt, was noch abweicht.",
   "DT.CombatSnapshot.Restored": "{count} Unterschiede wiederhergestellt.",
   "DT.CombatSnapshot.ImportInvalid": "Diese Datei ist kein Kampf-Snapshot.",
   "DT.CombatSnapshot.Imported": "Kampf-Snapshot „{name}“ importiert.",

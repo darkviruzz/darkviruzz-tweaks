@@ -2397,7 +2397,7 @@ game.user = ttSavedUser;
   const doc = (type, data, extras = {}) => {
     const d = {
       documentName: type,
-      get id() { return data._id; }, get x() { return data.x; }, get y() { return data.y; }, get elevation() { return data.elevation; },
+      get id() { return data._id; }, get name() { return data.name; }, get x() { return data.x; }, get y() { return data.y; }, get elevation() { return data.elevation; },
       toObject: () => clone(data),
       update: async (changes, opts) => { calls.push(["update", type, data._id, changes, opts]); applyChanges(data, changes); },
       createEmbeddedDocuments: async (name, list, opts) => { calls.push(["create", type, name, list.map(e => e._id), opts]); (data[FIELDS[name]] ??= []).push(...clone(list)); },
@@ -2434,12 +2434,17 @@ game.user = ttSavedUser;
       { _id: "cb2", tokenId: "tokB", actorId: "gob", initiative: 12, name: "Goblin", _stats: {} }] };
     world.npc = { _id: "npc", name: "NPC", system: {}, flags: {}, items: [], effects: [] };
     world.wolf = { _id: "wolf", name: "Wolf", system: {}, flags: {}, items: [], effects: [] };
+    world.wolfInherited = [];
     world.time = 1000;
     world.combatExists = true;
     calls.length = 0;
   };
   reset();
-  const tokenActor = id => (id === "tokB" ? doc("Actor", world.gob) : id === "tokC" ? doc("Actor", world.wolf) : doc("Actor", world.pc));
+  // tokC = an unlinked token whose synthetic actor also lists effects inherited from its base actor
+  const wolfDelta = () => ({ effects: { has: id => !(world.wolfInherited ?? []).includes(id) }, items: { has: () => true } });
+  const tokenActor = id => (id === "tokB" ? doc("Actor", world.gob)
+    : id === "tokC" ? doc("Actor", world.wolf, { isToken: true, token: { delta: wolfDelta() } })
+    : doc("Actor", world.pc));
   const sceneDoc = () => {
     const s = doc("Scene", world.scene);
     const { get } = s.tokens;
@@ -2612,6 +2617,33 @@ game.user = ttSavedUser;
     assert.equal(order[0], "time");
     assert.equal(order[1], "updateEmbedded", "others are shifted right after the rewind, before the fight is restored");
     assert.ok(order.indexOf("update") > order.lastIndexOf("updateEmbedded") || !order.includes("update"));
+
+    // inherited effects of an unlinked token are not updated through the token (the base actor covers them),
+    // and one failing document doesn't stop the other shifts
+    reset();
+    world.scene.tokens.push({ _id: "tokC", name: "Wolf", actorId: "wolf", actorLink: false, x: 0, y: 0, elevation: 0 });
+    world.wolf.effects = [
+      { _id: "own", name: "Own", start: { time: 900 }, duration: { value: 3600 } },
+      { _id: "inh", name: "From base", start: { time: 900 }, duration: { value: 3600 } }
+    ];
+    world.wolfInherited = ["inh"];
+    world.npc.effects = [{ _id: "bad", name: "Broken", start: { time: 900 }, duration: { value: 3600 } }];
+    const snap3 = buildSnapshot(liveCombat());
+    world.time += 600;
+    const savedActors = Object.getOwnPropertyDescriptor(game, "actors");
+    Object.defineProperty(game, "actors", { configurable: true, get: () => {
+      const npc = doc("Actor", world.npc, { hasPlayerOwner: false });
+      npc.updateEmbeddedDocuments = async () => { throw new Error("id [bad] does not exist in the EmbeddedCollection"); };
+      const list = [pcDoc(), npc];
+      return Object.assign(list, { get: id => list.find(a => a.id === id) });
+    } });
+    const rows3 = compareSnapshot(snap3).groups.flatMap(g => g.rows).filter(r => ["time", "keepOthers"].includes(r.op.type));
+    const { errors: errs3 } = await applyRows(rows3, snap3);
+    Object.defineProperty(game, "actors", savedActors);
+    assert.equal(world.wolf.effects[0].start.time, 300, "the token's own effect is shifted");
+    assert.equal(world.wolf.effects[1].start.time, 900, "the inherited one is not touched through the token");
+    assert.equal(errs3.length, 1);
+    assert.match(errs3[0].label, /KeepOthers.*NPC/, "the failed step names the document");
 
     reset();
     world.wolf.effects = [{ _id: "w1", name: "Mark", start: { time: 900 }, duration: { value: 3600 } }];
