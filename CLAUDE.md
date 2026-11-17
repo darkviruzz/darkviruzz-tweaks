@@ -1071,17 +1071,32 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   rounds of their own `start.combat` — per the effect notes above; the interaction with a long-paused combat is
   unverified).
 - Design: snapshot = `combat.toObject()` + `token.toObject()` per combatant + actor `toObject()` (linked: world actor;
-  unlinked: `token.actor`, the synthetic actor = base + delta, restored through it so writes land in the delta) +
-  `worldTime`. Diff by `_id` for embedded collections, by flattened paths for fields (arrays are leaves, keys starting
-  with `_` and `_stats` skipped). Missing documents are re-created with `{keepId: true}` so UUID links (concentration
-  `dependentOn`, `system.origin`, combatant → token) stay valid. Token positions via `TokenDocument#move({x, y,
-  elevation, action: "displace"})` (no walls, cost 0), combat fields with `{turnEvents: false}`.
+  unlinked: `token.actor`, the synthetic actor = base + delta, restored through it so writes land in the delta) + all
+  player-owned actors + `worldTime`. Saving only reads (user's requirement: no change to Foundry's normal flow). Diff by
+  `_id` for embedded collections, by flattened paths for fields (arrays are leaves, keys starting with `_` skipped).
+  Restore order (user's design, refined): 1. `game.time.advance(-delta)`; 2. "keep others": every running timed
+  effect (numeric `start.time`, `duration.value` set, not expired) of world actors and unlinked tokens on all scenes
+  outside the snapshot gets `start.time - delta`, so its remaining duration is unchanged — done AFTER the rewind,
+  because doing it before would shorten the remaining duration in between (expiry risk), while after the rewind it is
+  only temporarily longer; skipped without step 1; 3. the snapshot's rows (last, so the clock change can't touch them).
+  Missing documents are re-created with `{keepId: true}` so UUID links (concentration `dependentOn`,
+  `system.origin`, combatant → token) stay valid. Token positions via `TokenDocument#move({x, y, elevation, action:
+  "displace"})` (no walls, cost 0), combat fields with `{turnEvents: false}`.
+- **Combat Tracker encounter menu (⋮):** hook `getCombatContextOptions(app, menuItems)` (and
+  `getCombatantContextOptions` for combatant rows), fired in `CombatTracker#_onFirstRender` — once — so add entries
+  unconditionally and gate them with `visible`. Entries `{label (i18n key, localised by the menu), icon (class
+  string), visible, onClick(event, target)}`; `name`/`callback`/`condition` are deprecated since v14 (until v16).
+  `app.viewed` = the encounter shown. Source: League `foundry-vtt-types` at 14.370 (`combat-tracker.d.mts`,
+  `context-menu.d.mts`, 2026-11-17) — not the client source itself.
 - **Unverified against the v14 source** (no install in the cloud session — check on the dev machine): `keepId` for
   `createEmbeddedDocuments` on an unlinked token's synthetic actor (should route into the ActorDelta); that embedded
   `_id`s in `Combat.create(data, {keepId: true})` are kept; `game.time.advance()` with a negative value; the `-=key`
   deletion syntax in v14 (v14 may prefer `foundry.data.operators.ForcedDeletion`); that `Combat#update({round, turn})`
   without `advanceTime` leaves the world time alone; whether core un-expires an effect (`duration.expired`) when the
-  clock goes back — the restore writes `duration.expired` itself for the snapshot's effects.
+  clock goes back — the restore writes `duration.expired` itself for the snapshot's effects; whether dnd5e 6's pseudo
+  expiries ("out of combat any world-time advance expires them") also fire on a NEGATIVE time change, which would end
+  such effects of other actors at the rewind; the v14 `duration.units` names (we don't filter by unit: shifting
+  `start.time` of a round-based effect is assumed harmless).
 
 ## Current features (keep this list current)
 
@@ -1104,4 +1119,4 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
-| Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off, reload — camera button in the Token controls, GM only), hidden `combatSnapshotData` (world, `{snapshots: [...]}`); API `api.saveCombatSnapshot(combat, {name, includePCs})`, `api.openCombatSnapshots()` |
+| Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload), hidden `combatSnapshotData` (world, `{snapshots: [...]}`); API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |

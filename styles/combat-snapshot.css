@@ -81,16 +81,7 @@
 }
 
 .dt-csnap .dt-csnap__time {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 1rem;
   margin: 0;
-}
-
-.dt-csnap .dt-csnap__radio {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
 }
 
 .dt-csnap .dt-csnap__warning {
@@ -115,11 +106,6 @@
   border: 1px solid var(--color-border, #7a7971);
   border-radius: 4px;
   padding: 0.3rem 0.4rem;
-}
-
-.dt-csnap .dt-csnap__group.is-extra {
-  opacity: 0.85;
-  border-style: dashed;
 }
 
 .dt-csnap .dt-csnap__group > header {

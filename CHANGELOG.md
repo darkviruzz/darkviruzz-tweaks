@@ -7,11 +7,12 @@ and GMs, not for developers.
 ## [Unreleased]
 
 ### Added
-- **Combat Snapshots** (any system): save a running fight before you use the world for something
-  else, and later see everything that changed — HP, spell slots, used items, effects that ran out,
-  moved tokens, missing combatants, the world time — and tick what to put back. Missing things come
-  back with their old IDs, so concentration and other links keep working. The world time can be set
-  back, or the paused combatants' effects can be "frozen" instead. Snapshots can be exported and
+- **Combat Snapshots** (any system): before you use the world for something else, save the running
+  fight from the Combat Tracker's ⋮ menu. Later the snapshot shows everything that changed — HP,
+  spell slots, used items, effects that ran out, moved tokens, missing combatants, the world time —
+  and you tick what to put back. The world time goes back to the fight's time, while everybody
+  else's effects keep their remaining duration; missing things come back with their old IDs, so
+  concentration and other links keep working. Saving changes nothing. Snapshots can be exported and
   imported as files. GM only, off by default.
 
 ## [1.10.1] — 2026-11-12

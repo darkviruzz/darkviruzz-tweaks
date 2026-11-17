@@ -104,16 +104,3 @@ export function formatDuration(seconds) {
   }
   return sign + parts.join(" ");
 }
-
-/**
- * Shift the start time of every effect in actor data (actor effects and item effects) by
- * `seconds` — "freezes" time-based durations while the world clock moved on. Mutates `data`.
- */
-export function shiftEffectStarts(actorData, seconds) {
-  const effects = [...(actorData?.effects ?? []), ...(actorData?.items ?? []).flatMap(i => i.effects ?? [])];
-  for (const effect of effects) {
-    if (typeof effect.start?.time === "number") effect.start.time += seconds;
-    if (typeof effect.duration?.startTime === "number") effect.duration.startTime += seconds;
-  }
-  return actorData;
-}

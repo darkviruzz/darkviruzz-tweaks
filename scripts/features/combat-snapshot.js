@@ -5,50 +5,51 @@
  *
  * A fight is paused between sessions and the same world is used for something else in the
  * meantime (a one-shot). The Combat document itself survives (bind it to its scene so it isn't
- * shown — or ended — elsewhere), but its surroundings don't: every round of another fight and
- * every rest moves the world clock, so time-based effects of the paused combatants run out;
- * someone may touch a combatant's actor, a token, an item…
+ * shown — or ended — elsewhere), but its surroundings don't: every round of another fight (and a
+ * GM setting the clock) moves the world time, so time-based effects of the paused combatants run
+ * out; someone may touch a combatant's actor, a token, an item…
+ *
+ * Saving only READS: nothing in the world is changed, Foundry keeps running as usual.
  *
  * *Save* stores, in a hidden world setting:
  *   - the Combat (`toObject()` incl. combatants, round, turn, initiative),
  *   - the token of every combatant (position, hidden…, and for unlinked tokens the delta),
  *   - the actor of every combatant (linked: the world actor; unlinked: the token's synthetic
- *     actor, i.e. base + delta) with all items and effects — optionally all player-owned actors,
+ *     actor, i.e. base + delta) with all items and effects — and all player-owned actors,
  *   - the world time.
  * *Compare* lists every difference between now and the snapshot, one checkbox per difference
  * (field, missing / new item or effect, missing combatant/token/combat, world time). *Restore*
- * writes the selected ones back:
- *   - fields → `doc.update()` (combat with `turnEvents: false`, token positions via
- *     `TokenDocument#move` with action "displace" = teleport, no walls),
- *   - missing documents → re-created with `keepId: true`, so every UUID that pointed at them
- *     (concentration `dependentOn`, effect origins, combatant → token) is valid again,
- *   - documents new since the snapshot → deleted,
- *   - world time → `game.time.advance(-delta)` ("rewind"), or instead the start time of every
- *     snapshot effect is shifted by the delta ("shift": the world keeps its time, the paused
- *     combatants' durations are frozen), or nothing.
+ * writes the selected ones back, in this order:
+ *   1. world time → `game.time.advance(-delta)`: back to the time of the snapshot,
+ *   2. every OTHER actor's running effects (world actors and unlinked tokens on all scenes that
+ *      are not in the snapshot) get `start.time - delta`, so their remaining duration is what it
+ *      was before the rewind ("keep others"). Done AFTER the rewind: in between their remaining
+ *      duration is longer, never shorter, so nothing can expire on the way,
+ *   3. the snapshot's documents — after the rewind, so the clock can't touch what we write:
+ *      - fields → `doc.update()` (combat with `turnEvents: false`, token positions via
+ *        `TokenDocument#move` with action "displace" = teleport, no walls),
+ *      - missing documents → re-created with `keepId: true`, so every UUID that pointed at them
+ *        (concentration `dependentOn`, effect origins, combatant → token) is valid again,
+ *      - documents new since the snapshot → deleted.
  * Snapshots can be exported / imported as JSON files.
  *
  * Verified: see CLAUDE.md "Combat snapshots". `keepId` for embedded documents of an unlinked
  * token's synthetic actor, `game.time.advance` with a negative value and the `-=key` deletion
  * syntax are not verified against the v14 source (marked there).
  *
- * World setting (GM), default off; the window is GM-only.
+ * Entry points: two entries in the Combat Tracker's encounter menu (⋮, hook
+ * `getCombatContextOptions`) — "save snapshot" and "snapshots…" — and the module API.
+ * World setting (GM), default off; GM only.
  */
 
 import { MODULE_ID } from "../constants.js";
 import {
-  diffFields, diffCollection, updateData, formatValue, formatDuration, shiftEffectStarts
+  diffFields, diffCollection, updateData, formatValue, formatDuration
 } from "../lib/snapshot-diff.js";
 
 const KEY_ENABLED = "combatSnapshotEnabled";
 const KEY_DATA = "combatSnapshotData";
-const TOOL_NAME = "dtCombatSnapshots";
 const FORMAT = 1;
-const TIME_MODES = {
-  rewind: ["DT.CombatSnapshot.Time.rewind.Label", "DT.CombatSnapshot.Time.rewind.Hint"],
-  shift: ["DT.CombatSnapshot.Time.shift.Label", "DT.CombatSnapshot.Time.shift.Hint"],
-  none: ["DT.CombatSnapshot.Time.none.Label", "DT.CombatSnapshot.Time.none.Hint"]
-};
 
 const ACTOR_KEYS = ["name", "img", "system", "flags"];
 const ITEM_KEYS = ["name", "system", "flags"];
@@ -136,7 +137,7 @@ function combatLabel(combat) {
   return `${scene} — ${format("DT.CombatSnapshot.Round", { round: combat.round ?? 0 })}`;
 }
 
-function buildSnapshot(combat, { name, includePCs = false } = {}) {
+function buildSnapshot(combat, { name, includePCs = true } = {}) {
   const tokens = new Map();
   const actors = new Map();
   for (const combatant of combat.combatants ?? []) {
@@ -242,32 +243,74 @@ function effectRows(current, saved, parent, prefix, extra) {
     .map(row => (prefix && !row.op.path ? { ...row, label: `${prefix} › ${row.label}` } : row));
 }
 
+/* -------------------------------------------- */
+/*  Other actors' running effects               */
+/* -------------------------------------------- */
+
+const snapshotKeys = snapshot => new Set((snapshot.actors ?? []).map(entry => actorKey(entry.ref)));
+
+/** World actors and unlinked tokens (all scenes) that are NOT part of the snapshot. */
+function otherActors(exclude) {
+  const out = [];
+  for (const actor of game.actors ?? []) {
+    if (!exclude.has(actorKey({ kind: "actor", id: actor.id }))) out.push(actor);
+  }
+  for (const scene of game.scenes ?? []) {
+    for (const token of scene.tokens ?? []) {
+      if (token.actorLink || exclude.has(actorKey({ kind: "token", sceneId: scene.id, tokenId: token.id }))) continue;
+      if (token.actor) out.push(token.actor);
+    }
+  }
+  return out;
+}
+
+/** Running timed effects of an actor and its items: `[{parent, id, time}]`. */
+function runningEffects(actor) {
+  const parents = [actor, ...(actor.items ?? [])];
+  const out = [];
+  for (const parent of parents) {
+    for (const effect of parent.effects ?? []) {
+      const data = effect.toObject();
+      if (typeof data.start?.time !== "number") continue;
+      if (data.duration?.value === null || data.duration?.value === undefined || data.duration?.expired) continue;
+      out.push({ parent, id: data._id, time: data.start.time });
+    }
+  }
+  return out;
+}
+
+const othersEffects = snapshot => otherActors(snapshotKeys(snapshot)).flatMap(runningEffects);
+
 /**
  * Every difference between the live world and a snapshot.
  * @param {object} snapshot
- * @param {{timeMode?: "rewind"|"shift"|"none"}} options
  * @returns {{groups: {title, icon, note?, rows}[], warnings: string[], delta: number}}
+ *   delta = world time now − world time of the snapshot (seconds)
  */
-function compareSnapshot(snapshot, { timeMode = "rewind" } = {}) {
+function compareSnapshot(snapshot) {
   const groups = [];
   const warnings = [];
   const delta = (Number(game.time?.worldTime) || 0) - (Number(snapshot.worldTime) || 0);
-  const shift = timeMode === "shift" && delta !== 0;
 
   const sys = s => `${s?.id ?? "?"} ${s?.version ?? "?"}`;
   if (sys(snapshot.system) !== sys(game.system)) {
     warnings.push(format("DT.CombatSnapshot.Warn.System", { then: sys(snapshot.system), now: sys(game.system) }));
   }
 
-  // World time
-  if (timeMode === "rewind" && delta !== 0) {
-    groups.push({
-      title: localize("DT.CombatSnapshot.Group.Time"), icon: "fa-solid fa-clock",
-      rows: [makeRow(localize("DT.CombatSnapshot.Row.WorldTime"),
-        format("DT.CombatSnapshot.Row.TimeOffset", { time: formatDuration(delta) }),
-        localize("DT.CombatSnapshot.Row.SnapshotTime"),
-        { type: "time", seconds: -delta })]
-    });
+  // World time: back to the snapshot, then the other actors keep their remaining durations
+  if (delta !== 0) {
+    const rows = [makeRow(localize("DT.CombatSnapshot.Row.WorldTime"),
+      format("DT.CombatSnapshot.Row.TimeOffset", { time: formatDuration(delta) }),
+      localize("DT.CombatSnapshot.Row.SnapshotTime"),
+      { type: "time", seconds: -delta })];
+    const others = othersEffects(snapshot).length;
+    if (others) {
+      rows.push(makeRow(localize("DT.CombatSnapshot.Row.KeepOthers"),
+        format("DT.CombatSnapshot.Row.KeepOthersCount", { count: others }),
+        format("DT.CombatSnapshot.Row.KeepOthersShift", { time: formatDuration(-delta) }),
+        { type: "keepOthers", seconds: -delta }, { detail: localize("DT.CombatSnapshot.Row.KeepOthersHint") }));
+    }
+    groups.push({ title: localize("DT.CombatSnapshot.Group.Time"), icon: "fa-solid fa-clock", rows });
   }
 
   // Combat + combatants
@@ -301,11 +344,9 @@ function compareSnapshot(snapshot, { timeMode = "rewind" } = {}) {
     }
     const token = scene.tokens?.get(data._id);
     if (!token) {
-      const restored = clone(data);
-      if (shift && restored.delta) shiftEffectStarts(restored.delta, delta);
       tokenRows.push(makeRow(format("DT.CombatSnapshot.Row.Token", { name: data.name }),
         localize("DT.CombatSnapshot.State.Missing"), localize("DT.CombatSnapshot.State.Recreate"),
-        { type: "create", parent: { type: "scene", id: sceneId }, embedded: "Token", data: restored }));
+        { type: "create", parent: { type: "scene", id: sceneId }, embedded: "Token", data }));
     } else {
       tokenRows.push(...fieldRows(diffFields(token.toObject(), data, { exclude: ["delta"], skipPrivate: true }),
         { type: "token", sceneId, id: data._id }, data.name));
@@ -315,8 +356,7 @@ function compareSnapshot(snapshot, { timeMode = "rewind" } = {}) {
 
   // Actors
   for (const entry of snapshot.actors ?? []) {
-    const then = clone(entry.data);
-    if (shift) shiftEffectStarts(then, delta);
+    const then = entry.data;
     const extra = !!entry.extra;
     const group = { title: entry.name, icon: extra ? "fa-solid fa-user" : "fa-solid fa-user-shield", extra, rows: [] };
     const actor = resolveActor(entry.ref);
@@ -375,6 +415,17 @@ async function applyUpdate(ref, data) {
   return doc.update(data);
 }
 
+/** Shift the start time of every running effect of the actors outside the snapshot. */
+async function keepOthers(snapshot, seconds) {
+  const batches = new Map();
+  for (const { parent, id, time } of othersEffects(snapshot)) {
+    const list = batches.get(parent) ?? [];
+    list.push({ _id: id, "start.time": time + seconds });
+    batches.set(parent, list);
+  }
+  for (const [parent, updates] of batches) await parent.updateEmbeddedDocuments("ActiveEffect", updates);
+}
+
 /** Order matters: parents before children, deletions before creations before updates. */
 const STEPS = [
   ["update", "combat"], ["delete", "combat"], ["create", "combat"], ["update", "combatant"],
@@ -387,7 +438,7 @@ const STEPS = [
  * Write the given rows back. Every step is isolated: a failing one is reported, the rest runs.
  * @returns {Promise<{errors: Error[]}>}
  */
-async function applyRows(rows) {
+async function applyRows(rows, snapshot) {
   const errors = [];
   const run = async fn => {
     try {
@@ -413,7 +464,11 @@ async function applyRows(rows) {
     }
   }
 
-  for (const op of ops.filter(o => o.type === "time")) await run(() => game.time.advance(op.seconds));
+  const time = ops.find(o => o.type === "time");
+  if (time) await run(() => game.time.advance(time.seconds));
+  // Only together with the rewind, and only after it (see the header comment).
+  const keep = ops.find(o => o.type === "keepOthers");
+  if (keep && time && snapshot) await run(() => keepOthers(snapshot, keep.seconds));
   for (const op of ops.filter(o => o.type === "createTop")) {
     await run(() => CONFIG[op.documentName].documentClass.create(clone(op.data), { keepId: true }));
   }
@@ -490,8 +545,7 @@ function appClass() {
 
     view = "list";
     snapshotId = null;
-    timeMode = "rewind";
-    /** row key → checked, overriding the default (snapshot combatants on, extra actors off) */
+    /** row key → checked, overriding the default (every row ticked) */
     choices = new Map();
     rows = [];
     busy = false;
@@ -519,7 +573,7 @@ function appClass() {
         value: c.id, selected: c === game.combat
       }, [combatLabel(c)])));
       const name = make("input", { type: "text", name: "name", placeholder: localize("DT.CombatSnapshot.NamePlaceholder") });
-      const pcs = make("input", { type: "checkbox", name: "pcs", id: "dt-csnap-pcs" });
+      const pcs = make("input", { type: "checkbox", name: "pcs", id: "dt-csnap-pcs", checked: true });
       const save = button("fa-solid fa-camera", localize("DT.CombatSnapshot.Save"), async () => {
         await saveSnapshot(game.combats.get(select.value), { name: name.value.trim(), includePCs: pcs.checked });
         this.render();
@@ -581,7 +635,7 @@ function appClass() {
     }
 
     #checked(row) {
-      return this.choices.has(row.key) ? this.choices.get(row.key) : !row.extra;
+      return this.choices.get(row.key) ?? true;
     }
 
     #renderCompare() {
@@ -590,19 +644,12 @@ function appClass() {
         this.view = "list";
         return this.#renderList();
       }
-      const { groups, warnings, delta } = compareSnapshot(snapshot, { timeMode: this.timeMode });
+      const { groups, warnings, delta } = compareSnapshot(snapshot);
       this.rows = groups.flatMap(g => g.rows);
 
-      const modes = make("fieldset", { class: "dt-csnap__time" }, [
-        make("legend", {}, [format("DT.CombatSnapshot.TimeLegend", { time: formatDuration(delta) })]),
-        ...Object.entries(TIME_MODES).map(([mode, [labelKey, hintKey]]) => {
-          const input = make("input", { type: "radio", name: "timeMode", value: mode, checked: this.timeMode === mode });
-          input.addEventListener("change", () => {
-            this.timeMode = mode;
-            this.render();
-          });
-          return make("label", { class: "dt-csnap__radio", "data-tooltip": localize(hintKey) }, [input, localize(labelKey)]);
-        })
+      const modes = make("p", { class: "dt-csnap__time hint" }, [
+        format("DT.CombatSnapshot.TimeLegend", { time: formatDuration(delta) }), " ",
+        localize("DT.CombatSnapshot.OrderHint")
       ]);
 
       const count = make("span", { class: "dt-csnap__count" });
@@ -641,7 +688,7 @@ function appClass() {
           ]);
         });
         syncGroup();
-        return make("section", { class: `dt-csnap__group${group.extra ? " is-extra" : ""}` }, [
+        return make("section", { class: "dt-csnap__group" }, [
           make("header", {}, [
             group.rows.length ? groupBox : "",
             make("i", { class: group.icon, inert: true }),
@@ -695,7 +742,7 @@ function appClass() {
       if (!await confirm("DT.CombatSnapshot.RestoreTitle", format("DT.CombatSnapshot.RestoreConfirm", { count: rows.length, name: snapshot.name }))) return;
       this.busy = true;
       try {
-        const { errors } = await applyRows(rows);
+        const { errors } = await applyRows(rows, snapshot);
         if (errors.length) ui.notifications.error(format("DT.CombatSnapshot.RestoreErrors", { count: errors.length }));
         else ui.notifications.info(format("DT.CombatSnapshot.Restored", { count: rows.length }));
       } finally {
@@ -750,23 +797,35 @@ async function importSnapshot(text) {
 /*  Entry points                                */
 /* -------------------------------------------- */
 
-function onGetSceneControlButtons(controls) {
-  if (!mayUse()) return;
-  const tokenControls = controls?.tokens;
-  if (!tokenControls?.tools) return;
-  tokenControls.tools[TOOL_NAME] = {
-    name: TOOL_NAME,
-    title: "DT.CombatSnapshot.Button",
-    icon: "fa-solid fa-camera",
-    order: Object.keys(tokenControls.tools).length,
-    button: true,
-    visible: true,
-    onChange: () => openCombatSnapshots()
-  };
+/**
+ * The Combat Tracker's encounter menu (⋮). `getCombatContextOptions(app, menuItems)` fires once,
+ * at the tracker's first render — the entries are always added and hide via `visible`, so the
+ * setting works without a reload. `app.viewed` is the encounter the tracker shows.
+ */
+function onGetCombatContextOptions(app, menuItems) {
+  if (!Array.isArray(menuItems)) return;
+  const viewed = () => app?.viewed ?? game.combat ?? null;
+  menuItems.push(
+    {
+      label: "DT.CombatSnapshot.MenuSave",
+      icon: "fa-solid fa-camera",
+      visible: () => mayUse() && !!viewed(),
+      onClick: () => saveSnapshot(viewed()).catch(err => console.error(`${MODULE_ID} | combat snapshot failed`, err))
+    },
+    {
+      label: "DT.CombatSnapshot.MenuOpen",
+      icon: "fa-solid fa-clock-rotate-left",
+      visible: () => mayUse(),
+      onClick: () => openCombatSnapshots()
+    }
+  );
 }
 
 /** For tools/test-features.mjs only. */
-export const internals = { buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, loadSnapshots, openCombatSnapshots };
+export const internals = {
+  buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, loadSnapshots, openCombatSnapshots,
+  onGetCombatContextOptions
+};
 
 export default {
   id: "combatSnapshot",
@@ -783,8 +842,7 @@ export default {
         scope: "world",
         config: true,
         type: Boolean,
-        default: false,
-        requiresReload: true
+        default: false
       }
     },
     {
@@ -798,7 +856,7 @@ export default {
     }
   ],
   init() {
-    Hooks.on("getSceneControlButtons", onGetSceneControlButtons);
+    Hooks.on("getCombatContextOptions", onGetCombatContextOptions);
     Hooks.once("ready", () => {
       const module = game.modules?.get(MODULE_ID);
       if (module) module.api = Object.assign(module.api ?? {}, { openCombatSnapshots, saveCombatSnapshot: saveSnapshot });
