@@ -4,7 +4,7 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
-## [Unreleased]
+## [1.11.0] — 2026-11-17
 
 ### Added
 - **Combat Snapshots** (any system): before you use the world for something else, save the running
