@@ -100,6 +100,7 @@ scripts/
     template-targeting.js       target the creatures in a placed template by D&D area rules; dnd5e 6 card targets (world)
     rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
     tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
+    combat-snapshot.js          save a combat + its tokens/actors, compare, restore selected differences (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
     socket.js                   the module socket channel, messages routed per feature id
@@ -109,6 +110,7 @@ scripts/
     token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette)
     formations.js               pure formation geometry (block, hex, ring, crowd; spacing, order, walls via callback)
     area-coverage.js            pure AoE coverage: grid space / creature-base sections vs. an inside(x, y) callback
+    snapshot-diff.js            pure diff of toObject() data: flatten, field/collection diff, update data with -= deletions
 styles/
   settings.css                  category-header styling
   <feature>.css                 per-feature styling (every file must be listed in module.json "styles")
@@ -1058,6 +1060,29 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   hexes), Huge 3×3 (7), Gargantuan 4×4+ (12+). Sage Advice could not be checked (sageadvice.eu,
   dndbeyond.com and wizards.com are not reachable from the cloud session).
 
+### Combat snapshots (feature *Combat Snapshots*, written 2026-11-17 — NOT tested on the table yet)
+
+- A Combat survives anything that doesn't delete it; bound to its scene (chain icon in the tracker, Combat#scene) it is
+  listed only on that scene. Carousel (`combat-tracker-dock`, GitHub main checked 2026-11-17, `scripts/main.js`) shows
+  exactly one combat, `ui.combat.viewed`, rebuilds on every `canvasReady` for the viewed scene's combat (or closes), and
+  re-targets on `updateCombat` with `active` / `scene: null`; its turn hotkeys act on `game.combat`.
+- What a paused combat loses meanwhile is the WORLD TIME: rounds of another combat (6 s each) and rests advance
+  `game.time.worldTime` for all actors, so time-based effects of paused combatants run out (round-based ones count the
+  rounds of their own `start.combat` — per the effect notes above; the interaction with a long-paused combat is
+  unverified).
+- Design: snapshot = `combat.toObject()` + `token.toObject()` per combatant + actor `toObject()` (linked: world actor;
+  unlinked: `token.actor`, the synthetic actor = base + delta, restored through it so writes land in the delta) +
+  `worldTime`. Diff by `_id` for embedded collections, by flattened paths for fields (arrays are leaves, keys starting
+  with `_` and `_stats` skipped). Missing documents are re-created with `{keepId: true}` so UUID links (concentration
+  `dependentOn`, `system.origin`, combatant → token) stay valid. Token positions via `TokenDocument#move({x, y,
+  elevation, action: "displace"})` (no walls, cost 0), combat fields with `{turnEvents: false}`.
+- **Unverified against the v14 source** (no install in the cloud session — check on the dev machine): `keepId` for
+  `createEmbeddedDocuments` on an unlinked token's synthetic actor (should route into the ActorDelta); that embedded
+  `_id`s in `Combat.create(data, {keepId: true})` are kept; `game.time.advance()` with a negative value; the `-=key`
+  deletion syntax in v14 (v14 may prefer `foundry.data.operators.ForcedDeletion`); that `Combat#update({round, turn})`
+  without `advanceTime` leaves the world time alone; whether core un-expires an effect (`duration.expired`) when the
+  clock goes back — the restore writes `duration.expired` itself for the snapshot's effects.
+
 ## Current features (keep this list current)
 
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
@@ -1079,3 +1104,4 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
+| Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off, reload — camera button in the Token controls, GM only), hidden `combatSnapshotData` (world, `{snapshots: [...]}`); API `api.saveCombatSnapshot(combat, {name, includePCs})`, `api.openCombatSnapshots()` |

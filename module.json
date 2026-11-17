@@ -29,6 +29,7 @@
     "styles/token-tools.css",
     "styles/token-status-icons.css",
     "styles/token-formation.css",
+    "styles/combat-snapshot.css",
     "styles/rsr-attack-targets.css"
   ],
   "languages": [

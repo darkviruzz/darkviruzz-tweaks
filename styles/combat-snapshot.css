@@ -1,0 +1,173 @@
+/*
+ * Feature: Combat Snapshots — the snapshot window (ApplicationV2, class .dt-csnap).
+ */
+
+.dt-csnap [hidden] {
+  display: none !important;
+}
+
+.dt-csnap .window-content {
+  padding: 0.5rem 0.75rem;
+}
+
+.dt-csnap .dt-csnap__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 100%;
+}
+
+.dt-csnap h3 {
+  margin: 0 0 0.3rem;
+}
+
+.dt-csnap .hint {
+  opacity: 0.75;
+  font-size: var(--font-size-12, 12px);
+}
+
+.dt-csnap .dt-csnap__buttons,
+.dt-csnap .dt-csnap__footer,
+.dt-csnap .dt-csnap__item-buttons {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.dt-csnap .dt-csnap__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dt-csnap .dt-csnap__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--color-border, #7a7971);
+  border-radius: 4px;
+}
+
+.dt-csnap .dt-csnap__item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dt-csnap .dt-csnap__item-buttons button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.dt-csnap .dt-csnap__head {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.dt-csnap .dt-csnap__head > button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.dt-csnap .dt-csnap__head > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.dt-csnap .dt-csnap__time {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0;
+}
+
+.dt-csnap .dt-csnap__radio {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dt-csnap .dt-csnap__warning {
+  margin: 0;
+  color: var(--color-level-warning, #ee9b3a);
+}
+
+.dt-csnap .dt-csnap__warning i,
+.dt-csnap .dt-csnap__same i {
+  margin-right: 0.4rem;
+}
+
+.dt-csnap .dt-csnap__groups {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dt-csnap .dt-csnap__group {
+  border: 1px solid var(--color-border, #7a7971);
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+}
+
+.dt-csnap .dt-csnap__group.is-extra {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.dt-csnap .dt-csnap__group > header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.dt-csnap .dt-csnap__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 2fr) minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1px 0;
+  font-size: var(--font-size-13, 13px);
+}
+
+.dt-csnap .dt-csnap__row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-csnap .dt-csnap__from {
+  opacity: 0.75;
+}
+
+.dt-csnap .dt-csnap__row > i {
+  opacity: 0.6;
+  font-size: 0.8em;
+}
+
+.dt-csnap .dt-csnap__footer {
+  margin-top: auto;
+}
+
+.dt-csnap .dt-csnap__footer > button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.dt-csnap .dt-csnap__count {
+  flex: 1;
+  text-align: right;
+  opacity: 0.8;
+}
+
+.dt-csnap .dt-csnap__restore {
+  font-weight: bold;
+}

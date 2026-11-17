@@ -2348,4 +2348,235 @@ await test("template targeting: dnd5e 6 — the usage card's recorded targets ar
 globalThis.canvas = ttSavedCanvas;
 game.user = ttSavedUser;
 
+/* ---------- Combat Snapshots ---------- */
+{
+  const lib = await import(pathToFileURL(join(ROOT, "scripts/lib/snapshot-diff.js")).href);
+  const cs = await import(pathToFileURL(join(ROOT, "scripts/features/combat-snapshot.js")).href);
+  const { buildSnapshot, compareSnapshot, applyRows, saveSnapshot, importSnapshot, loadSnapshots } = cs.internals;
+  const clone = v => JSON.parse(JSON.stringify(v));
+
+  await test("snapshot-diff: flatten / diffFields / updateData / formatDuration", () => {
+    assert.deepEqual(lib.flatten({ a: { b: 1, c: [1, 2], d: {} }, e: null }), { "a.b": 1, "a.c": [1, 2], e: null });
+    assert.deepEqual(lib.diffFields({ a: 1, b: { c: 2 }, _stats: 1 }, { a: 1, b: { c: 3 }, _stats: 2 }, { skipPrivate: true }),
+      [{ path: "b.c", from: 2, to: 3 }]);
+    assert.deepEqual(lib.diffFields({ system: { x: 1 }, items: [1] }, { system: { x: 1 }, items: [2] }, { keys: ["system"] }), []);
+    assert.deepEqual(lib.updateData([{ path: "a.b", value: 1 }, { path: "flags.dt.x", value: undefined }, { path: "top", value: undefined }]),
+      { "a.b": 1, "flags.dt.-=x": null, "-=top": null });
+    assert.equal(lib.formatDuration(3725), "1 h 2 min 5 s");
+    assert.equal(lib.formatDuration(-60), "−1 min");
+    const coll = lib.diffCollection([{ _id: "a" }, { _id: "b" }], [{ _id: "b" }, { _id: "c" }]);
+    assert.deepEqual([coll.missing.map(d => d._id), coll.added.map(d => d._id), coll.common.length], [["c"], ["a"], 1]);
+  });
+
+  // --- a tiny live document model ---
+  const calls = [];
+  const FIELDS = { Item: "items", ActiveEffect: "effects", Combatant: "combatants", Token: "tokens" };
+  const CHILDREN = { Actor: ["Item", "ActiveEffect"], Item: ["ActiveEffect"], Combat: ["Combatant"], Scene: ["Token"] };
+  const applyChanges = (target, changes) => {
+    for (const [key, value] of Object.entries(changes)) {
+      const del = key.match(/^(?:(.*)\.)?-=([^.]+)$/);
+      if (del) delete (del[1] ? getProperty(target, del[1]) : target)?.[del[2]];
+      else setProperty(target, key, value);
+    }
+  };
+  const doc = (type, data, extras = {}) => {
+    const d = {
+      documentName: type,
+      get id() { return data._id; }, get x() { return data.x; }, get y() { return data.y; }, get elevation() { return data.elevation; },
+      toObject: () => clone(data),
+      update: async (changes, opts) => { calls.push(["update", type, data._id, changes, opts]); applyChanges(data, changes); },
+      createEmbeddedDocuments: async (name, list, opts) => { calls.push(["create", type, name, list.map(e => e._id), opts]); (data[FIELDS[name]] ??= []).push(...clone(list)); },
+      deleteEmbeddedDocuments: async (name, ids) => { calls.push(["delete", type, name, ids]); data[FIELDS[name]] = data[FIELDS[name]].filter(e => !ids.includes(e._id)); },
+      move: async waypoint => { calls.push(["move", data._id, waypoint]); Object.assign(data, { x: waypoint.x, y: waypoint.y, elevation: waypoint.elevation }); },
+      ...extras
+    };
+    for (const child of CHILDREN[type] ?? []) {
+      const field = FIELDS[child];
+      d[field] = { get: id => { const e = (data[field] ?? []).find(x => x._id === id); return e ? doc(child, e) : undefined; } };
+    }
+    return d;
+  };
+
+  const world = {};
+  const reset = () => {
+    world.pc = { _id: "pc1", name: "Hero", img: "h.webp", system: { attributes: { hp: { value: 20 } } }, flags: {},
+      items: [{ _id: "it1", name: "Potion", system: { quantity: 2 }, flags: {}, effects: [] },
+        { _id: "it2", name: "Sword", system: { uses: { spent: 0 } }, flags: {}, effects: [{ _id: "ie1", name: "Flame", disabled: true, _stats: {} }] }],
+      effects: [{ _id: "ef1", name: "Bless", disabled: false, start: { time: 100 }, duration: { value: 60, expired: false }, flags: {}, _stats: { m: 1 } }] };
+    world.gob = { _id: "gob", name: "Goblin", img: "g.webp", system: { attributes: { hp: { value: 7 } } }, flags: {}, items: [], effects: [] };
+    world.scene = { _id: "s1", name: "Cave", tokens: [
+      { _id: "tokA", name: "Hero", actorId: "pc1", actorLink: true, x: 0, y: 0, elevation: 0, hidden: false, _movementHistory: [] },
+      { _id: "tokB", name: "Goblin", actorId: "gob", actorLink: false, x: 100, y: 100, elevation: 0, hidden: false, delta: { system: {} } }] };
+    world.combat = { _id: "c1", round: 2, turn: 1, scene: "s1", flags: {}, _stats: {}, combatants: [
+      { _id: "cb1", tokenId: "tokA", actorId: "pc1", initiative: 15, name: "", _stats: {} },
+      { _id: "cb2", tokenId: "tokB", actorId: "gob", initiative: 12, name: "Goblin", _stats: {} }] };
+    world.time = 1000;
+    world.combatExists = true;
+    calls.length = 0;
+  };
+  reset();
+  const sceneDoc = () => {
+    const s = doc("Scene", world.scene);
+    const get = s.tokens.get;
+    s.tokens = { get: id => { const t = get(id); if (!t) return t; return Object.assign(t, { actor: id === "tokB" ? doc("Actor", world.gob) : doc("Actor", world.pc) }); } };
+    return s;
+  };
+  const pcDoc = () => doc("Actor", world.pc, { hasPlayerOwner: true });
+  const created = [];
+  // defineProperties, not Object.assign: assign would evaluate the getters once
+  Object.defineProperties(game, Object.getOwnPropertyDescriptors({
+    get combats() { return { get: id => (world.combatExists && id === world.combat._id ? doc("Combat", world.combat) : undefined), contents: [] }; },
+    get scenes() { return { get: id => (id === "s1" ? sceneDoc() : undefined) }; },
+    get actors() { const list = [pcDoc(), doc("Actor", { _id: "npc", name: "NPC" }, { hasPlayerOwner: false })]; return Object.assign(list, { get: id => list.find(a => a.id === id) }); },
+    time: { get worldTime() { return world.time; }, advance: async s => { calls.push(["time", s]); world.time += s; } },
+    version: "14.370"
+  }));
+  CONFIG.Combat = { documentClass: { create: async (data, opts) => { created.push({ data, opts }); world.combat = clone(data); world.combatExists = true; } } };
+  CONFIG.Actor = { documentClass: { create: async (data, opts) => { created.push({ data, opts }); } } };
+  foundry.utils.randomID = () => `id${Math.random().toString(36).slice(2, 8)}`;
+  foundry.utils.saveDataToFile = () => {};
+  ui.notifications.error = m => notes.push(m);
+
+  const liveCombat = () => {
+    const scene = { id: "s1", name: "Cave" };
+    const token = id => {
+      const t = world.scene.tokens.find(x => x._id === id);
+      return { id, name: t.name, actorLink: t.actorLink, parent: scene, toObject: () => clone(t) };
+    };
+    return {
+      round: world.combat.round, turn: world.combat.turn, scene,
+      toObject: () => clone(world.combat),
+      combatants: [
+        { token: token("tokA"), actor: pcDoc() },
+        { token: token("tokB"), actor: doc("Actor", world.gob) }
+      ]
+    };
+  };
+
+  await test("Combat Snapshot: build captures combat, tokens, linked + unlinked actors, world time", () => {
+    const snap = buildSnapshot(liveCombat(), { includePCs: true });
+    assert.equal(snap.combat._id, "c1");
+    assert.equal(snap.worldTime, 1000);
+    assert.equal(snap.tokens.length, 2);
+    assert.deepEqual(snap.actors.map(a => [a.ref, a.extra]), [
+      [{ kind: "actor", id: "pc1" }, false],
+      [{ kind: "token", sceneId: "s1", tokenId: "tokB" }, false]
+    ], "the PC is a combatant, so includePCs adds nothing twice; the NPC has no player owner");
+    assert.equal(snap.name, "Cave — DT.CombatSnapshot.Round:{\"round\":2}");
+    assert.equal(snap.actors[0].data.effects[0].name, "Bless");
+  });
+
+  await test("Combat Snapshot: an unchanged world shows no differences", () => {
+    const snap = buildSnapshot(liveCombat());
+    const { groups, delta } = compareSnapshot(snap);
+    assert.equal(delta, 0);
+    assert.deepEqual(groups, []);
+  });
+
+  await test("Combat Snapshot: differences are listed and restored with the same ids (rewind)", async () => {
+    reset();
+    const snap = buildSnapshot(liveCombat());
+    // the one-shot happens …
+    world.time += 3600;
+    world.pc.system.attributes.hp.value = 5;
+    world.pc.flags.dt = { x: 1 };
+    world.pc.items = world.pc.items.filter(i => i._id !== "it1");                 // potion drunk
+    world.pc.items[0].system.uses.spent = 1;
+    world.pc.items[0].effects[0].disabled = false;
+    world.pc.effects = [{ _id: "ef2", name: "Poisoned", flags: {} }];               // Bless gone, new effect
+    world.gob.system.attributes.hp.value = 0;
+    world.scene.tokens[1].x = 500;
+    world.scene.tokens[0]._movementHistory = [{ x: 1 }];                            // private: ignored
+    world.combat.round = 5; world.combat.turn = 0;
+    world.combat.combatants = world.combat.combatants.filter(c => c._id !== "cb2");
+    world.combat._stats = { modified: 1 };                                           // private: ignored
+
+    const { groups } = compareSnapshot(snap, { timeMode: "rewind" });
+    const rows = groups.flatMap(g => g.rows);
+    const ops = rows.map(r => r.op);
+    assert.deepEqual(ops.find(o => o.type === "time"), { type: "time", seconds: -3600 });
+    assert.ok(rows.some(r => r.label.startsWith("DT.CombatSnapshot.Field.HP") && r.from === "5" && r.to === "20"), JSON.stringify(rows.map(r => [r.label, r.from, r.to])));
+    assert.ok(ops.some(o => o.type === "create" && o.embedded === "Item" && o.data._id === "it1"));
+    assert.ok(ops.some(o => o.type === "create" && o.embedded === "ActiveEffect" && o.data._id === "ef1"));
+    assert.ok(ops.some(o => o.type === "delete" && o.embedded === "ActiveEffect" && o.id === "ef2"));
+    assert.ok(ops.some(o => o.type === "create" && o.embedded === "Combatant" && o.data._id === "cb2"));
+    assert.ok(ops.some(o => o.type === "update" && o.ref.type === "effect" && o.ref.parent.type === "item" && o.path === "disabled"));
+    assert.ok(!rows.some(r => r.op.path?.startsWith("_")), "private fields are not compared");
+    assert.ok(rows.every(r => !r.extra));
+
+    const { errors } = await applyRows(rows);
+    assert.deepEqual(errors, []);
+    assert.equal(world.time, 1000);
+    assert.deepEqual(clone(world.pc.effects.map(e => e._id)), ["ef1"]);
+    assert.equal(world.pc.system.attributes.hp.value, 20);
+    assert.equal(world.pc.flags.dt.x, undefined, "a key added since the snapshot is deleted (-= syntax)");
+    assert.equal(world.gob.system.attributes.hp.value, 7, "the unlinked token's synthetic actor is restored");
+    assert.equal(world.scene.tokens[1].x, 100);
+    assert.deepEqual([world.combat.round, world.combat.turn], [2, 1]);
+    assert.ok(calls.filter(c => c[0] === "create").every(c => c[4]?.keepId === true), "re-created with keepId");
+    assert.deepEqual(calls.find(c => c[0] === "update" && c[1] === "Combat")[4], { turnEvents: false });
+    assert.equal(calls.find(c => c[0] === "move")[2].action, "displace");
+    assert.equal(calls[0][0], "time", "the clock goes back first");
+    assert.deepEqual(compareSnapshot(snap).groups, [], "afterwards everything matches the snapshot");
+  });
+
+  await test("Combat Snapshot: 'shift' keeps the world time and moves effect start times instead", async () => {
+    reset();
+    const snap = buildSnapshot(liveCombat());
+    world.time += 600;
+    const { groups } = compareSnapshot(snap, { timeMode: "shift" });
+    const rows = groups.flatMap(g => g.rows);
+    assert.ok(!rows.some(r => r.op.type === "time"));
+    assert.deepEqual(rows.map(r => [r.op.path, r.op.value]), [["start.time", 700]]);
+    await applyRows(rows);
+    assert.equal(world.time, 1600);
+    assert.equal(world.pc.effects[0].start.time, 700);
+    assert.deepEqual(compareSnapshot(snap, { timeMode: "none" }).groups.length, 1, "the snapshot itself is untouched");
+  });
+
+  await test("Combat Snapshot: a deleted combat is re-created with keepId; extra PCs start unticked", async () => {
+    reset();
+    const snap = buildSnapshot(liveCombat());
+    snap.actors[0].extra = true;
+    world.combatExists = false;
+    world.pc.system.attributes.hp.value = 1;
+    const { groups } = compareSnapshot(snap);
+    const rows = groups.flatMap(g => g.rows);
+    const top = rows.find(r => r.op.type === "createTop");
+    assert.equal(top.op.documentName, "Combat");
+    assert.ok(rows.filter(r => r.op.ref?.type === "actor").every(r => r.extra));
+    created.length = 0;
+    await applyRows([top]);
+    assert.deepEqual(created[0].opts, { keepId: true });
+    assert.equal(created[0].data._id, "c1");
+  });
+
+  await test("Combat Snapshot: guards (setting off, players) and import validation", async () => {
+    reset();
+    const savedUser = game.user;
+    settings.combatSnapshotEnabled = false;
+    game.user = { isGM: true };
+    assert.equal(await saveSnapshot(liveCombat()), null, "off");
+    settings.combatSnapshotEnabled = true;
+    game.user = { isGM: false };
+    assert.equal(await saveSnapshot(liveCombat()), null, "players can't");
+    game.user = { isGM: true };
+    let stored = {};
+    settings.combatSnapshotData = stored;
+    game.settings.set = async (ns, key, value) => { settings[key] = value; };
+    const snap = await saveSnapshot(liveCombat(), { name: "Cave fight" });
+    assert.equal(loadSnapshots().length, 1);
+    assert.equal(loadSnapshots()[0].name, "Cave fight");
+    notes.length = 0;
+    assert.equal(await importSnapshot("{nope"), null);
+    assert.equal(await importSnapshot(JSON.stringify({ format: 99 })), null);
+    assert.equal(notes.length, 2);
+    const imported = await importSnapshot(JSON.stringify(snap));
+    assert.notEqual(imported.id, snap.id, "a duplicate id gets a new one");
+    assert.equal(loadSnapshots().length, 2);
+    game.user = savedUser;
+    settings.combatSnapshotEnabled = false;
+  });
+}
+
 console.log(`\ntest-features: ${passed} passed`);
