@@ -30,6 +30,11 @@ const ROOT_CLASS = "dt-token-tools";
  * @property {string} label                   i18n key (tooltip / palette label).
  * @property {(token: object) => boolean} visible  Is the tool usable for this HUD's token now?
  * @property {(token: object, event: Event) => void} onClick
+ * @property {(tokens: object[]) => boolean} [available]  Optional: could the tool be used for
+ *           these (controlled) tokens right now — independent of any per-user Token HUD button
+ *           setting. Together with `open` it lets other UIs (Token Action HUD, see
+ *           features/tah-token-tools.js) offer the tool. Tools without both aren't offered there.
+ * @property {(tokens: object[]) => void} [open]  Optional: run the tool for these tokens.
  */
 
 /**
@@ -42,6 +47,11 @@ export function registerTokenTool(tool) {
     Hooks.on("renderTokenHUD", onRenderTokenHUD);
     hooked = true;
   }
+}
+
+/** Every registered tool, in palette order (low `order` first). */
+export function registeredTools() {
+  return [...tools.values()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 /** The tools usable for this token right now, in palette order. */

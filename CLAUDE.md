@@ -102,6 +102,8 @@ scripts/
     emanation-token-size.js     emanations take the size of the token they come from; dnd5e 6 self-range → caster (world)
     rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
     tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
+    tah-token-tools.js          token tools (art picker, formation…) as Token Action HUD actions (world: off/gm/all)
+    tah-position.js             Token Action HUD remembers the nearest screen edges, clamped into view (world; anchor per user)
     combat-snapshot.js          save a combat + its tokens/actors, compare, restore selected differences (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
@@ -205,6 +207,10 @@ Features that act on selected tokens and want a Token HUD button register a tool
 `scripts/lib/token-tools.js` instead of adding their own button: the HUD then shows only the
 tools whose `visible()` is true — one as its own button, several behind one "Token Tools"
 button with a palette (the user's wish: no extra submenu when only one tool applies).
+A tool may also define `available(tokens)` (usable for these controlled tokens right now —
+independent of any per-user Token HUD button setting) and `open(tokens)`; then *Token Tools in
+Token Action HUD* (`tah-token-tools.js`) offers it as a Token Action HUD action.
+`registeredTools()` returns every registered tool in `order`.
 
 ## Tooling
 
@@ -1034,6 +1040,40 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   the HUD stays at 20 until a reload. `renderApplicationV2(app, element)` fires for it (class
   chain). Our fix pins the inline z-index with a MutationObserver on its `style` attribute.
 
+- **Third-party actions (feature *Token Tools in Token Action HUD*, verified 2026-11-22 against TAH Core 2.1.2 source
+  from its source map, `dist/token-action-hud-core.min.mjs.map` → `sourcesContent`):** `managers/system-manager.mjs`
+  fires `Hooks.callAll("tokenActionHudCoreAddActionHandlerExtenders", actionHandler)` when the HUD's handlers are built;
+  `ActionHandler#addActionHandlerExtender(ext)` sets `ext.hudManager/groupHandler/actionHandler` and
+  `#buildExtendedActionsCore` awaits `ext.extendActionHandler()` on EVERY build (after system, generic, compendium
+  and macro actions). `addActions(actionsData, groupData)` puts every action into `availableActions` (first id wins —
+  that map feeds the "+ Add Action" list, so an action is offered there only while some build adds it), then
+  `groupData.type ??= "system"` and `groupHandler.getGroups(groupData)` — no group → nothing more. Existing group actions
+  with the same id are refreshed (`Object.assign`, `isPreset: true`), so repeated builds don't duplicate. Actions
+  placed by the user in other groups are refreshed from `availableActions` by `#updateNonPresetActions` (incl.
+  `onClick`). `createAction` keeps `onClick`; `RollHandler#handleActionClickCore` calls `action.onClick()` (no
+  arguments) and then `forceUpdateTokenActionHud`. `icon1` is rendered raw (`{{{icon1}}}` in `templates/action.hbs`).
+  Core's own "Toggle Combat" / "Make Invisible" (`generic-action-handler.mjs`) go to `{id: "token", type: "system"}`;
+  token-action-hud-dnd5e 2.2.0's default layout nests it as `utility_token` under the tab `utility` (label
+  `tokenActionHud.utility` = "Utility" / de "Nützliches"). Core's update hooks include `controlToken`, `updateToken`,
+  `updateActor`… and `forceUpdateTokenActionHud`. Foundry 14.370 `common/documents/user.mjs`: `User#isGM` =
+  `hasRole(ASSISTANT)` → Assistant GMs count as GMs. **Untested at the table.**
+- **Position (feature *Token Action HUD Position*, same source):** user flag `flags.token-action-hud-core.position =
+  {top, left}` written only at drag end (`#dragEvent` mouseup: `element.offsetTop/offsetLeft`; the drag moves
+  `style.left/top` in rAFs) and by `resetPosition()` (80/150). `TokenActionHud#setPosition()` ignores its argument;
+  undocked → `document.body.appendChild`, `#setPositionFromFlag` (synchronous when the element exists; values `< 5` or
+  `> window.innerHeight/innerWidth + 5` → 80/150; sets `topPos`/`leftPos`) and `#applyDirection` (private; toggles
+  `expand-up`/`expand-down` on `[data-part="subgroupsContainer"]` and `tah-hidden` on `[data-part="characterName"]`
+  from the public getter `direction`: "auto" = up when `topPos > innerHeight / 2`). Core's `renderTokenActionHud` hook
+  runs `postRender()`. Inner `#token-action-hud` carries `transform: scale(…)` (origin top left); subgroup lists are
+  `position: absolute`, so its bounding rect is the bar only (CSS of the shipped styles — a custom style could differ).
+  No resize handling in Core. **Foundry 14.370 `ApplicationV2#render`** (`client/applications/api/application.mjs`
+  ~l. 586–600): `_onFirstRender` → `_onRender` + the `render*` hooks → `_postRender` → THEN
+  `setPosition(options.position)` if `"position" in options` (TAH renders with `position: {}`) — so anything that
+  moves the HUD must run after the hook, we use `requestAnimationFrame`. Our writes touch only `style.left/top`;
+  `tah-layer.js`'s style observer only touches `zIndex` — no loop. The same user's other open clients also get the
+  `updateUser`; only the client whose HUD sits at the new flag position records the anchor. **Untested at the table**
+  (incl. other HUD styles, scale ≠ 1, and the multi-monitor case).
+
 ### Template Regions & D&D area rules (feature *Template Auto-Targeting*, verified 2026-11-06)
 
 Sources: dnd5e 6.0.6 / 5.3.3 (`release-*` clones), Foundry v14 API docs (foundryvtt.com/api, v14),
@@ -1264,4 +1304,6 @@ against the 14.370 client source and the dnd5e 6.0.6 bundle):
 | Emanations in Token Size | `emanationTokenSize` | `features/emanation-token-size.js` | any (caster: dnd5e 6) | world | `emanationTokenSize` (off — 1×1 emanation bases on a token take its size + attachment, `preCreateRegion` / `dnd5e.createMeasuredTemplate`), `emanationSelfOnCaster` (off — dnd5e 6 self-range emanations snap to the caster) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
+| Token Tools in Token Action HUD | `tahTokenTools` | `features/tah-token-tools.js` (+ `lib/token-tools.js` `registeredTools`, tool `available`/`open`) | any (Token Action HUD Core 2.1.2) | world | `tahTokenTools` (`off` / `gm` / `all`, default `off`); actions `dt-tool-<toolId>` in TAH group `{id: "token", type: "system"}` (Utility → Token); no group of our own |
+| Token Action HUD Position | `tahPosition` | `features/tah-position.js` | any (Token Action HUD Core 2.1.2) | world + user | `tahPositionAnchor` (off, world), hidden `tahPositionAnchorData` (user: `{top, left, h, v, dx, dy, vw, vh}`) — display only, TAH's position flag is never written |
 | Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload); storage: world compendium `world.dt-combat-snapshots` (JournalEntry, one entry per snapshot, `flags.<id>.meta` + `flags.<id>.snapshot` = JSON string); hidden `combatSnapshotData` (world) = 1.11.0 storage, migrated into the pack and emptied; API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |

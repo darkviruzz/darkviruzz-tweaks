@@ -29,6 +29,8 @@ import templateTargeting from "./template-targeting.js";
 import emanationTokenSize from "./emanation-token-size.js";
 import rsrAttackTargets from "./rsr-attack-targets.js";
 import tahLayer from "./tah-layer.js";
+import tahTokenTools from "./tah-token-tools.js";
+import tahPosition from "./tah-position.js";
 import combatSnapshot from "./combat-snapshot.js";
 
 export const FEATURES = [
@@ -51,5 +53,7 @@ export const FEATURES = [
   weaponMastery,
   rsrAttackTargets,
   chatExport,
-  tahLayer
+  tahLayer,
+  tahTokenTools,
+  tahPosition
 ];

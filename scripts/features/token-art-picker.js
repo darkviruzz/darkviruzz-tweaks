@@ -762,7 +762,11 @@ const HUD_TOOL = {
   icon: "fa-solid fa-images",
   label: "DT.TokenArt.HudButton",
   visible: token => enabled() && !!game.settings.get(MODULE_ID, KEY_HUD) && !!token?.document?.isOwner,
-  onClick: token => openTokenArtPicker({ tokens: selectionFor(token) })
+  onClick: token => openTokenArtPicker({ tokens: selectionFor(token) }),
+  // Token Action HUD entry (features/tah-token-tools.js): what openTokenArtPicker needs.
+  available: tokens => enabled() && tmtInstalled()
+    && (tokens ?? []).some(t => (t?.document ?? t)?.isOwner),
+  open: tokens => openTokenArtPicker({ tokens })
 };
 
 /** The world actor of an Actors-sidebar entry. */
