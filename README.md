@@ -283,6 +283,42 @@ in Foundry.
 > The feature uses the module's own message channel, which Foundry sets up when a world is
 > launched. If live drags don't show up right after installing or updating the module,
 > return to setup and launch the world again.
+
+### 8a. Stacked Tokens Fan Out  ·  *any system · world (GM)*
+
+Tokens lying (almost) on top of each other are hard to pick. With this on, resting the mouse
+on such a stack spreads it out a little **on your own screen only**, so every token of it can
+be clicked — for the GM and for players alike.
+
+**How it works:** a *stack* is the token under the mouse plus every token whose centre is
+closer to it than half the smaller token's width/height (and so on: A over B over C is one
+stack). Only tokens you can see and select or target count — hidden tokens you can't see,
+secret tokens and tokens on another layer or with a non-selecting tool are left out. When the
+mouse has rested on a stack for the **delay**, it fans out:
+
+- the token **under the mouse never moves** — waiting and then clicking always selects the
+  token that was under the mouse;
+- every other token moves the **distance** (default 30 % of its own width/height) away, evenly
+  spread around it (two tokens: the other one moves up and to the right); with many tokens the
+  circle grows a little so they don't cover each other. The layout is always the same for the
+  same stack.
+
+While the stack is fanned out you can move the mouse onto any of its tokens and click, select
+or target it; the layout stays put. It folds back when the mouse leaves the fanned tokens (after
+a moment), you start dragging a token, a token of the stack moves, changes size, is hidden,
+deleted or animated, the Token HUD opens for one of them (it sits at the real position), you
+switch tool, layer or scene, or the GM switches the setting off.
+
+Only the tokens' pictures (with border, bars, name, status icons and the clickable area) move:
+nothing is changed for real, nothing is sent to other players, and vision, light and the
+tokens' real positions stay where they are.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Fan out stacked tokens** | off | Stacks of tokens spread apart while the mouse rests on them (each person sees it only on their own screen). |
+| **Delay (ms)** | 600 | How long the mouse has to rest on the stack (200–2000). |
+| **Distance (% of token size)** | 30 | How far the tokens move apart (10–100 % of their width/height). |
+
 ### 9. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
 
 See images in Foundry's File Browser without clicking them — and without downloading big

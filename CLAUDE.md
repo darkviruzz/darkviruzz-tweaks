@@ -90,6 +90,7 @@ scripts/
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
     live-token-drag.js          everyone sees token drags live (world/GM; module socket)
+    token-stack-fan.js          stacked tokens fan out locally on mouse rest (world setting; display only)
     file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
     token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
     savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
@@ -788,6 +789,47 @@ Verified 2026-10-25 against the real v14 source (local install, build 14.364:
   every `refreshToken` of the preview unthrottled via socketlib and moves receivers'
   `token.x/y`/`mesh` directly; no end signal; `animate: false` for the drop; leftover
   `console.log` and an undeclared global `pressedKey`.
+### Stacked tokens fan out (feature *Stacked Tokens Fan Out*, written 2026-11-22 — NOT tested on the table yet)
+
+Verified against the local 14.370 client source (`client/canvas/placeables/{token,placeable-object}.mjs`,
+`client/canvas/layers/tokens.mjs`, `client/canvas/interaction/{_module,mouse-handler}.mjs`).
+
+- Display-only offset = the *Live Token Drag* technique: `token.position` (container — its hit area is
+  `token.shape` in local coordinates, so the clickable area moves too) + `token.mesh.position` (= centre).
+  `Token#_refreshPosition` (14.370 l. ~1596) is the ONLY writer of both (`position.set(doc.x, doc.y)`,
+  `mesh.position = this.center`, turn marker relative to the container) and calls
+  `MouseInteractionManager.emulateMoveEvent()` itself when the container is away from the document
+  position — so handing a token back with `renderFlags.set({refreshPosition: true})` re-evaluates hover.
+  Re-apply offsets in `refreshToken` when `flags.refreshPosition`.
+- `Token#center` = `document.getCenterPoint()`, `Token#w/h` = `document.getSize()`, `Token#bounds` = document
+  rect — all document-based, unaffected by display offsets (stack detection uses them). During a movement
+  animation the document's derived x/y follow the animation, so animating tokens are never fanned.
+- `MouseInteractionManager` is exported as `foundry.canvas.interaction.MouseInteractionManager`;
+  `emulateMoveEvent()` is static and throttled.
+- `Token#isInteractable` (14.370): false for previews, during Region placement (unless attaching), when
+  the token layer is inactive, during token placement / movement planning (except the planned token),
+  without a tool with `interaction`, and for secret tokens. `Token#_canHover` = not secret and no
+  `layer._draggedToken` (no ownership check). `PlaceableObject#_onHoverIn` returns early while a mouse
+  button is held, sets `layer.hover` and calls `Hooks.callAll("hoverToken", token, true)` (local only).
+- `TokenLayer#_draggedToken` is set in `Token#_initializeDragLeft` and cleared in `#_finalizeDragLeft`; the drag
+  preview (`previewType === "dragging"`) shares the original's `document.id` — check `isPreview` before
+  treating a `refreshToken` as the real token. `Token#animationContexts` (Map, any animation),
+  `#movementAnimationPromise`.
+- Design decisions: a stack is transitive "centre distance < 0.5 × the smaller token's shorter side"
+  (`STACK_RATIO`); the hovered token gets offset exactly 0; the others sit on a "square ring" (directions
+  normalised to Chebyshev length 1, start up-right, even angles) with radius = distance % of each token's
+  own size, grown ×1.1 until neighbours are ≥ distance % apart; open = 140 ms ease-out via
+  `canvas.app.ticker` (never `Token#animate`); the ticker only runs while a fan is open (pointer check
+  with `canvas.mousePosition`, 250 ms grace, 10 % margin); hover events only arm the delay — an open fan
+  ignores them (a moved hit area can flicker hover).
+- **Untested at the table:** how it feels (delay, ease, grace), whether hover flickers when a member's
+  hit area moves under a resting pointer, interaction with the Token HUD / targeting (T key) and with
+  Live Token Drag on receivers (both features write `token.position`; a stack member that someone else is
+  live-dragging is not detected as such here — live drag re-positions it every frame, so its display wins),
+  and `TokenLayer#_onDropActiveEffect`, which mixes the quadtree
+  (document bounds) with hit areas in container coordinates (a dropped effect on a fanned member's moved
+  part may miss).
+
 ### File Browser / FilePicker (feature *File Browser Preview*, verified 2026-10-25)
 
 Sources: v14 API docs 14.368 (signatures), the *Asset Preview* module 0.1.2 by
@@ -1144,6 +1186,7 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
+| Stacked Tokens Fan Out | `tokenStackFan` | `features/token-stack-fan.js` | any | world (computed locally per client) | `stackFanEnabled` (off), `stackFanDelay` (600 ms, 200–2000), `stackFanDistance` (30 %, 10–100) — display only, no socket, no writes |
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
 | Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<row>.<mastery>` (true / "requested" / false = undone) + `weaponMastery.undo.<row>.<mastery>` (revert data; row = `t#` or the flag-safe token UUID of a selected token) — once per row, GM Undo in the tray; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |

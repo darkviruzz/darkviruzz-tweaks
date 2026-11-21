@@ -533,6 +533,185 @@ await test("live drag (receiver): the dragging user disconnects → only their t
   assert.equal(ticker.fns.length, 0);
 });
 
+/* ---------- Stacked Tokens Fan Out ---------- */
+const sfModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-stack-fan.js")).href);
+const sf = sfModule.internals;
+const sfHooksBefore = Object.fromEntries(Object.entries(hooks).map(([k, v]) => [k, v.length]));
+sfModule.default.init();
+const sfFire = (name, ...args) => { for (const h of (hooks[name] ?? []).slice(sfHooksBefore[name] ?? 0)) h(...args); };
+// Fake clock: timers run when the test advances time; every advance also runs one ticker frame.
+let sfNow = 0;
+let sfTimers = [];
+Object.assign(sf.clock, {
+  now: () => sfNow,
+  setTimeout: (fn, ms) => { const t = { fn, at: sfNow + ms }; sfTimers.push(t); return t; },
+  clearTimeout: t => { sfTimers = sfTimers.filter(x => x !== t); }
+});
+const sfTicker = { fns: [], add(fn, ctx, priority) { this.fns.push({ fn, priority }); }, remove(fn) { this.fns = this.fns.filter(f => f.fn !== fn); } };
+const sfAdvance = ms => {
+  sfNow += ms;
+  for (const t of sfTimers.filter(x => x.at <= sfNow)) { sfTimers = sfTimers.filter(x => x !== t); t.fn(); }
+  for (const { fn } of sfTicker.fns) fn();
+};
+const sfSavedCanvas = globalThis.canvas;
+const sfSavedControls = ui.controls;
+let sfEmulated = 0;
+foundry.canvas = { interaction: { MouseInteractionManager: { emulateMoveEvent: () => { sfEmulated++; } } } };
+const sfTokens = [];
+globalThis.canvas = {
+  ready: true, scene: { id: "scene1" }, app: { ticker: sfTicker }, mousePosition: { x: 50, y: 50 },
+  tokens: { active: true, hover: null, _draggedToken: null, placeables: sfTokens, get: id => sfTokens.find(t => t.document.id === id) }
+};
+ui.controls = { tool: { name: "select", interaction: true } };
+const pt = () => ({ x: 0, y: 0, set(a, b) { this.x = a; this.y = b; } });
+const sfToken = (id, x, y, { size = 1, sort = 0, visible = true, secret = false } = {}) => {
+  const s = 100 * size;
+  const t = { destroyed: false, isPreview: false, hasPreview: false, visible, renderable: true, isInteractable: true,
+    animationContexts: new Map(), flags: [], w: s, h: s,
+    document: { id, x, y, sort, isSecret: secret },
+    get center() { return { x: t.document.x + (s / 2), y: t.document.y + (s / 2) }; },
+    position: pt(), mesh: { position: pt() },
+    renderFlags: { set: f => t.flags.push(f) } };
+  t.position.set(x, y); t.mesh.position.set(x + (s / 2), y + (s / 2));
+  sfTokens.push(t); return t;
+};
+/** What core does on a refreshPosition render flag, followed by the refreshToken hook. */
+const coreRefresh = t => {
+  t.position.set(t.document.x, t.document.y); const c = t.center; t.mesh.position.set(c.x, c.y);
+  sfFire("refreshToken", t, { refreshPosition: true });
+};
+const sfHover = t => { canvas.tokens.hover = t; sfFire("hoverToken", t, true); };
+const sfUnhover = t => { if (canvas.tokens.hover === t) canvas.tokens.hover = null; sfFire("hoverToken", t, false); };
+const sfReset = () => {
+  sfFire("canvasTearDown"); sfTokens.length = 0; sfTimers = []; canvas.tokens.hover = null; canvas.tokens._draggedToken = null;
+  canvas.mousePosition = { x: 50, y: 50 }; ui.controls.tool = { name: "select", interaction: true }; settings.stackFanEnabled = true;
+};
+const at = t => [t.position.x, t.position.y, t.mesh.position.x, t.mesh.position.y];
+settings.stackFanEnabled = false; settings.stackFanDelay = 600; settings.stackFanDistance = 30;
+
+await test("stack fan: fanOffsets — hovered stays at 0, the other moves 30 % of its size; mixed sizes; deterministic", () => {
+  const two = sf.fanOffsets([{ id: "a", width: 100, height: 100 }, { id: "b", width: 100, height: 100 }], "a", 30);
+  assert.deepEqual(two.get("a"), { dx: 0, dy: 0 });
+  assert.deepEqual(two.get("b"), { dx: 30, dy: -30 });
+  const mixed = sf.fanOffsets([{ id: "a", width: 100, height: 100 }, { id: "big", width: 200, height: 200 }], "a", 30);
+  assert.deepEqual(mixed.get("big"), { dx: 60, dy: -60 }, "offset from the token's own size");
+  const many = n => Array.from({ length: n }, (_, i) => ({ id: `t${i}`, width: 100, height: 100, sort: i }));
+  for (const n of [3, 5, 9]) {
+    const offs = sf.fanOffsets(many(n), "t0", 30);
+    assert.deepEqual(offs.get("t0"), { dx: 0, dy: 0 });
+    const pts = [...offs.values()];
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const d = Math.max(Math.abs(pts[i].dx - pts[j].dx), Math.abs(pts[i].dy - pts[j].dy));
+      assert.ok(d >= 30 - 1e-6, `${n} tokens: ${i}/${j} only ${d}px apart`);
+    }
+    const shuffled = sf.fanOffsets(many(n).reverse(), "t0", 30);
+    assert.deepEqual([...shuffled.entries()].sort(), [...offs.entries()].sort(), "same layout whatever the input order");
+  }
+});
+await test("stack fan: stackIds — centre distance relative to size, transitive, far tokens excluded", () => {
+  const c = (id, cx, cy, size = 100) => ({ id, cx, cy, width: size, height: size });
+  const list = [c("a", 50, 50), c("b", 90, 50), c("c", 130, 50), c("d", 250, 50), c("e", 50, 99)];
+  assert.deepEqual(sf.stackIds(list, "a"), ["a", "b", "c", "e"]);
+  assert.deepEqual(sf.stackIds(list, "d"), ["d"]);
+  assert.deepEqual(sf.stackIds([c("a", 0, 0), c("tiny", 20, 0, 20)], "a"), ["a"], "uses the smaller token's size");
+  assert.deepEqual(sf.stackIds(list, "missing"), []);
+});
+await test("stack fan: setting off → hovering a stack does nothing", () => {
+  sfToken("a", 0, 0, { sort: 1 }); sfToken("b", 10, 10);
+  sfHover(sfTokens[0]); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+  assert.equal(sfTicker.fns.length, 0);
+});
+await test("stack fan: after the delay the hovered token stays, the other is offset by 30 % — display only", () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(599);
+  assert.equal(sf.state.fan, null, "not before the delay");
+  sfAdvance(1); assert.deepEqual(sf.state.fan, { hoveredId: "a", ids: ["a", "b"] });
+  sfAdvance(50); assert.ok(b.position.x > 10 && b.position.x < 40, "eases in");
+  sfAdvance(200);
+  assert.deepEqual(at(a), [0, 0, 50, 50], "token under the mouse never moves");
+  assert.deepEqual(at(b), [40, -20, 90, 30]);
+  assert.deepEqual([b.document.x, b.document.y], [10, 10], "document untouched");
+  assert.ok(sfEmulated > 0, "hover is re-evaluated");
+  coreRefresh(b); assert.deepEqual(at(b), [40, -20, 90, 30], "re-applied after core's refreshPosition");
+  b.position.set(10, 10); sfFire("refreshToken", b, { refreshState: true });
+  assert.deepEqual([b.position.x, b.position.y], [10, 10], "other render flags are left alone");
+  coreRefresh(b);
+});
+await test("stack fan: hovering another member keeps the fan; pointer inside the fanned area keeps it", () => {
+  const [a, b] = sfTokens;
+  sfUnhover(a); sfHover(b); canvas.mousePosition = { x: 135, y: -15 }; // on b's displayed strip
+  sfAdvance(1000);
+  assert.deepEqual(sf.state.fan, { hoveredId: "a", ids: ["a", "b"] }, "no re-layout");
+  assert.deepEqual(at(b), [40, -20, 90, 30]);
+});
+await test("stack fan: pointer leaves → short grace, then collapse back to core", () => {
+  const [a, b] = sfTokens;
+  canvas.mousePosition = { x: 500, y: 500 }; sfAdvance(16); sfAdvance(100);
+  assert.ok(sf.state.fan, "still open inside the grace period");
+  canvas.mousePosition = { x: 50, y: 50 }; sfAdvance(16); sfAdvance(300);
+  assert.ok(sf.state.fan, "coming back resets the grace period");
+  canvas.mousePosition = { x: 500, y: 500 }; canvas.tokens.hover = null; sfAdvance(16); sfAdvance(260);
+  assert.equal(sf.state.fan, null);
+  assert.deepEqual(b.flags.at(-1), { refreshPosition: true }); assert.deepEqual(a.flags.at(-1), { refreshPosition: true });
+  assert.equal(sfTicker.fns.length, 0, "ticker stops");
+  coreRefresh(b); assert.deepEqual(at(b), [10, 10, 60, 60], "no offset after collapse");
+});
+await test("stack fan: moving between members keeps the delay; leaving cancels it", async () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(300);
+  sfHover(b); sfUnhover(a); await tick(1); sfAdvance(300);
+  assert.deepEqual(sf.state.fan, { hoveredId: "b", ids: ["a", "b"] }, "fans at 600 ms around the token now under the mouse");
+  assert.deepEqual(at(b), [10, 10, 60, 60]);
+  sfReset();
+  const c = sfToken("c", 0, 0); sfToken("d", 5, 5);
+  sfHover(c); sfAdvance(300); sfUnhover(c); await tick(1); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+});
+await test("stack fan: single tokens, hidden-from-me and secret tokens don't form a stack", () => {
+  sfReset();
+  const lone = sfToken("lone", 500, 500); sfHover(lone); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+  const a = sfToken("a", 0, 0); const inv = sfToken("inv", 5, 5, { visible: false });
+  sfHover(a); assert.equal(sf.state.pending, false, "invisible token is no stack member");
+  inv.visible = true; inv.document.isSecret = true;
+  sfHover(a); assert.equal(sf.state.pending, false, "secret token is no stack member");
+  inv.document.isSecret = false; a.isInteractable = false;
+  sfHover(a); assert.equal(sf.state.pending, false, "not interactable (layer/tool) → nothing");
+});
+const sfOpen = () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(600); sfAdvance(200);
+  assert.ok(sf.state.fan); return { a, b };
+};
+await test("stack fan: collapse triggers — drag, member update/delete, Token HUD, tool, animation, setting off, teardown", () => {
+  let { b } = sfOpen();
+  sfFire("refreshToken", { isPreview: true, previewType: "dragging", document: { id: "b" } }, { refreshPosition: true });
+  assert.equal(sf.state.fan, null, "drag preview");
+  ({ b } = sfOpen()); sfFire("updateToken", b.document, { name: "x" }); assert.ok(sf.state.fan, "unrelated update");
+  sfFire("updateToken", b.document, { x: 20 }); assert.equal(sf.state.fan, null, "member moved");
+  ({ b } = sfOpen()); sfFire("deleteToken", b.document); assert.equal(sf.state.fan, null, "member deleted");
+  ({ b } = sfOpen()); sfFire("renderTokenHUD", { object: b }); assert.equal(sf.state.fan, null, "HUD");
+  sfOpen(); ui.controls.tool = { name: "ruler", interaction: false }; sfAdvance(16); assert.equal(sf.state.fan, null, "tool");
+  ({ b } = sfOpen()); b.animationContexts.set("x", {}); sfAdvance(16); assert.equal(sf.state.fan, null, "animation");
+  sfOpen(); canvas.tokens._draggedToken = {}; sfAdvance(16); assert.equal(sf.state.fan, null, "drag in progress");
+  sfOpen(); settings.stackFanEnabled = false; sfModule.default.settings[0].options.onChange(false);
+  assert.equal(sf.state.fan, null, "setting off"); assert.equal(sfTicker.fns.length, 0);
+  ({ b } = sfOpen()); const flags = b.flags.length; sfFire("canvasTearDown");
+  assert.deepEqual(sf.state, { pending: false, fan: null }); assert.equal(b.flags.length, flags, "no redraw of torn-down tokens");
+});
+await test("stack fan: a destroyed member doesn't throw — the fan just closes", () => {
+  const { b } = sfOpen(); b.destroyed = true;
+  sfAdvance(16); assert.equal(sf.state.fan, null);
+  sfReset(); settings.stackFanEnabled = false;
+});
+globalThis.canvas = sfSavedCanvas;
+ui.controls = sfSavedControls;
+delete foundry.canvas;
+
 /* ---------- File Browser Preview ---------- */
 const fpModule = await import(pathToFileURL(join(ROOT, "scripts/features/file-picker-preview.js")).href);
 const fp = fpModule.internals;
