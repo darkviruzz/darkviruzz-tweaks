@@ -170,6 +170,191 @@ await test("postUse: not the owner → nothing", async () => {
   assert.equal(TrayV6.calls.length, 0);
 });
 
+// 1.12: any item type, the activity-type guard, choices, list helpers, quick add, context menu.
+const sea = await import(pathToFileURL(join(ROOT, "scripts/lib/autoapply-list.js")).href);
+const seaInternals = (await import(pathToFileURL(join(ROOT, "scripts/features/spell-effect-autoapply.js")).href)).internals;
+const featActivity = (actor, name, type = "utility", units = "self") => ({
+  actor, type, range: { units }, applicableEffects: [{ id: "e1" }],
+  item: { id: "i2", type: "feat", name, system: { range: { units } } }
+});
+
+await test("postUse: a listed FEATURE (Rage) applies like a spell", async () => {
+  settings.spellAutoApplyWhitelist = "Mage Armor, Rage";
+  customElements.registry["effect-application"] = TrayV6; TrayV6.calls = []; createdEffects = [];
+  const actor = makeActor();
+  hooks["dnd5e.postUseActivity"][0](featActivity(actor, "Rage"), {}, { message: v6Message([], [{ uuid: "Item.rage" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 1); assert.equal(createdEffects.length, 1);
+});
+await test("guard: attack / save / damage / enchant activities never inject targets or apply", async () => {
+  settings.spellAutoApplyWhitelist = "Color Spray";
+  for (const type of ["attack", "save", "damage", "enchant"]) {
+    TrayV6.calls = [];
+    const a = featActivity(makeActor(), "Color Spray", type); a.item.type = "spell";
+    const cfg = { data: { system: { targets: [] } } };
+    hooks["dnd5e.preUseActivity"][0](a, {}, {}, cfg);
+    assert.equal(cfg.data.system.targets.length, 0, type);
+    hooks["dnd5e.postUseActivity"][0](a, {}, { message: v6Message([], [{ uuid: "Item.blind" }]) });
+    await tick();
+    assert.equal(TrayV6.calls.length, 0, type);
+  }
+  // A utility activity of the same item still works.
+  const ok = featActivity(makeActor(), "Color Spray", "utility"); ok.item.type = "spell";
+  hooks["dnd5e.postUseActivity"][0](ok, {}, { message: v6Message([], [{ uuid: "x" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 1);
+});
+
+// Choices: a stub DialogV2 and a tiny document for the dialog content.
+const dialogCalls = [];
+let dialogAnswer = null;
+const fakeEl = tag => ({ tag, children: [], textContent: "", name: "", value: "", append(...n) { this.children.push(...n); } });
+globalThis.document = { createElement: fakeEl };
+foundry.applications = { api: { DialogV2: { wait: async config => { dialogCalls.push(config); return dialogAnswer; } } } };
+await test("choices: ask OFF → several effects are not applied, no dialog", async () => {
+  settings.spellAutoApplyWhitelist = "Guidance"; settings.spellAutoApplyAskChoice = false;
+  TrayV6.calls = []; dialogCalls.length = 0;
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 0); assert.equal(dialogCalls.length, 0);
+});
+await test("choices: ask ON → the user picks one, exactly that effect is applied", async () => {
+  settings.spellAutoApplyAskChoice = true; dialogAnswer = "1";
+  TrayV6.calls = []; dialogCalls.length = 0;
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  const msg = v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]);
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: msg });
+  await tick();
+  assert.equal(dialogCalls.length, 1);
+  const select = dialogCalls[0].content.children[1];
+  assert.deepEqual(select.children.map(o => o.textContent), ["Arcana", "Stealth"]);
+  assert.equal(TrayV6.calls.length, 1); assert.equal(TrayV6.calls[0].effect.name, "Stealth");
+  assert.ok(msg.flags[`${MODULE_ID}.autoApplied`]);
+});
+await test("choices: ask ON, dialog cancelled/closed → nothing applied", async () => {
+  dialogAnswer = null; TrayV6.calls = [];
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  const msg = v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]);
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: msg });
+  await tick();
+  assert.equal(TrayV6.calls.length, 0); assert.equal(msg.flags[`${MODULE_ID}.autoApplied`], undefined);
+  settings.spellAutoApplyAskChoice = false;
+});
+delete globalThis.document;
+delete foundry.applications;
+
+await test("list: parse / serialise / add / remove are case-insensitive and keep the comma format", () => {
+  assert.deepEqual(sea.parseList(" Mage Armor ,rage;; mage armor\nFly "), ["Mage Armor", "rage", "Fly"]);
+  assert.equal(sea.serialiseList(["Fly", "fly", " Rage "]), "Fly, Rage");
+  assert.equal(sea.addToList("Fly", "Jump, Shield", "fly"), "Fly, Jump, Shield");
+  assert.equal(sea.removeFromList("Fly, Hunter's Mark", "hunter's mark"), "Fly");
+  assert.equal(sea.listHas("Fly, Rage", "RAGE"), true);
+});
+const sItem = (name, type, activities, effectIds = ["e1"], extra = {}) => ({
+  name, type, system: { activities, range: { units: "self" }, ...extra },
+  effects: new Map(effectIds.map(id => [id, { id }]))
+});
+const act = (type, units, effects = [{ _id: "e1" }], value) => ({ type, range: { units, value }, effects });
+await test("classify: ok, choice, never (range / rider / no effect / no activity)", () => {
+  assert.deepEqual(sea.classifyItem(sItem("Mage Armor", "spell", [act("utility", "touch")])), { status: "ok", count: 1 });
+  const guidance = sItem("Guidance", "spell", [act("utility", "touch", [{ _id: "a" }, { _id: "b" }, { _id: "c" }])], ["a", "b", "c"]);
+  assert.deepEqual(sea.classifyItem(guidance), { status: "choice", count: 3 });
+  // Hunter's Mark: the marking activity has range 90 ft, the damage activity no effect.
+  const hm = sItem("Hunter's Mark", "spell", [act("damage", "any", []), act("utility", "ft", [{ _id: "e1" }], 90)]);
+  assert.deepEqual(sea.classifyItem(hm), { status: "never", count: 0, reason: "range", range: "90 ft" });
+  const colorSpray = sItem("Color Spray", "spell", [act("save", "self")]);
+  assert.equal(sea.classifyItem(colorSpray).reason, "rider");
+  assert.equal(sea.classifyItem(sItem("Natural Weapons", "spell", [act("enchant", "self")])).reason, "rider");
+  assert.equal(sea.classifyItem(sItem("Dagger", "weapon", [act("attack", "ft", [], 20)])).reason, "noEffect");
+  assert.equal(sea.classifyItem(sItem("Rope", "loot", [])).reason, "noActivity");
+  // Missing effect documents don't count; an external uuid does.
+  assert.equal(sea.classifyItem(sItem("Ghost", "spell", [act("utility", "self", [{ _id: "gone" }])])).reason, "noEffect");
+  assert.equal(sea.classifyItem(sItem("Ext", "spell", [act("utility", "self", [{ uuid: "Compendium.x.y" }])], [])).status, "ok");
+  // Activities as a Collection-like Map; mixed self/enemy item stays ok.
+  const mixed = sItem("Celestial Revelation", "feat", new Map([["a", act("save", "self")], ["b", act("utility", "self")]]));
+  assert.equal(sea.classifyItem(mixed).status, "ok");
+});
+await test("index / candidates / groups / suggestions", () => {
+  const entries = [
+    { item: sItem("Mage Armor", "spell", [act("utility", "touch")], ["e1"], { level: 1 }), pc: false },
+    { item: sItem("mage armor", "spell", [act("utility", "ft", [{ _id: "e1" }], 30)], ["e1"], { level: 1 }), pc: true },
+    { item: sItem("Rage", "feat", [act("utility", "self")]), pc: true },
+    { item: sItem("Potion of Flying", "consumable", [act("utility", "self")]), pc: false },
+    { item: sItem("Hunter's Mark", "spell", [act("utility", "ft", [{ _id: "e1" }], 90)], ["e1"], { level: 1 }), pc: true },
+    { item: sItem("Guidance", "spell", [act("utility", "touch", [{ _id: "a" }, { _id: "b" }])], ["a", "b"], { level: 0 }), pc: false }
+  ];
+  const index = sea.buildIndex(entries);
+  assert.equal(index.get("mage armor").status, "ok"); assert.equal(index.get("mage armor").pc, true);
+  assert.equal(index.get("potion of flying").group, "item");
+  assert.deepEqual(sea.candidatesFromIndex(index, "Rage"), ["Mage Armor", "Guidance", "Potion of Flying"]);
+  const groups = sea.groupList("Rage, Hunter's Mark, Guidance, Mage Armor, Potion of Flying, Unheard Of", index);
+  assert.deepEqual(groups.map(g => g.group), ["spell", "feature", "item", "unknown"]);
+  assert.deepEqual(groups[0].entries.map(e => e.name), ["Guidance", "Hunter's Mark", "Mage Armor"]);
+  const missing = sea.missingSuggestions(sea.CURATED_NAMES.filter(n => n !== "Rage" && n !== "Guidance").join(", "));
+  assert.deepEqual(missing, [{ group: "choices", names: ["Guidance"] }, { group: "features", names: ["Rage"] }]);
+});
+await test("defaults: the curated list is the setting default and has no Hunter's Mark", () => {
+  const def = features.spell.settings.find(s => s.key === "spellAutoApplyWhitelist").options.default;
+  assert.deepEqual(sea.parseList(def), [...sea.CURATED_NAMES]);
+  assert.ok(!sea.listHas(def, "Hunter's Mark"));
+  assert.ok(sea.listHas(def, "Rage") && sea.listHas(def, "Potion of Flying") && sea.listHas(def, "Guidance"));
+  const ask = features.spell.settings.find(s => s.key === "spellAutoApplyAskChoice").options;
+  assert.equal(ask.type, Boolean); assert.equal(ask.default, false); assert.equal(ask.scope, "world");
+});
+await test("settings list status: ok / choice depends on Ask / never with reason / unknown", () => {
+  assert.equal(seaInternals.entryStatus({ status: "ok", count: 1 }, false).key, "ok");
+  assert.equal(seaInternals.entryStatus({ status: "choice", count: 18 }, true).key, "choice");
+  const off = seaInternals.entryStatus({ status: "choice", count: 18 }, false);
+  assert.equal(off.key, "never"); assert.match(off.tooltip, /ChoiceOff/);
+  const hm = seaInternals.entryStatus({ status: "never", reason: "range", range: "90 ft" }, true);
+  assert.match(hm.tooltip, /Status\.Range.*90 ft/);
+  assert.equal(seaInternals.entryStatus(null, true).key, "unknown");
+});
+
+const usageMsg = (item, activity, type = "usage") => ({ type, getAssociatedActivity: () => activity, getAssociatedItem: () => item, system: {} });
+await test("quick add: offered on a GM's usage card of an unlisted self/touch item with an effect", () => {
+  settings.spellAutoApplyWhitelist = "Mage Armor";
+  game.user.isGM = true;
+  const item = sItem("Barkskin", "spell", []);
+  const a = act("utility", "touch"); a.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), "Barkskin");
+  // Guards: listed, not GM, feature off, rider activity, ranged activity, not a usage card.
+  settings.spellAutoApplyWhitelist = "barkskin";
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null);
+  settings.spellAutoApplyWhitelist = "Mage Armor";
+  game.user.isGM = false; assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null); game.user.isGM = true;
+  settings.spellAutoApplyEnabled = false; assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null); settings.spellAutoApplyEnabled = true;
+  const save = act("save", "self"); save.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, save)), null);
+  const ranged = act("utility", "ft", [{ _id: "e1" }], 90); ranged.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, ranged)), null);
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a, "attack")), null);
+  game.user.isGM = false;
+});
+await test("context menu: GM gets add/remove in the menu's own shape (dnd5e 6 and 5.3)", async () => {
+  const writes = [];
+  game.settings.set = async (ns, k, v) => { writes.push(v); settings[k] = v; };
+  game.user.isGM = true; notes.length = 0;
+  const item = sItem("Barkskin", "spell", [act("utility", "touch")]);
+  const v6Menu = [{ label: "DND5E.ItemView", icon: "fa-solid fa-eye", onClick() {} }];
+  hooks["dnd5e.getItemContextOptions"][0](item, v6Menu);
+  assert.equal(v6Menu.length, 2); assert.equal(v6Menu[1].label, "DT.SpellAutoApply.Context.Add");
+  v6Menu[1].onClick(); await tick();
+  assert.equal(writes.at(-1), "Mage Armor, Barkskin"); assert.equal(notes.length, 1);
+  const v5Menu = [{ name: "DND5E.ItemView", icon: "<i></i>", callback() {} }];
+  hooks["dnd5e.getItemContextOptions"][0](item, v5Menu);
+  assert.equal(v5Menu[1].name, "DT.SpellAutoApply.Context.Remove"); assert.match(v5Menu[1].icon, /^<i class=/);
+  v5Menu[1].callback(); await tick();
+  assert.equal(writes.at(-1), "Mage Armor");
+  // No entry: not GM; or an unlisted item without a usable activity.
+  game.user.isGM = false; const m1 = []; hooks["dnd5e.getItemContextOptions"][0](item, m1); assert.equal(m1.length, 0);
+  game.user.isGM = true; const m2 = [];
+  hooks["dnd5e.getItemContextOptions"][0](sItem("Color Spray", "spell", [act("save", "self")]), m2); assert.equal(m2.length, 0);
+  game.user.isGM = false; delete game.settings.set;
+  settings.spellAutoApplyWhitelist = "Mage Armor, Shield of Faith";
+});
+
 /* ---------- Defeated Tokens ---------- */
 const makeToken = (id, sort, scene) => {
   const t = { id, sort, flags: {}, updates: [],
