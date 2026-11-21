@@ -16,16 +16,34 @@
  *
  * Block, hex and crowd generate an ordered list of CANDIDATE places on a lattice whose step is
  * the smallest token's distance; tokens are then placed one by one on the first free candidate
- * that keeps every distance and passes `valid` (walls, scene bounds). Order modes:
+ * that keeps every distance and passes `valid` (walls, canvas bounds). Order modes:
  *   - nearest (default): largest first (they need the room), each choosing — among as many of the
  *     next free candidates as there are tokens left — the one closest to where it stands now;
  *     afterwards tokens of the same size swap places while that shortens the total way;
- *   - largeFirst: larger creatures take the first places (centre / front rows);
- *   - largeLast:  smaller creatures first (centre / front), larger ones outside / behind.
+ *   - RANKED modes: every unit may carry a numeric `rank` (lower = earlier place = front row of a
+ *     block / centre of a hex blob / first on the ring). Units take the places in rank order
+ *     (larger ones first within a rank); afterwards units with the SAME rank and the SAME size swap
+ *     places while that shortens the total way — identical creatures never cross each other's
+ *     paths, while the ranking between different ranks is kept. Without an explicit rank:
+ *       - largeFirst: rank = −radius → larger creatures take the first places (centre / front);
+ *       - largeLast:  rank = radius → smaller creatures first, larger ones outside / behind;
+ *       - defenders / attackers: the caller supplies the rank (system data); missing → like largeFirst.
  */
 
 export const TYPES = ["block", "hex", "circle", "crowd"];
-export const ORDERS = ["nearest", "largeFirst", "largeLast"];
+export const ORDERS = ["nearest", "largeFirst", "largeLast", "defenders", "attackers"];
+
+/** The rank a unit has in a ranked order mode (see the file comment). */
+export function rankOf(unit, order) {
+  if (Number.isFinite(unit.rank)) return unit.rank;
+  return (order === "largeLast") ? unit.r : -unit.r;
+}
+
+/** Same tie group = same rank and same size (only those may swap places in ranked modes). */
+function tieGroup(order) {
+  if (order === "nearest") return (a, b) => Math.abs(a.r - b.r) <= EPS;
+  return (a, b) => (Math.abs(a.r - b.r) <= EPS) && (rankOf(a, order) === rankOf(b, order));
+}
 
 const EPS = 1e-6;
 const SQRT3_2 = Math.sqrt(3) / 2;
@@ -118,8 +136,8 @@ function placeOnCandidates(units, candidates, opts) {
   const fits = (unit, p) => placed.every(q => dist(p, q) >= ((unit.r + q.r) * spacing) - EPS);
 
   const sorted = [...units].sort((a, b) => {
-    if (order === "largeLast") return (a.r - b.r) || 0;
-    return (b.r - a.r) || (order === "nearest" ? dist(a, opts.anchor) - dist(b, opts.anchor) : 0);
+    if (order === "nearest") return (b.r - a.r) || (dist(a, opts.anchor) - dist(b, opts.anchor));
+    return (rankOf(a, order) - rankOf(b, order)) || (b.r - a.r) || 0;
   });
 
   for (const [index, unit] of sorted.entries()) {
@@ -144,17 +162,22 @@ function placeOnCandidates(units, candidates, opts) {
   return { result, complete };
 }
 
-/** Swap places between same-size units while it shortens the total way (nearest mode). */
-export function improveBySwapping(units, result, maxPasses = 20) {
+/**
+ * Swap places between units of one tie group while it shortens the total way. Default group =
+ * same size (nearest mode); ranked modes pass "same size AND same rank". A swap-optimal result has
+ * no two crossing paths inside a group (uncrossing two crossing paths always shortens them).
+ */
+export function improveBySwapping(units, result, maxPasses = 20, sameGroup = tieGroup("nearest")) {
   for (let pass = 0; pass < maxPasses; pass++) {
     let changed = false;
     for (let i = 0; i < units.length; i++) {
       for (let j = i + 1; j < units.length; j++) {
         const a = units[i];
         const b = units[j];
-        if (Math.abs(a.r - b.r) > EPS) continue;
+        if (!sameGroup(a, b)) continue;
         const pa = result.get(a.id);
         const pb = result.get(b.id);
+        if (!pa || !pb) continue;
         if ((dist(a, pb) + dist(b, pa)) < (dist(a, pa) + dist(b, pb)) - EPS) {
           result.set(a.id, pb);
           result.set(b.id, pa);
@@ -178,8 +201,7 @@ function circlePlan(units, opts) {
   const angleOf = u => Math.atan2(u.y - anchor.y, u.x - anchor.x);
   let ring;
   if (order === "nearest") ring = [...units].sort((a, b) => angleOf(a) - angleOf(b));
-  else if (order === "largeLast") ring = [...units].sort((a, b) => a.r - b.r);
-  else ring = [...units].sort((a, b) => b.r - a.r);
+  else ring = [...units].sort((a, b) => (rankOf(a, order) - rankOf(b, order)) || (b.r - a.r) || (angleOf(a) - angleOf(b)));
 
   const arcs = ring.map(u => u.r * spacing * 2);
   const total = arcs.reduce((s, a) => s + a, 0);
@@ -213,21 +235,25 @@ function circlePlan(units, opts) {
     }
   }
   const points = place(start);
-  return new Map(ring.map((u, i) => [u.id, snap ? snap(u, points[i]) : points[i]]));
+  // Ring slots of one tie group are interchangeable (same arc) → least movement among them.
+  const result = improveBySwapping(ring, new Map(ring.map((u, i) => [u.id, points[i]])), 20, tieGroup(order));
+  if (snap) for (const u of ring) result.set(u.id, snap(u, result.get(u.id)));
+  return result;
 }
 
 /**
  * Plan a formation.
- * @param {{id: string, r: number, x: number, y: number}[]} units  current centres (px) and radii
+ * @param {{id: string, r: number, x: number, y: number, rank?: number}[]} units  current centres (px),
+ *   radii and (ranked modes) an optional rank — lower = earlier place
  * @param {object} opts
  * @param {string} [opts.type="block"]       block | hex | circle | crowd
  * @param {number} [opts.spacing=1]          distance factor (see above)
  * @param {number} [opts.columns=0]          block width, 0 = automatic
  * @param {number} [opts.rotation=0]         degrees, clockwise; 0 = front up
- * @param {string} [opts.order="nearest"]    nearest | largeFirst | largeLast
+ * @param {string} [opts.order="nearest"]    nearest | largeFirst | largeLast | defenders | attackers
  * @param {number} [opts.seed=1]             crowd randomness
  * @param {{x, y}} [opts.anchor]             centre of the formation (default: the group's centre)
- * @param {(p: {x, y}) => boolean} [opts.valid]          may a token stand there (walls, bounds)?
+ * @param {(p: {x, y}) => boolean} [opts.valid]          may a token stand there (walls, canvas bounds)?
  * @param {(unit, p: {x, y}) => {x, y}} [opts.snap]       grid snapping of a centre
  * @returns {Map<string, {x: number, y: number}>}  new centre per unit id (units that found no
  *   place keep their position)
@@ -278,5 +304,5 @@ export function planFormation(units, opts = {}) {
 
   result ??= new Map();
   for (const u of list) if (!result.has(u.id)) result.set(u.id, { x: u.x, y: u.y });
-  return (order === "nearest") ? improveBySwapping(list, result) : result;
+  return improveBySwapping(list, result, 20, tieGroup(order));
 }

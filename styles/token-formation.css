@@ -53,6 +53,79 @@
   box-shadow: 0 0 4px var(--color-warm-2, #ff6400);
 }
 
+/* In-window preview (inline SVG): faint = where a token stands now, solid = its new place. */
+.dt-formation .dt-formation__schematic {
+  display: flex;
+  justify-content: center;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.dt-formation .dt-formation__svg {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+}
+
+.dt-formation .dt-formation__now {
+  fill: rgba(200, 200, 200, 0.12);
+  stroke: rgba(220, 220, 220, 0.55);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.dt-formation .dt-formation__path {
+  stroke: #40c060;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.dt-formation .dt-formation__path.is-blocked {
+  stroke: #e04040;
+}
+
+.dt-formation .dt-formation__arrowhead {
+  fill: #9a9a9a;
+}
+
+.dt-formation .dt-formation__disc {
+  fill: #3a5a44;
+}
+
+.dt-formation .dt-formation__place.is-blocked .dt-formation__disc {
+  fill: #6a2a2a;
+}
+
+.dt-formation .dt-formation__initial {
+  fill: #fff;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.dt-formation .dt-formation__ring {
+  fill: none;
+  stroke: #40c060;
+  stroke-width: 2;
+}
+
+.dt-formation .dt-formation__place.is-blocked .dt-formation__ring {
+  stroke: #e04040;
+}
+
+.dt-formation .dt-formation__front circle {
+  fill: rgba(0, 0, 0, 0.5);
+  stroke: var(--color-warm-2, #ff6400);
+  stroke-width: 1;
+}
+
+.dt-formation .dt-formation__front path {
+  fill: var(--color-warm-2, #ff6400);
+}
+
 .dt-formation .dt-formation__row .form-fields {
   gap: 0.5rem;
 }
