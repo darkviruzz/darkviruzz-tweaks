@@ -84,7 +84,7 @@ scripts/
   features/
     index.js                    FEATURES registry (settings-display order) — add new features here
     ability-score-prominence.js dnd5e display tweak (per-user)
-    spell-effect-autoapply.js   dnd5e auto-apply of self-cast spell effects (world/GM)
+    spell-effect-autoapply.js   dnd5e auto-apply of self-used spell/feature/item effects (world/GM; pure list logic in lib/autoapply-list.js)
     find-my-token.js            pan/zoom/select/ping your own token (per-user + keybinding)
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
@@ -532,6 +532,41 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   `flags.core.overlay: true` and `flags.dnd5e.autoDowned`; removed again above 0 HP.
 - **Combat5e** overrides `_onStartTurn`/`_onEndTurn`/`_onStartRound` but only adds
   `_recoverUses` after `super` — no movement-history changes.
+- **Auto-apply for any item type (feature *Spell Effect Auto-Apply*, 2026-11-22, verified against the
+  bundled `dnd5e.mjs` of 6.0.6 and 5.3.3 — NOT tested on the table yet).** Up to 1.11 the feature only
+  fired for `item.type === "spell"`, so `feat` items on the user's list (Rage, Draconic Flight) were dead;
+  multi-effect items (Guidance: 18 effects, one per skill) never fired either; Hunter's Mark (range 90 ft,
+  its effect marks the enemy) can't fire by design. Facts behind the rework:
+  - `activity.type` is a read-only schema field (`BaseActivityData`, initial `metadata.type`) in both
+    versions: attack, save, damage, heal, utility, check, enchant, summon, cast, forward, transform.
+    Effects of attack/save/damage activities are riders for the creature hit — Color Spray, the Smites,
+    Ensnaring Strike, Spirit Guardians have range **self** but are save activities; Shocking Grasp /
+    Chill Touch are touch attacks. Enchant effects go onto items. We never auto-apply from those four.
+  - Activity `range` is the effective value: `prepareFinalData` → `_setOverride("range")` copies the
+    item's range unless `range.override` (6.0.6 ~l. 20580).
+  - Activity effects (`AppliedEffectField`): `{_id, uuid?, level {min, max}}`; 6.0 adds `uuid` (effect
+    outside the item) and `getEffect()` (the old `effect` getter is deprecated until 6.2).
+    `activity.applicableEffects` filters by `relevantLevel`.
+  - An effect referenced by an activity is prepared with `transfer = disabled = false`
+    (`ActiveEffect5e`-system `prepareBaseData`, `isOnActivity`) even if stored `transfer: true,
+    disabled: true` (Rage) — `message.system.getEffects()` resolves `system.effects` uuids (relative to
+    the item) to documents and returns them; `_prepareEffectData` copies `toObject()` with
+    `disabled: false, transfer: false` and `_stats.duplicateSource = effect.uuid`, so applying an
+    item's own effect to its own actor is fine.
+  - Usage messages: `message.type === "usage"` in both versions (5.3 creates them with `type: "usage"`);
+    `ChatMessage5e#getAssociatedActivity()` / `getAssociatedItem()` exist in both (6.0 with `{scaled}`).
+  - **`dnd5e.getItemContextOptions(item, menuItems)`** is fired by dnd5e's own actor-sheet inventory
+    (`_onOpenContextMenu`, not for activity rows) in both versions; mutate `menuItems`. Entry shape:
+    6.0 `{label, icon: "fa-solid …", visible, onClick, group}`, 5.3 `{name, icon: "<i …></i>",
+    condition, callback}` — we mirror the shape the menu already uses. Tidy sheets don't fire it
+    (not checked).
+  - **DialogV2 (14.370 `client/applications/api/dialog.mjs`):** `wait({rejectClose = false, …})`
+    resolves to the button callback's return value (else its `action`), `null` when dismissed;
+    button `label` is localised (`_loc`); `content` may be a `<div>` WITHOUT attributes (its innerHTML
+    is used, not cleaned) or a string (cleaned with `cleanHTML`).
+  Untested at the table: the settings list widget (no DOM tests — only its pure parts), the choice
+  dialog, the quick-add button's placement on real cards, the context-menu entry, and whether the
+  curated defaults behave as the research says in the world's actual items.
 
 ### Pause (feature *Pause Control*, v1.7.0)
 
@@ -1286,7 +1321,7 @@ against the 14.370 client source and the dnd5e 6.0.6 bundle):
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
 |---|---|---|---|---|---|
 | Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off — default dnd5e sheet + Tidy 5e non-classic sheet), `abilityExpandedRollTargets` (off — default sheet only) |
-| Spell Effect Auto-Apply | `spellEffectAutoApply` | `features/spell-effect-autoapply.js` | dnd5e 5.x/6.x | world | `spellAutoApplyEnabled` (off), `spellAutoApplyWhitelist` (`"Mage Armor"`) |
+| Spell Effect Auto-Apply | `spellEffectAutoApply` | `features/spell-effect-autoapply.js` (+ `lib/autoapply-list.js`) | dnd5e 5.x/6.x | world | `spellAutoApplyEnabled` (off), `spellAutoApplyAskChoice` (off — several effects → dialog), `spellAutoApplyWhitelist` (curated `CURATED_DEFAULTS` of `lib/autoapply-list.js`; one comma-separated String, edited with a chip widget in the settings window); any item type, never from attack/save/damage/enchant activities; GM quick add `.dt-sea-quickadd` on usage cards + `dnd5e.getItemContextOptions` entry; message flag `autoApplied` |
 | Find My Token | `findMyToken` | `features/find-my-token.js` | any | user | `findTokenButton` (off, reload), `findTokenZoom` (1.5; 0 = keep zoom), `findTokenPing` (off); keybinding `findMyToken` (unbound) |
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |

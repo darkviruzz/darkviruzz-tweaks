@@ -58,9 +58,9 @@ sheet (Tidy already makes the modifier a roll button).
 
 ### 2. Spell Effect Auto-Apply  ·  *dnd5e · world (GM)*
 
-Applies the Active Effect of a self-cast spell automatically, so nobody has to press
-**apply** on the chat card. Typical case: *Mage Armor*, which you almost always cast on
-yourself.
+Applies the Active Effect of a spell, feature or item you use **on yourself** automatically,
+so nobody has to press **apply** on the chat card. Typical cases: *Mage Armor*, *Rage*, a
+*Potion of Flying*.
 
 **Why the click exists in the first place:** the chat card's effect tray is a GM tool. In
 dnd5e 5.x only the GM sees it for spell effects; in dnd5e 6.x players see it only if the GM
@@ -69,16 +69,16 @@ even then someone still has to click **apply**. That's why the GM ends up clicki
 someone else's Mage Armor.
 
 **How it works:** the module listens to dnd5e's `dnd5e.postUseActivity` hook, which fires on
-the caster's own client. When all of the conditions below hold, it hands the effect to
+the acting user's own client. When all of the conditions below hold, it hands the effect to
 **dnd5e's own chat-tray code** — the same code the apply button runs, in whichever dnd5e
 version (5.x or 6.x) is installed — so the result is identical: same origin, same
-concentration link, and re-casting **refreshes** the existing effect instead of stacking a
+concentration link, and using it again **refreshes** the existing effect instead of stacking a
 second copy.
 
-**The chat card** is adjusted to match. Casting a Self/Touch spell without targeting anything
+**The chat card** is adjusted to match. Using a Self/Touch activity without targeting anything
 normally leaves dnd5e's target list empty, so the card's effect tray falls back to reading
-your canvas selection and shows *"No Tokens Selected"*. This feature records the caster as the
-target, so the card lists them properly, and adds an **"Automatically applied to …"** banner
+your canvas selection and shows *"No Tokens Selected"*. This feature records your actor as the
+target, so the card lists it properly, and adds an **"Automatically applied to …"** banner
 (above the tray, or at the end of the card when the tray isn't shown to you). The banner is
 re-checked against the actor's live effects every time the card renders, so it disappears on
 its own if the effect is later removed — it never claims something is applied when it isn't.
@@ -86,24 +86,76 @@ its own if the effect is later removed — it never claims something is applied 
 An effect is auto-applied only when **all** of these are true:
 
 1. the feature is enabled,
-2. the item is a **spell** whose name is on the whitelist (case-insensitive),
-3. the spell's **range is Self or Touch**,
-4. **the caster is the target** — implicit for Self; for Touch this means either nothing was
-   targeted, or the caster's own token was the only target,
-5. the casting user **owns** the actor (dnd5e refuses effect application otherwise, and this
+2. the item's name is on the list (case-insensitive) — spells, features (e.g. *Rage*) and
+   items (e.g. potions) alike,
+3. the activity is **not** an attack, save, damage or enchant activity. Their effects are meant
+   for the creature that is hit (*Color Spray* → Blinded, the Smites, *Shocking Grasp* …) or
+   for an item, even when the range says Self — so they are never put on the user,
+4. the activity's **range is Self or Touch**,
+5. **you are the target** — implicit for Self; for Touch this means either nothing was
+   targeted, or your own token was the only target,
+6. the acting user **owns** the actor (dnd5e refuses effect application otherwise, and this
    feature does not try to work around that),
-6. the spell offers **exactly one** effect. Spells with several effect variants to choose
-   from are left to the player — dnd5e's tray pre-selects only one effect as well.
+7. the activity offers **exactly one** effect — or several and **Ask When Several Effects** is
+   on: then a small dialog asks which one to apply (*Apply nothing* / closing it applies
+   nothing). Without that setting, items offering a choice (*Guidance*: one effect per skill)
+   are left to the chat card as before.
 
-Anything else — a Touch spell aimed at an ally, a ranged spell, a spell not on the list, a
-multi-effect spell — behaves exactly as before and still waits for a manual apply.
+Anything else — a Touch spell aimed at an ally, a ranged spell, an item not on the list —
+behaves exactly as before and still waits for a manual apply.
+
+**The list in the settings window** shows every entry as a chip, grouped into *Spells* (sorted
+by level), *Features*, *Items* and *Not found in this world*. The group and a status come from
+the items on the world's actors with that name; hover a chip for details:
+
+- **ok** (check mark) — a Self/Touch activity offers exactly one effect.
+- **choice of N** — the activities offer several effects; works only with *Ask When Several
+  Effects* (otherwise shown as a warning).
+- **never fires** (red), with the reason: no Self or Touch activity offers an effect (e.g.
+  *Hunter's Mark*: range 90 ft — its effect marks the enemy, so it doesn't belong on the list);
+  only attack/save/damage activities carry the effects; or no activity references an effect at
+  all. Such entries are kept until you remove them — the feature simply never fires for them.
+- **unknown** (question mark, dashed) — no actor in this world has an item of that name (still allowed, e.g. for later).
+
+× removes an entry. The add field suggests names of items on the world's actors (player
+characters first) that can auto-apply and aren't listed yet; Enter or **Add** adds it, and a
+comma-separated paste adds several. **Suggestions** lists the curated defaults below that are
+not on the list yet — click one, or **Add all suggestions**. Saving still goes through the
+normal **Save Changes** button; the setting itself stays one comma-separated text, so lists
+from older versions keep working.
+
+**Quick add for the GM:** when a spell, feature or item that isn't on the list is used through a
+Self/Touch activity that offers an effect, its chat card shows a small **Auto-apply "…" in
+future** button (GM only, while the feature is on). One click puts the name on the list. On
+dnd5e's own actor sheets the item context menu (right-click) also has **Auto-apply on self-use:
+add / remove** for items with such an activity.
+
+**Curated defaults** — the default list for worlds that never saved the setting, and the
+content of **Suggestions** (each checked against the dnd5e 6.0.6 SRD and the PHB/DMG modules:
+a Self/Touch activity offering exactly one effect, except the choices):
+
+- **Spells:** Mage Armor, Shield, Longstrider, Jump, Darkvision, See Invisibility,
+  Invisibility, Greater Invisibility, Fly, Gaseous Form, Spider Climb, Barkskin, Stoneskin,
+  Tongues, Comprehend Languages, Speak with Animals, Detect Magic, Detect Evil and Good,
+  Detect Poison and Disease, Disguise Self, Alter Self, Divine Favor, Heroism, Protection from
+  Evil and Good, Protection from Poison, Pass without Trace, Death Ward, Freedom of Movement,
+  Nondetection, True Seeing, Mind Blank, Foresight, Glibness, Etherealness, Fount of Moonlight
+- **Choices** (need *Ask When Several Effects*): Guidance, Resistance, Enhance Ability,
+  Protection from Energy
+- **Features:** Rage, Draconic Flight, Innate Sorcery, Monk's Focus, Large Form, Stonecunning,
+  Nature's Veil, Dragon Wings, Superior Defense, Cunning Action, Defensive Duelist, Peerless
+  Athlete
+- **Items:** Potion of Flying, Potion of Invisibility, Potion of Greater Invisibility, Potion of
+  Invulnerability, Potion of Water Breathing, Potion of Climbing, Winged Boots, Wings of
+  Flying, Cloak of the Bat
 
 | Setting | Default | Effect |
 |---|---|---|
-| **Auto-Apply Self-Cast Spell Effects** | off | Master switch for the feature. |
-| **Auto-Apply Spell Whitelist** | `Mage Armor` | Comma-separated spell names allowed to auto-apply, e.g. `Mage Armor, Shield of Faith`. |
+| **Auto-Apply Self-Use Effects** | off | Master switch for the feature (also for the quick-add button and the context-menu entry). |
+| **Ask When Several Effects** | off | Items offering several effects ask the user which one to apply instead of being skipped. |
+| **Auto-Apply List** | the curated defaults above | The names allowed to auto-apply, edited with the list widget (stored as one comma-separated text). |
 
-> Names are matched against the spell's name **as it appears on the character sheet**, so if
+> Names are matched against the item's name **as it appears on the character sheet**, so if
 > your world uses translated compendium items, put the translated name in the list. The range
 > check is deliberately based on *range*, not target type: the 2024 *Mage Armor* is
 > `range: touch` with target type `willing`, so a target-type check would never match it.
