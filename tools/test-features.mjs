@@ -2101,6 +2101,244 @@ await test("TAH layer: pinned to the chosen z-index, re-applied after TAH's righ
   delete globalThis.MutationObserver;
 });
 
+/* ---------- Token Tools in Token Action HUD ---------- */
+const tttModule = await import(pathToFileURL(join(ROOT, "scripts/features/tah-token-tools.js")).href);
+const ttt = tttModule.internals;
+const tokenToolsLib = await import(pathToFileURL(join(ROOT, "scripts/lib/token-tools.js")).href);
+tttModule.default.init();
+// A local dummy tool with the TAH contract (never shown in the Token HUD) and one without it.
+const tttOpened = [];
+let tttDummyOk = true;
+tokenToolsLib.registerTokenTool({ id: "tttDummy", order: 50, icon: "fa-solid fa-flask\"><script>", label: "DT.Test.Dummy",
+  visible: () => false, onClick: () => {}, available: tokens => tttDummyOk && tokens.length >= 2, open: tokens => tttOpened.push(tokens) });
+tokenToolsLib.registerTokenTool({ id: "tttLegacy", order: 5, icon: "fa-solid fa-ban", label: "DT.Test.Legacy",
+  visible: () => false, onClick: () => {} });
+const tttHandler = () => {
+  const handler = { added: [], extenders: [],
+    addActions(actions, group) { this.added.push({ actions, group }); },
+    addActionHandlerExtender(ext) { ext.actionHandler = this; this.extenders.push(ext); } };
+  return handler;
+};
+const tttOwned = id => ({ id, document: { isOwner: true } });
+
+await test("TAH token tools: registeredTools() lists every tool in order; the Token HUD API is unchanged", () => {
+  const ids = tokenToolsLib.registeredTools().map(t => t.id);
+  assert.ok(ids.includes("tokenArt") && ids.includes("tttDummy") && ids.includes("tttLegacy"));
+  assert.ok(ids.indexOf("tttLegacy") < ids.indexOf("tokenArt") && ids.indexOf("tokenArt") < ids.indexOf("tttDummy"), "sorted by order");
+  assert.equal(typeof tokenToolsLib.availableTools, "function");
+  assert.ok(!tokenToolsLib.availableTools({ document: { isOwner: true } }).some(t => t.id.startsWith("ttt")), "visible() still decides the Token HUD");
+});
+
+await test("TAH token tools: extender attached once per action handler; missing TAH API shapes don't throw", async () => {
+  const handler = tttHandler();
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  assert.equal(handler.extenders.length, 1);
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", {});
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", undefined);
+  const ext = ttt.makeExtender(); ext.actionHandler = {};
+  settings.tahTokenTools = "all";
+  assert.doesNotThrow(() => ext.extendActionHandler());
+});
+
+await test("TAH token tools: setting off / gm / all decides who gets the actions (isGM = GM or Assistant GM)", async () => {
+  const savedModules = game.modules; const savedControlled = canvas.tokens.controlled;
+  game.modules = { get: id => (id === "too-many-tokens-online" ? { active: false } : undefined) };
+  settings.tokenArtEnabled = true;
+  canvas.tokens.controlled = [tttOwned("a"), tttOwned("b")];
+  const handler = tttHandler();
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  const build = () => { handler.added.length = 0; handler.extenders[0].extendActionHandler(); return handler.added; };
+  settings.tahTokenTools = "off"; game.user.isGM = true;
+  assert.equal(build().length, 0, "off → nothing, even for a GM");
+  settings.tahTokenTools = "gm"; game.user.isGM = false;
+  assert.equal(build().length, 0, "gm → not for players");
+  game.user.isGM = true;
+  let added = build();
+  assert.equal(added.length, 1);
+  assert.deepEqual(added[0].group, { id: "token", type: "system" }, "Core's own Utility → Token group");
+  const ids = added[0].actions.map(a => a.id);
+  assert.ok(ids.includes("dt-tool-tokenArt") && ids.includes("dt-tool-tttDummy"));
+  assert.ok(!ids.includes("dt-tool-tttLegacy"), "tools without available/open are not offered");
+  assert.ok(ids.indexOf("dt-tool-tokenArt") < ids.indexOf("dt-tool-tttDummy"), "palette order");
+  const art = added[0].actions.find(a => a.id === "dt-tool-tokenArt");
+  assert.equal(art.name, "DT.TokenArt.HudButton"); assert.equal(art.icon1, '<i class="fa-solid fa-images"></i>');
+  assert.equal(added[0].actions.find(a => a.id === "dt-tool-tttDummy").icon1, '<i class="fa-solid fa-flaskscript"></i>', "icon classes are sanitised");
+  game.user.isGM = false; settings.tahTokenTools = "all";
+  added = build();
+  assert.ok(added[0].actions.some(a => a.id === "dt-tool-tokenArt"), "all → players too");
+  // The tool's own guards still apply.
+  canvas.tokens.controlled = [{ id: "x", document: { isOwner: false } }, { id: "y", document: { isOwner: false } }];
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "art picker needs an owned token");
+  canvas.tokens.controlled = [tttOwned("a")];
+  added = build();
+  assert.deepEqual(added[0].actions.map(a => a.id).filter(id => id.startsWith("dt-tool-ttt")), [], "dummy wants ≥ 2 tokens");
+  settings.tokenArtEnabled = false;
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "art picker switched off");
+  settings.tokenArtEnabled = true; game.modules = { get: () => undefined };
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "Too Many Tokens not installed");
+  canvas.tokens.controlled = [];
+  assert.equal(build().length, 0, "no tokens → nothing");
+  game.modules = savedModules; canvas.tokens.controlled = savedControlled; settings.tahTokenTools = "off";
+});
+
+await test("TAH token tools: onClick opens the tool for the tokens controlled at click time; a failing tool is skipped", async () => {
+  const savedControlled = canvas.tokens.controlled; const savedError = console.error;
+  const errors = []; console.error = (...a) => errors.push(a);
+  settings.tahTokenTools = "all"; tttOpened.length = 0;
+  canvas.tokens.controlled = [tttOwned("a"), tttOwned("b")];
+  const actions = ttt.buildActions(canvas.tokens.controlled);
+  const dummy = actions.find(a => a.id === "dt-tool-tttDummy");
+  canvas.tokens.controlled = [tttOwned("c"), tttOwned("d"), tttOwned("e")];
+  dummy.onClick();
+  assert.equal(tttOpened.length, 1); assert.deepEqual(tttOpened[0].map(t => t.id), ["c", "d", "e"]);
+  tttDummyOk = undefined;
+  tokenToolsLib.registerTokenTool({ ...tokenToolsLib.registeredTools().find(t => t.id === "tttDummy"), available: () => { throw new Error("boom"); } });
+  assert.ok(!ttt.buildActions(canvas.tokens.controlled).some(a => a.id === "dt-tool-tttDummy"));
+  assert.equal(errors.length, 1);
+  console.error = savedError; canvas.tokens.controlled = savedControlled; settings.tahTokenTools = "off";
+});
+
+await test("TAH token tools: changing the setting asks TAH to rebuild", () => {
+  const savedCallAll = Hooks.callAll; const called = [];
+  Hooks.callAll = name => called.push(name);
+  tttModule.default.settings[0].options.onChange("gm");
+  assert.deepEqual(called, ["forceUpdateTokenActionHud"]);
+  Hooks.callAll = savedCallAll;
+  const opts = tttModule.default.settings[0].options;
+  assert.equal(opts.default, "off"); assert.deepEqual(Object.keys(opts.choices), ["off", "gm", "all"]); assert.equal(opts.scope, "world");
+});
+
+/* ---------- Token Action HUD Position ---------- */
+const tapModule = await import(pathToFileURL(join(ROOT, "scripts/features/tah-position.js")).href);
+const tap = tapModule.internals;
+tapModule.default.init();
+const BAR = { width: 400, height: 50, ox: 0, oy: 0 };
+const VP = (width, height) => ({ width, height });
+const rectAt = (left, top, box = BAR) => ({ left: left + box.ox, top: top + box.oy, right: left + box.ox + box.width, bottom: top + box.oy + box.height });
+
+await test("TAH position: nearest edges are recorded with the top-left corner's distance", () => {
+  assert.deepEqual(tap.computeAnchor({ left: 150, top: 80 }, rectAt(150, 80), VP(1920, 1080)),
+    { top: 80, left: 150, h: "left", v: "top", dx: 150, dy: 80, vw: 1920, vh: 1080 });
+  const a = tap.computeAnchor({ left: 1400, top: 960 }, rectAt(1400, 960), VP(1920, 1080));
+  assert.deepEqual([a.h, a.v, a.dx, a.dy], ["right", "bottom", 520, 120]);
+});
+
+await test("TAH position: top-left stays; bottom and right anchors follow the window; clamp keeps the bar in view", () => {
+  const tl = tap.computeAnchor({ left: 150, top: 80 }, rectAt(150, 80), VP(1920, 1080));
+  assert.deepEqual(tap.resolvePosition(tl, VP(1280, 720), BAR), { left: 150, top: 80 }, "top-left anchored stays");
+  const bottom = tap.computeAnchor({ left: 100, top: 960 }, rectAt(100, 960), VP(1920, 1080));
+  assert.equal(bottom.v, "bottom");
+  assert.deepEqual(tap.resolvePosition(bottom, VP(1920, 720), BAR), { left: 100, top: 600 }, "shorter window: same distance to the bottom");
+  assert.deepEqual(tap.resolvePosition(bottom, VP(1920, 1440), BAR), { left: 100, top: 1320 }, "taller window");
+  const right = tap.computeAnchor({ left: 1400, top: 80 }, rectAt(1400, 80), VP(1920, 1080));
+  assert.equal(right.h, "right");
+  assert.deepEqual(tap.resolvePosition(right, VP(2560, 1080), BAR), { left: 2040, top: 80 }, "right anchor follows");
+  // Too small: pushed into view; bigger again: back at the anchored place (the anchor is unchanged).
+  assert.deepEqual(tap.resolvePosition(right, VP(1000, 1080), BAR), { left: 480, top: 80 }, "right anchor follows a narrower window");
+  assert.deepEqual(tap.resolvePosition(right, VP(450, 1080), BAR), { left: 0, top: 80 }, "too narrow → clamped into view");
+  const far = { h: "left", v: "top", dx: 900, dy: 700 };
+  assert.deepEqual(tap.resolvePosition(far, VP(800, 600), BAR), { left: 400, top: 550 });
+  assert.deepEqual(tap.resolvePosition(far, VP(1920, 1080), BAR), { left: 900, top: 700 }, "back at its place");
+  assert.deepEqual(tap.resolvePosition(far, VP(300, 40), BAR), { left: 0, top: 0 }, "bar bigger than the window → top-left visible");
+  // Scaled bar with an offset from the element corner.
+  assert.deepEqual(tap.resolvePosition(far, VP(800, 600), { width: 600, height: 75, ox: 10, oy: -20 }), { left: 190, top: 545 });
+});
+
+await test("TAH position: plan — matching anchor used, old flag adopted once, off-screen flag only clamped", () => {
+  assert.equal(tap.planPosition({ flag: null, stored: null, viewport: VP(1920, 1080), box: BAR }), null, "no TAH position → Core's default");
+  const stored = tap.computeAnchor({ left: 100, top: 960 }, rectAt(100, 960), VP(1920, 1080));
+  let plan = tap.planPosition({ flag: { top: 960, left: 100 }, stored, viewport: VP(1366, 768), box: BAR });
+  assert.deepEqual(plan.position, { left: 100, top: 648 }); assert.equal(plan.adopt, false);
+  plan = tap.planPosition({ flag: { top: 700, left: 100 }, stored, viewport: VP(1366, 768), box: BAR });
+  assert.equal(plan.adopt, true, "different flag → adopt with the current window");
+  assert.deepEqual([plan.anchor.v, plan.anchor.dy, plan.anchor.vh], ["bottom", 68, 768]);
+  assert.deepEqual(plan.position, { left: 100, top: 700 });
+  plan = tap.planPosition({ flag: { top: 960, left: 100 }, stored: {}, viewport: VP(1366, 768), box: BAR });
+  assert.equal(plan.adopt, false, "outside this window → not adopted");
+  assert.deepEqual(plan.position, { left: 100, top: 718 }, "but shown clamped (Core would fall back to 80/150)");
+});
+
+await test("TAH position: apply() shows the anchored place display-only, syncs topPos and the expand direction", async () => {
+  const saved = { set: game.settings.set, getFlag: game.user.getFlag, window: globalThis.window, tah: game.tokenActionHud };
+  const writes = []; game.settings.set = async (ns, k, v) => { writes.push([k, v]); settings[k] = v; };
+  const flags = { position: { top: 960, left: 100 } };
+  game.user.getFlag = (ns, k) => (ns === "token-action-hud-core" ? flags[k] : undefined);
+  globalThis.window = { innerWidth: 1920, innerHeight: 1080, addEventListener() {} };
+  const container = new WmEl("div"); container.className = "expand-up";
+  const name = new WmEl("div");
+  const element = { isConnected: true, style: { left: "100px", top: "960px" },
+    getBoundingClientRect() { return { left: parseFloat(this.style.left), top: parseFloat(this.style.top) }; },
+    querySelector: sel => (sel === "#token-action-hud" ? bar : sel === '[data-part="characterName"]' ? name : null),
+    querySelectorAll: sel => (sel === '[data-part="subgroupsContainer"]' ? [container] : []) };
+  const bar = { getBoundingClientRect: () => { const l = parseFloat(element.style.left); const t = parseFloat(element.style.top); return { left: l, top: t, width: 400, height: 50, right: l + 400, bottom: t + 50 }; } };
+  const app = { element, isDocked: false, isCollapsed: false, topPos: 960,
+    get direction() { return this.topPos > globalThis.window.innerHeight / 2 ? "up" : "down"; } };
+  game.tokenActionHud = app;
+  settings.tahPositionAnchor = false; settings.tahPositionAnchorData = {};
+  tap.apply();
+  assert.deepEqual(writes, []); assert.equal(element.style.top, "960px", "off → untouched");
+  settings.tahPositionAnchor = true;
+  // A drag ended on this client: anchor recorded (bottom-left).
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 960 } } } });
+  assert.equal(writes.length, 1); assert.deepEqual([writes[0][1].h, writes[0][1].v, writes[0][1].dy], ["left", "bottom", 120]);
+  // Other users, other flags, or this user's other client (HUD not at that place) record nothing.
+  tap.onUpdateUser({ id: "other", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 1 } } } });
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { isUnlocked: true } } });
+  element.style.top = "500px";
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 960 } } } });
+  assert.equal(writes.length, 1);
+  // Smaller window: shown 120 px above the bottom; TAH's flag is not touched.
+  writes.length = 0;
+  globalThis.window.innerHeight = 600; element.style.top = "960px"; // TAH's setPosition re-applied the flag
+  tap.apply();
+  assert.equal(element.style.top, "480px"); assert.equal(app.topPos, 480);
+  assert.deepEqual(flags.position, { top: 960, left: 100 }, "TAH's flag unchanged");
+  assert.deepEqual(writes, [], "nothing persisted for a display position");
+  // Tiny window: clamped; then large again → back at the edge distance.
+  globalThis.window.innerHeight = 100; tap.apply();
+  assert.equal(element.style.top, "0px"); assert.equal(app.topPos, 0);
+  assert.ok(container.classList.contains("expand-down") && !container.classList.contains("expand-up"), "upper half → expands down");
+  globalThis.window.innerHeight = 1080; tap.apply();
+  assert.equal(element.style.top, "960px");
+  assert.ok(container.classList.contains("expand-up"), "lower half again → expands up");
+  assert.ok(name.classList.contains("tah-hidden"));
+  // Docked styles and an empty HUD are left alone.
+  app.isDocked = true; globalThis.window.innerHeight = 600; element.style.top = "960px"; tap.apply();
+  assert.equal(element.style.top, "960px");
+  app.isDocked = false; element.isConnected = false; tap.apply();
+  assert.equal(element.style.top, "960px");
+  element.isConnected = true;
+  // Switching off hands the position back to TAH.
+  let tahSet = 0; app.setPosition = () => { tahSet++; };
+  tap.onToggle(false); assert.equal(tahSet, 1);
+  if (saved.set === undefined) delete game.settings.set; else game.settings.set = saved.set;
+  if (saved.getFlag === undefined) delete game.user.getFlag; else game.user.getFlag = saved.getFlag;
+  if (saved.window === undefined) delete globalThis.window; else globalThis.window = saved.window;
+  game.tokenActionHud = saved.tah; settings.tahPositionAnchor = false;
+});
+
+await test("TAH position: the render hook schedules one frame, only for the TAH app and only when on", () => {
+  const savedRaf = globalThis.requestAnimationFrame; const frames = [];
+  globalThis.requestAnimationFrame = fn => { frames.push(fn); return frames.length; };
+  settings.tahPositionAnchor = false;
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 0);
+  settings.tahPositionAnchor = true;
+  hooks.renderApplicationV2.forEach(h => h({ id: "something-else" }));
+  assert.equal(frames.length, 0);
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 1, "bursts coalesce into one frame");
+  const savedTah = game.tokenActionHud; game.tokenActionHud = undefined;
+  frames[0]();                                  // no HUD → nothing, no error
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 2, "next render schedules again");
+  frames[1]();
+  game.tokenActionHud = savedTah; settings.tahPositionAnchor = false;
+  if (savedRaf === undefined) delete globalThis.requestAnimationFrame; else globalThis.requestAnimationFrame = savedRaf;
+});
+
 /* ---------- Template Auto-Targeting ---------- */
 const area = await import(pathToFileURL(join(ROOT, "scripts/lib/area-coverage.js")).href);
 const ttModule = await import(pathToFileURL(join(ROOT, "scripts/features/template-targeting.js")).href);

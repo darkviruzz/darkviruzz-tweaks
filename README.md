@@ -339,7 +339,8 @@ are loaded from GitHub exactly as before.
 
 **How it works:**
 
-- **Open it** for the selected tokens with the Token HUD button (option below) or a
+- **Open it** for the selected tokens with the Token HUD button (option below), from Token
+  Action HUD (see *Token Tools in Token Action HUD*) or a
   keybinding; for an actor's prototype token via **right-click on the actor in the Actors
   sidebar → Token Art (Too Many Tokens)**; or from a macro:
   `game.modules.get("darkviruzz-tweaks").api.openTokenArtPicker();`
@@ -647,6 +648,60 @@ HUD behaves as the module made it.
 |---|---|---|
 | **Keep Token Action HUD Above the Interface** | off | Pin the HUD to the layer below. |
 | **Token Action HUD: Layer (z-index)** | 50 | 31–99; 50 = above the Carousel (30), below windows (100+). |
+
+### 17a. Token Tools in Token Action HUD  ·  *any system · world (GM)*
+
+Puts this module's token tools — **Token Art Picker** and **Token Formations** — into
+**Token Action HUD** as actions, so you don't have to right-click the token for them.
+
+**How to get them into the HUD (GM / Assistant GM):**
+
+1. Switch on the tool itself (*Enable Token Art Picker*, *Token Formations*) and set
+   **Token Tools in Token Action HUD** below to *GMs and Assistant GMs* (or *Everyone*).
+2. Select one or more tokens. The tools appear in Token Action HUD on the **Utility** tab
+   (German: *Nützliches*) in the **Token** group — next to *Make Invisible* and *Add to
+   Combat*. A tool only shows where it can be used: the art picker for tokens you own (and only
+   when *Too Many Tokens – Online* is installed), Formations when several tokens are selected.
+   Clicking one opens it for the currently selected tokens.
+3. **Not there?** Your HUD layout may no longer have the Token group, or you want the tools
+   somewhere else. With suitable tokens selected (the list only offers tools usable right now),
+   click the **padlock** on the HUD to unlock it, click the **+** in the group you want, and pick
+   the action (*Token art (Too Many Tokens)*, *Formation*) from the list —
+   then lock the HUD again. Token Action HUD remembers it in your layout. (World macros can be
+   added to the HUD the same way.)
+
+The per-user *Token HUD Button* options of the tools are independent of this: they only
+control the right-click Token HUD. Without Token Action HUD installed, this option does nothing.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Token Tools in Token Action HUD** | Off | *Off* · *GMs and Assistant GMs* · *Everyone* (players get the tools only for tokens they own, as the tools themselves allow). |
+
+### 17b. Token Action HUD Position  ·  *any system · world (GM), position per user*
+
+Keeps **Token Action HUD** where you put it on every screen size.
+
+**How it works:** Token Action HUD stores its position counted from the top-left corner of the
+window. Placed at the top that works everywhere — placed at the bottom (e.g. above the macro
+bar) it lands below the visible area on a smaller window or another monitor, and Token Action
+HUD then even jumps back to its default spot. With this option:
+
+- When you **finish dragging** the HUD, the module remembers the nearest edges (e.g. *bottom
+  left*) and the distance to them. This is stored per user, so it follows you to other
+  computers.
+- After every HUD refresh and whenever the window size changes, the HUD is shown at that
+  distance from its edges. A bottom-placed HUD stays above the macro bar at any resolution;
+  one at the right edge stays at the right.
+- If the window is too small, the HUD is pushed into the visible area — **only for the
+  moment**: make the window larger again and it returns to its place at the edge. Nothing about
+  the pushed position is saved; only your own drags change the remembered place.
+- A position you saved before switching this on is taken over once (if it is inside the current
+  window). Docked HUD styles are left alone. Switched off, Token Action HUD positions itself as
+  before.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Anchor Token Action HUD to the Nearest Screen Edge** | off | Remember the HUD's place relative to the nearest screen edges and keep it inside the window. |
 
 ### 18. Combat Snapshots  ·  *any system · world (GM)*
 
