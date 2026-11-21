@@ -969,6 +969,30 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 - `canvas.controls` (ControlsLayer) is a PIXI container in the interface group — a preview
   container added there with `eventMode = "none"` doesn't catch clicks.
   `canvas.dimensions.sceneRect.contains(x, y)`; `CONST.GRID_TYPES.GRIDLESS = 0`.
+- **Rework 2026-11-22 (verified against 14.370 / dnd5e 6.0.6 + 5.3.3; NOT tested on the table yet):**
+  - **Movement limit = the whole canvas, not the scene.** `Scene#getDimensions()` → `rect` = `(0, 0, width,
+    height)` incl. padding, `sceneRect` = the map. `Token#constrainMovementPath` stops a path when
+    `!canvas.dimensions.rect.contains(center)` (movement origin); move collisions (`PointMovementSource`) use the
+    canvas' `outerBounds` edges only — `innerBounds` (scene rect) are active by default only for sight from inside
+    the scene (`ClockwiseSweepPolygon#_determineEdgeTypes`). Hook `destroyToken(token)` fires from `PlaceableObject#destroy`. So tokens may stand in the padding; the formation
+    used to reject places outside `sceneRect` and pulled such tokens onto the map — now it tests `rect`.
+  - **Ranked orders (lib/formations.js):** units may carry `rank` (lower = earlier place); `largeFirst` /
+    `largeLast` derive it from the radius (`rankOf`). After placing, `improveBySwapping(units, result, passes,
+    sameGroup)` swaps only inside a tie group (same rank AND same radius; nearest mode: same radius). A
+    pairwise-swap-optimal assignment has no crossing paths inside a group (uncrossing two crossing paths always
+    shortens them). Ring: slots of a tie group (equal arcs) are swapped the same way. Rolled NPC HP would split
+    identical creatures into different defender ranks (tie-break by max HP, as specified).
+  - **dnd5e attack data (5.3.3 and 6.0.6 identical):** `AttackActivity#prepareFinalData` sets
+    `labels.modifier` (deterministic simplified formula, dnd5e itself `parseInt`s it for the sheet) and
+    `labels.toHit`; `attack.type.value ||= item.system.attackType ?? "melee"`; weapons:
+    `system.range.reach` (prepared: null for ranged weapons, else 10 ft with property `rch`, else 5 ft),
+    `system.equipped`; `item.system.activities` iterates values (Collection). NPC traits have no
+    `weaponProf`, but natural weapons are `weapon` items with attack activities.
+  - **Token alpha (14.370):** `PlaceableObject#_refreshState` → `this.alpha = _getTargetAlpha()` (1, or 0.4/0.8
+    while dragging); `Token#_refreshState` and `#_refreshMesh` → `mesh.alpha = this.alpha * document.alpha`
+    (`refresh` propagates to `refreshState`). `refreshToken` fires synchronously after `_applyRenderFlags`, so
+    dimming there (when `flags.refreshState || flags.refreshMesh`) shows no undimmed frame; restore with
+    `token.renderFlags.set({refreshState: true})`. The dim is display-only on this client (no document write).
 
 ### dnd5e 6 targets on usage vs. attack cards (feature *Attack Targets on RSReforged Cards*, verified 2026-11-06 against dnd5e 6.0.6 and RSReforged 6.0.2)
 
@@ -1235,7 +1259,7 @@ against the 14.370 client source and the dnd5e 6.0.6 bundle):
 | Chat Export by Time Range | `chatExport` | `features/chat-export.js` (+ `lib/attack-roll.js`) | any (dnd5e 5.3/6.x details) | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); dialog: range (hours / days / from–to / all) + format (detailed default / foundry); API `api.exportChat({hours} \| {days} \| {from, to} \| {all: true}, {format})` |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`, `lib/token-tools.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
 | Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
-| Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
+| Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client; `order` ∈ nearest / largeFirst / largeLast / defenders / attackers — the last two offered only in dnd5e, fallback size); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})`; `HUD_TOOL.available(tokens)` / `.open(tokens)` for other entry points (Token Action HUD); in-window SVG preview + canvas ghosts 0.8 / arrows / real tokens dimmed to 0.2 (display only) |
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
 | Emanations in Token Size | `emanationTokenSize` | `features/emanation-token-size.js` | any (caster: dnd5e 6) | world | `emanationTokenSize` (off — 1×1 emanation bases on a token take its size + attachment, `preCreateRegion` / `dnd5e.createMeasuredTemplate`), `emanationSelfOnCaster` (off — dnd5e 6 self-range emanations snap to the caster) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |

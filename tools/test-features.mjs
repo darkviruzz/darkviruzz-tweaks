@@ -2207,6 +2207,168 @@ await test("token tools: no tool → nothing, one → its own button, two → on
   menu.children[0].click(); assert.equal(palette.hidden, false, "button opens the palette");
   canvas.tokens.controlled = [];
 });
+// Do two straight paths a→A and b→B cross (proper intersection)?
+const pathsCross = (a, A, b, B) => {
+  const o = (p, q, r) => Math.sign(((q.x - p.x) * (r.y - p.y)) - ((q.y - p.y) * (r.x - p.x)));
+  return (o(a, A, b) * o(a, A, B) < 0) && (o(b, B, a) * o(b, B, A) < 0);
+};
+const crossings = (units, map, sameGroup = () => true) => {
+  let n = 0;
+  for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
+    if (sameGroup(units[i], units[j]) && pathsCross(units[i], map.get(units[i].id), units[j], map.get(units[j].id))) n++;
+  }
+  return n;
+};
+await test("formations: ranked orders — identical creatures settle by least movement and never cross; ranks and sizes still decide", () => {
+  // Four identical creatures in a line behind the formation: before the rework largeFirst handed out
+  // the places middle-out in list order, so they crossed over.
+  const line = [0, 100, 200, 300].map((x, i) => ({ id: `i${i}`, r: 50, x, y: 600 }));
+  for (const order of ["largeFirst", "largeLast", "defenders", "attackers"]) {
+    const map = formations.planFormation(line, { type: "block", columns: 4, anchor: { x: 150, y: 0 }, order });
+    assert.deepEqual(line.map(u => Math.round(map.get(u.id).x)), [0, 100, 200, 300], `${order}: everyone straight ahead`);
+  }
+  const scattered = [...Array(9).keys()].map(i => ({ id: `s${i}`, r: 50, x: ((i * 377) % 900), y: ((i * 613) % 700) }));
+  for (const type of ["block", "hex", "crowd"]) {
+    const map = formations.planFormation(scattered, { type, order: "largeFirst", seed: 4 });
+    assert.equal(crossings(scattered, map), 0, `${type}: no crossing paths among identical tokens`);
+  }
+  // Mixed sizes: the Large one still takes the first place (front row), the rest settle behind it.
+  const mixed = [...line, { id: "L", r: 100, x: 900, y: 900 }];
+  const big = formations.planFormation(mixed, { type: "block", columns: 3, anchor: { x: 0, y: 0 }, order: "largeFirst" });
+  assert.ok(line.every(u => big.get("L").y < big.get(u.id).y), "Large in the front row");
+  assert.equal(overlaps(big, mixed, 1), 0);
+  // Explicit ranks (defenders / attackers): rank 0 in the front row, rank 1 behind; no crossing inside a rank.
+  const ranked = [...Array(6).keys()].map(i => ({ id: `r${i}`, r: 50, x: i * 150, y: 400 + ((i % 2) * 50), rank: i % 2 }));
+  const front = formations.planFormation(ranked, { type: "block", columns: 3, anchor: { x: 300, y: 0 }, order: "defenders" });
+  const yOf = rank => ranked.filter(u => u.rank === rank).map(u => front.get(u.id).y);
+  assert.ok(Math.max(...yOf(0)) < Math.min(...yOf(1)), "rank 0 ahead of rank 1");
+  assert.equal(crossings(ranked, front, (a, b) => a.rank === b.rank), 0);
+  assert.equal(formations.rankOf({ r: 50 }, "largeLast"), 50); assert.equal(formations.rankOf({ r: 50 }, "largeFirst"), -50);
+  assert.equal(formations.rankOf({ r: 50, rank: 2 }, "largeFirst"), 2);
+});
+await test("formations: ring — identical tokens take the ring slots nearest to them", () => {
+  // Slots of 4 Medium tokens (rotation 0) lie at -45°, 45°, 135°, 225°; put each token far out in one of those directions.
+  const dirs = [135, -45, 225, 45];
+  const units = dirs.map((deg, i) => ({ id: `q${i}`, r: 50, x: Math.cos(deg * Math.PI / 180) * 1000, y: Math.sin(deg * Math.PI / 180) * 1000 }));
+  for (const order of ["largeFirst", "largeLast", "attackers"]) {
+    const ring = formations.planFormation(units, { type: "circle", anchor: { x: 0, y: 0 }, order });
+    units.forEach((u, i) => {
+      const p = ring.get(u.id);
+      const deg = Math.atan2(p.y, p.x) * 180 / Math.PI;
+      assert.ok(Math.abs((((deg - dirs[i]) % 360) + 540) % 360 - 180) < 1, `${order}: ${u.id} at its own side`);
+    });
+  }
+});
+await test("formation: dnd5e ranks — AC order, melee / reach / ranged lines by attack bonus, fallbacks for missing data", () => {
+  // dnd5e 5.3.3 and 6.0.6 share these prepared shapes (activities iterate as values; arrays stand in for the Collection).
+  const atk = (type, modifier, reach) => ({ type: "attack", attack: { type: { value: type } }, labels: { modifier }, range: { reach } });
+  const weapon = (activity, { equipped = true, props = [], reach = null, units = "ft", sort = 0 } = {}) => ({
+    type: "weapon", sort, system: { equipped, properties: new Set(props), range: { reach, units }, activities: [activity] } });
+  const actor = (items, { ac = 15, hp = 20, abilities = {}, prof = 2 } = {}) => ({ items, system: { abilities, attributes: { ac: { value: ac }, hp: { max: hp }, prof } } });
+  assert.deepEqual(fm.primaryAttack(actor([weapon(atk("melee", "+5"))])), { type: "melee", reach: 5, units: "ft", bonus: 5 });
+  assert.equal(fm.primaryAttack(actor([weapon(atk("melee", "+4"), { props: ["rch"] })])).reach, 10, "Reach property → 10 ft");
+  assert.equal(fm.primaryAttack(actor([weapon(atk("melee", "+4", 10))])).reach, 10, "activity reach");
+  const bow = weapon(atk("ranged", "+7"), { sort: 2 });
+  const unequippedSword = weapon(atk("melee", "+9"), { equipped: false, sort: 1 });
+  assert.equal(fm.primaryAttack(actor([unequippedSword, bow])).type, "ranged", "equipped weapons first");
+  const spell = { type: "spell", system: { activities: [atk("ranged", "+6")] } };
+  const claw = { type: "feat", system: { activities: [atk("melee", "+3")] } };
+  assert.equal(fm.primaryAttack(actor([spell, claw])).bonus, 3, "natural attacks before spells");
+  const noLabel = { type: "attack", attack: { type: { value: "melee" } }, labels: {}, range: {} };
+  assert.equal(fm.primaryAttack(actor([weapon(noLabel)], { abilities: { str: { mod: 3 }, dex: { mod: 1 } }, prof: 3 })).bonus, 6, "fallback mod + prof");
+  assert.equal(fm.primaryAttack(actor([{ type: "loot", system: {} }])), null);
+  assert.equal(fm.primaryAttack({}), null);
+  assert.deepEqual([null, { type: "melee", reach: 5 }, { type: "melee", reach: 10 }, { type: "ranged", reach: 0 }, { type: "melee", reach: 3, units: "m" }].map(fm.attackerLine), [3, 0, 1, 2, 1]);
+  assert.deepEqual(fm.denseRanks([[1, 2], [0, 5], [1, 2], [0, 1]]), [2, 1, 2, 0]);
+  const profiles = [{ ac: 18, hpMax: 30 }, { ac: 15, hpMax: 50 }, { ac: 18, hpMax: 30 }, { ac: null, hpMax: 99 }];
+  assert.deepEqual(fm.systemRanks("defenders", profiles), [0, 1, 0, 2], "AC first, equal → equal rank, no AC last");
+  assert.equal(fm.systemRanks("defenders", [{ ac: null }, {}]), null, "no data → size fallback");
+  const p = a => ({ attack: a });
+  assert.deepEqual(fm.systemRanks("attackers", [p({ type: "ranged", bonus: 9 }), p({ type: "melee", reach: 5, bonus: 4 }),
+    p({ type: "melee", reach: 5, bonus: 6 }), p({ type: "melee", reach: 10, bonus: 7 }), p(null)]), [3, 1, 0, 2, 4]);
+  assert.equal(fm.systemRanks("attackers", [p(null)]), null);
+  assert.equal(fm.systemRanks("nearest", profiles), null);
+  assert.deepEqual(fm.combatProfile(null), { ac: null, hpMax: null, attack: null });
+});
+await test("formation: defenders / attackers in the plan (dnd5e only), places outside the scene but inside the canvas allowed", () => {
+  canvas.grid = { type: 0 };
+  canvas.dimensions = { uiScale: 1, rect: { contains: (x, y) => x >= 0 && y >= 0 && x <= 3000 && y <= 3000 },
+    sceneRect: { contains: (x, y) => x >= 500 && y >= 500 && x <= 2500 && y <= 2500 } };
+  const acActor = ac => ({ items: [], system: { attributes: { ac: { value: ac }, hp: { max: 10 } } } });
+  const tokens = [fToken("a", 200, 100), fToken("b", 300, 100), fToken("c", 200, 300), fToken("d", 300, 300)];
+  [12, 18, 12, 18].forEach((ac, i) => { tokens[i].actor = acActor(ac); });
+  const moves = fm.computePlan(tokens, { type: "block", spacing: 1, columns: 2, rotation: 0, order: "defenders", snap: false });
+  const y = id => moves.find(m => m.token.id === id).centre.y;
+  assert.ok(Math.max(y("b"), y("d")) < Math.min(y("a"), y("c")), "AC 18 in the front row");
+  assert.ok(moves.every(m => m.centre.x < 500 && m.centre.y < 500), "tokens in the padding stay in the padding");
+  assert.ok(moves.every(m => !m.blocked));
+  // At the canvas edge: places beyond it are invalid.
+  const edge = [fToken("e", 0, 0), fToken("f", 0, 100), fToken("g", 0, 200), fToken("h", 0, 300)];
+  const edged = fm.computePlan(edge, { type: "block", spacing: 1, columns: 4, rotation: 0, order: "nearest", snap: false });
+  assert.ok(edged.every(m => m.centre.x >= 0 && m.centre.y >= 0), "nothing outside the canvas");
+  // Other systems: the dnd5e orders are not offered, a stored one falls back to size.
+  assert.deepEqual(fm.availableOrders(), formations.ORDERS);
+  game.system.id = "pf2e";
+  assert.deepEqual(fm.availableOrders(), ["nearest", "largeFirst", "largeLast"]);
+  assert.equal(fm.computePlan(tokens, { type: "block", spacing: 1, order: "attackers", snap: false }).length, 4);
+  game.system.id = "dnd5e";
+});
+await test("formation: in-window preview layout + SVG; HUD_TOOL.available / open for other entry points", () => {
+  const tokens = [fToken("a", 0, 0), fToken("b", 1000, 0, 2)];
+  tokens[0].document.name = "Goblin"; tokens[1].document.texture = { src: "ogre.webp" };
+  const moves = [{ token: tokens[0], centre: { x: 400, y: 400 }, blocked: false, unchanged: false },
+    { token: tokens[1], centre: { x: 600, y: 400 }, blocked: true, unchanged: false }];
+  const layout = fm.schematicLayout(moves, 90);
+  assert.equal(layout.width, 300); assert.ok(layout.height >= 160 && layout.height <= 300);
+  for (const pl of layout.places) for (const q of [pl.from, pl.to]) {
+    assert.ok(q.x - pl.r >= -1e-6 && q.x + pl.r <= layout.width + 1e-6 && q.y - pl.r >= -1e-6 && q.y + pl.r <= layout.height + 1e-6, "old and new positions fit");
+  }
+  assert.ok(Math.abs(layout.places[1].r - (2 * layout.places[0].r)) < 1e-6, "circle size by token size");
+  assert.deepEqual(layout.places.map(pl => [pl.label, pl.img, pl.blocked]), [["G", null, false], ["", "ogre.webp", true]]);
+  assert.equal(layout.front.angle, 90);
+  assert.equal(fm.buildSchematic(layout), null, "no createElementNS → skipped");
+  document.createElementNS = (ns, tag) => new WmEl(tag);
+  const svg = fm.buildSchematic(layout);
+  delete document.createElementNS;
+  assert.equal(svg.tag, "svg");
+  const tags = [...svg.walk()].map(n => n.tag);
+  assert.equal(tags.filter(t => t === "image").length, 1, "token image clipped into its circle");
+  assert.equal(tags.filter(t => t === "line").length, 2, "an arrow per moved token");
+  assert.ok([...svg.walk()].some(n => n.attrs?.class === "dt-formation__place is-blocked"), "blocked place marked");
+  assert.ok([...svg.walk()].some(n => n.tag === "text" && n.textContent === "G"));
+  // HUD_TOOL contract for Token Action HUD (package B): independent of the per-user HUD setting.
+  settings.formationEnabled = true; settings.formationHudButton = false;
+  assert.equal(fm.HUD_TOOL.available([tokens[0]]), false, "one token");
+  assert.equal(fm.HUD_TOOL.available([tokens[0], fToken("x", 0, 0, 1, false)]), false, "not owned");
+  assert.equal(fm.HUD_TOOL.available(tokens), true);
+  settings.formationEnabled = false;
+  assert.equal(fm.HUD_TOOL.available(tokens), false, "world switch off");
+  notes.length = 0;
+  assert.equal(fm.HUD_TOOL.open(tokens), null); assert.deepEqual(notes, ["DT.Formation.Disabled"]);
+  settings.formationEnabled = true;
+});
+await test("formation: real tokens dimmed to 20 % while the window is open (display only), re-applied after core refreshes, restored", () => {
+  const dimToken = id => ({ id, alpha: 1, mesh: { alpha: 0.9 }, document: { alpha: 0.9 }, _getTargetAlpha: () => 1,
+    flags: [], renderFlags: { set(f) { this.owner.flags.push(f); } } });
+  const a = dimToken("a"); const b = dimToken("b");
+  a.renderFlags.owner = a; b.renderFlags.owner = b;
+  fm.setDimmed([a, b]);
+  assert.equal(a.alpha, fm.DIM_ALPHA); assert.ok(Math.abs(a.mesh.alpha - (0.2 * 0.9)) < 1e-9, "mesh = alpha × document alpha");
+  assert.equal(fm.GHOST_ALPHA, 0.8);
+  a.alpha = 1; a.mesh.alpha = 0.9; // core's _refreshState reset it
+  hooks.refreshToken.forEach(h => h(a, { refreshPosition: true }));
+  assert.equal(a.alpha, 1, "unrelated refresh → untouched");
+  hooks.refreshToken.forEach(h => h(a, { refreshState: true }));
+  assert.equal(a.alpha, 0.2, "re-applied after refreshState");
+  fm.setDimmed([a]);
+  assert.deepEqual(b.flags, [{ refreshState: true }], "a token no longer arranged gets its alpha back");
+  fm.restoreAll();
+  assert.deepEqual(a.flags, [{ refreshState: true }]); assert.equal(fm.dimmed.size, 0);
+  a.alpha = 1;
+  hooks.refreshToken.forEach(h => h(a, { refreshState: true }));
+  assert.equal(a.alpha, 1, "after restoring nothing is dimmed any more");
+  assert.equal("alpha" in a.document && a.document.alpha, 0.9, "document never written");
+});
 
 /* ---------- Attack Targets on RSReforged Cards ---------- */
 const rsrModule = await import(pathToFileURL(join(ROOT, "scripts/features/rsr-attack-targets.js")).href);

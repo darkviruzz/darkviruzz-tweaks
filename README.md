@@ -420,8 +420,12 @@ Arrange a group of tokens in one go — made for gridless maps.
 
 **How it works:** select several tokens and open **Formation** (Token HUD, a keybinding or
 `game.modules.get("darkviruzz-tweaks").api.openFormation()`). A small window offers four
-formations, and the canvas shows a live preview — a ghost image at every new place and a line
-from each token to it:
+formations and shows a **preview picture** of the result right in the window: a faint dashed
+circle where each token stands now, a solid circle (with the token's image or initial) at its new
+place, an arrow in between, an orange arrow for the front, red for places a wall blocks. The canvas
+shows the same as "where on the map": while the window is open the real tokens are dimmed to
+20 % (only on your screen — nothing is saved), ghosts of the new places are drawn at 80 % and thin
+arrows (with a dark outline, readable on bright and dark maps) lead from each token to its place:
 
 - **Block** — rows and columns, as square as possible and rather wider than deep (7 tokens →
   3 + 3 + 1); *Width (columns)* makes it a broad line (all in one rank) or a column (1).
@@ -434,12 +438,26 @@ crowded (half overlapping), up to 5 = far apart — and larger creatures automat
 larger distance. *Facing* turns the formation (the front row of a block faces up at 0°).
 *Who goes where*: **least movement** (default — every token takes a place close to where it
 stands, tokens of the same size swap until the total way is shortest), **larger creatures in
-the middle / front** or **outside / behind**. On maps with a grid, *Snap to grid* is offered.
+the middle / front** or **outside / behind**, and in dnd5e worlds also:
+
+- **Defenders in front** — highest AC first (ties: more max HP first);
+- **Attackers in front** — melee attackers first, ordered by the attack bonus of their primary
+  attack (first equipped weapon, else a natural attack / feature, else a spell attack); creatures
+  whose primary attack has **reach** (over 5 ft) form the second line, **ranged** attackers go to
+  the back, creatures without an attack last.
+
+"First" means the front row of a block, the centre of a hex, the first places on a ring. Creatures
+that rank equally and have the same size (e.g. four identical goblins) settle among themselves by
+least movement — they never cross each other's paths. If no selected creature has the data (no AC /
+no attacks), these orders fall back to "larger creatures first". On maps with a grid, *Snap to
+grid* is offered.
 
 Places behind walls are skipped: a place counts only if the straight line from the formation's
-centre to it isn't blocked by a wall, and it lies inside the scene. *Apply* moves all tokens
+centre to it isn't blocked by a wall, and it lies on the canvas — the map **or the padding around
+it** (Foundry's own limit for token movement), so tokens parked next to the map stay there instead
+of being pulled onto it. *Apply* moves all tokens
 together as a normal movement, so Foundry still stops a token at a wall on its own way there
-(the preview marks those in red). The formation is centred where the group stands; afterwards
+(the previews mark those in red). The formation is centred where the group stands; afterwards
 the tokens stay selected, so you can drag the whole formation somewhere else. Players can
 arrange the tokens they own.
 
