@@ -25,6 +25,7 @@ import chatExport from "./chat-export.js";
 import tokenStatusIcons from "./token-status-icons.js";
 import tokenFormation from "./token-formation.js";
 import templateTargeting from "./template-targeting.js";
+import emanationTokenSize from "./emanation-token-size.js";
 import rsrAttackTargets from "./rsr-attack-targets.js";
 import tahLayer from "./tah-layer.js";
 import combatSnapshot from "./combat-snapshot.js";
@@ -43,6 +44,7 @@ export const FEATURES = [
   tokenArtPicker,
   tokenFormation,
   templateTargeting,
+  emanationTokenSize,
   savageAttacker,
   weaponMastery,
   rsrAttackTargets,

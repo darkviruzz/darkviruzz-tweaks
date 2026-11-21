@@ -320,6 +320,12 @@
   "DT.Settings.TemplateTargetHidden.Hint": "Aus: Versteckte Tokens werden nie anvisiert (ihre Namen stünden sonst in den Zielen der Chatkarte). Spieler visieren nie Tokens an, die sie nicht sehen.",
   "DT.Settings.TemplateTargetDefeated.Name": "Auch besiegte Kreaturen anvisieren",
   "DT.Settings.TemplateTargetDefeated.Hint": "Aus: Kreaturen mit dem Zustand Besiegt / Tot bleiben außen vor.",
+  "DT.Categories.EmanationTokenSize.Label": "Ausstrahlungen in Token-Größe",
+  "DT.Categories.EmanationTokenSize.Hint": "Ausstrahlungen (Auren wie Schutzgeister) starten mit einer 1×1-Basis, darum fällt die Ausstrahlung einer großen Kreatur zu klein aus. Diese Funktion gibt ihnen die Größe des Tokens, von dem sie ausgehen. Für die ganze Welt (vom GM).",
+  "DT.Settings.EmanationTokenSize.Name": "Ausstrahlungen bekommen die Token-Größe",
+  "DT.Settings.EmanationTokenSize.Hint": "Wird eine Ausstrahlung auf einem Token gezeichnet oder platziert (Mitte ihrer Basis auf dem Token), übernimmt sie Größe und Form des Tokens und folgt ihm – auch wenn der Token beim Klick nicht hervorgehoben war oder dir nicht gehört. Es zählen nur Tokens, die du siehst. Gilt für die Ausstrahlung des Regionen-Werkzeugs und für D&D-5e-6-Templates; ortsfeste D&D-Templates bekommen die Größe, bleiben aber, wo sie sind.",
+  "DT.Settings.EmanationSelfOnCaster.Name": "Ausstrahlungen mit Reichweite Selbst auf den Zaubernden (D&D 5e 6)",
+  "DT.Settings.EmanationSelfOnCaster.Hint": "Die Ausstrahlung einer Aktivität mit Reichweite Selbst (Schutzgeister, Auren …) landet immer auf dem Token des Zaubernden, in dessen Größe, egal wohin du klickst – außer du klickst auf einen anderen Token, dann bleibt sie dort. Folgt dem Zaubernden, außer das Template ist ortsfest.",
 
   "DT.ChatExport.Mode.All": "Gesamter Chatverlauf",
   "DT.ChatExport.Format.Label": "Format",

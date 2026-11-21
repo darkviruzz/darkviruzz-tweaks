@@ -464,6 +464,42 @@ Which creatures count follows the D&D rules for areas of effect:
 
 ---
 
+### 12a. Emanations in Token Size  ·  *any system (caster: dnd5e 6) · world (GM)*
+
+Emanations (auras such as *Spirit Guardians*) get the size of the token they come from.
+
+**How it works:** in Foundry every emanation starts from a 1×1 base. Foundry gives it a token's
+size — and lets it follow that token — only if the mouse happened to highlight the token at the
+moment of the click while placing a spell's template; the Region tool's emanation never does.
+So the aura of a Large creature often comes out one size too small, and doesn't move with it.
+
+- **Emanations Take the Token's Size:** when an emanation is created with its base still 1×1 and
+  the centre of that base lies on a token, the base becomes that token's size, shape and position.
+  If the Region consists of just that emanation and isn't attached yet, it is also **attached** to
+  the token (it follows the token's moves and size changes), exactly as Foundry does when the
+  highlight worked — including the token's level, its hidden state and its elevation. This also
+  works for tokens you don't own (as in Foundry itself), but only for tokens you can see; secret
+  tokens count only for their owners and the GM. If several tokens overlap, the top one counts.
+  It applies to emanations drawn with the Region tool and to D&D 5e 6 spell templates.
+  **Stationary** D&D templates (*target.template.stationary*) get the size and position but are
+  not attached. Undo, paste and Regions that are already attached are left alone; a Region with
+  several shapes gets the sizes but no attachment.
+- **Self-Range Emanations on the Caster (D&D 5e 6):** an emanation of an activity with range
+  *Self* always goes onto the caster's token, in its size and attached to it (unless stationary),
+  **wherever you click** — you no longer have to hit your own token. Clicking on another token
+  keeps it there. The caster is the token dnd5e uses for the activity (your controlled token,
+  else the first one on the scene). Works independently of the first setting.
+
+The corrected base also changes what *Template Auto-Targeting* sees: the area now starts at the
+token's edge, and the token the emanation comes from is left out.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Emanations Take the Token's Size** | off | World switch (GM): a 1×1 emanation drawn or placed on a token takes that token's size and follows it. |
+| **Self-Range Emanations on the Caster (D&D 5e 6)** | off | Emanations of *Self*-range activities snap to the caster's token wherever the click was. |
+
+---
+
 ### 13. Savage Attacker  ·  *dnd5e · world (GM)*
 
 Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,

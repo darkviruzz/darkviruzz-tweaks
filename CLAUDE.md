@@ -98,6 +98,7 @@ scripts/
     token-status-icons.js       token icons: overlay by priority list, dynamic icon size, ignored effects (world; display only)
     token-formation.js          arrange selected tokens: block / hex / ring / crowd with canvas preview (world + user HUD entry)
     template-targeting.js       target the creatures in a placed template by D&D area rules; dnd5e 6 card targets (world)
+    emanation-token-size.js     emanations take the size of the token they come from; dnd5e 6 self-range → caster (world)
     rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
     tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
     combat-snapshot.js          save a combat + its tokens/actors, compare, restore selected differences (world/GM)
@@ -1020,6 +1021,8 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   tool) and never attaches. Our targeting just follows the Region's geometry (`testPoint`), so the
   area size is never our bug. (Reported by Markus 2026-11-12: "emanation bei large creatures sollte
   größer sein".)
+- **Since feature *Emanations in Token Size* (2026-11-22) the module can fix that base** (see the
+  facts at the end of this section). The paragraph above still describes core and dnd5e.
 - **Targets are recorded BEFORE the template exists:** `Activity#use` builds the usage message
   with `system.targets: TargetsField.getDescriptors()` (the user's targets at that moment), creates
   it, then `_finalizeUsage` places the template, then `dnd5e.postUseActivity`. Readers of those
@@ -1059,6 +1062,45 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   Emanation extends from a creature and moves with it. Creature space DMG 2024: Large 2×2 (3
   hexes), Huge 3×3 (7), Gargantuan 4×4+ (12+). Sage Advice could not be checked (sageadvice.eu,
   dndbeyond.com and wizards.com are not reachable from the cloud session).
+
+**Emanations in Token Size** (feature `emanationTokenSize`, written 2026-11-22 — NOT tested on the table yet; verified
+against the 14.370 client source and the dnd5e 6.0.6 bundle):
+
+- `RegionLayer#attachPlacementToToken(position)` (`client/canvas/layers/regions.mjs`, 14.370) runs on every pointermove of
+  a placement with `attachToToken` and reads `canvas.tokens.hover?.document`. For a token emanation it writes the base
+  from the hovered token's `_source` `{x, y, width, height, shape}` and `elevation = {bottom: data.elevation.bottom +
+  source.elevation, top: data.elevation.top + source.elevation + source.depth × canvas.grid.distance}` (each only if the
+  ORIGINAL placement data's bound is finite, else null), plus `levels: [source.level]`, `hidden: token.hidden`,
+  `attachment: {token: id}`; without a hover it restores the original 1×1 base and `attachment: {token: null}`. During a
+  placement `Token#isInteractable` returns `attachToToken`; `_canHover` = `!document.isSecret` (no ownership check);
+  `TokenDocument#isSecret` = SECRET disposition AND no OBSERVER permission (false for the GM).
+- The Region tool's emanation (`shapeData` `{type: "emanation", base: {type: "token", x: 0, y: 0, width: 1, height: 1,
+  shape: hex ? ELLIPSE_1 : RECTANGLE_1}, radius: 0, gridBased}`) never looks for a token. Its creation data
+  (`_createDragPreviewData`) has no elevation → schema default (null = ±Infinity) in template mode.
+- `RegionDocument.createTokenEmanation(token, range, …)` is core's canonical "emanation from a token" (base from
+  `token._source`, `attachment.token`, `levels: [level]`).
+- Core keeps an attached base in sync (`TokenDocument##computeAttachedRegionUpdates`, `client/documents/token.mjs`) only
+  if it EXACTLY equals the token's old x/y/width/height/shape; otherwise the shape is only translated. Hence the feature
+  writes the token's exact `_source` values and attaches single-shape Regions.
+- `preCreate<Document>` hooks receive `(doc, createData, options, userId)` where `options` is the operation minus
+  `data/noHook/pack/parent` (`client/data/client-backend.mjs` `#preCreateDocumentArray`). Undo of a deletion creates with
+  `{isUndo: true, keepId: true}` (`placeables-layer.mjs`); copy & paste creates with NO marker (`isPaste` is only set on
+  cut & paste, which UPDATES) — so a pasted 1×1 emanation on a token is corrected too.
+- dnd5e 6.0.6 `TemplatePlacement.fromActivity`: unattached placements (and all stationary ones) are combined into ONE
+  Region (several shapes if `target.count > 1`), each attached one gets its own Region; the regionData sent to
+  `dnd5e.createMeasuredTemplate` has `levels: [canvas.level.id]`, NO `elevation` and NO `hidden` (the placement's
+  elevation is dropped — dnd5e TODO), `attachment.token` undefined when stationary. `activity.getUsageToken()` returns a
+  TokenDocument (`getSceneTargets(actor)[0]?.document`).
+- Our decisions: hand-drawn emanations on a token get size AND attachment (consistent with core's hover); stationary
+  dnd5e templates size + position only; multi-shape Regions sizes only; dnd5e Regions (`flags.dnd5e.activity`) are
+  skipped in `preCreateRegion` and handled in `dnd5e.createMeasuredTemplate`. Self-range (`activity.range.units ===
+  "self"`) emanations: a token under the click wins (with the size setting on, or if it is the caster), otherwise the
+  caster (`flags.dnd5e.origin` via `fromUuidSync`, else `getUsageToken()`).
+- Interplay with *Template Auto-Targeting*: the corrected base enlarges the area it tests, and the new
+  `attachment.token` is the emanation origin it leaves out. No change there.
+- Unverified: hex grids (the base centre uses `grid.sizeX/sizeY` × width/height — a hex token's real footprint is a
+  polygon); whether core's `_preCreateOperation` shape constraints are recomputed correctly after our `updateSource`
+  (expected — that runs after the hooks); the whole feature on the table.
 
 ### Combat snapshots (feature *Combat Snapshots*, written 2026-11-17 — NOT tested on the table yet)
 
@@ -1152,6 +1194,7 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
 | Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
+| Emanations in Token Size | `emanationTokenSize` | `features/emanation-token-size.js` | any (caster: dnd5e 6) | world | `emanationTokenSize` (off — 1×1 emanation bases on a token take its size + attachment, `preCreateRegion` / `dnd5e.createMeasuredTemplate`), `emanationSelfOnCaster` (off — dnd5e 6 self-range emanations snap to the caster) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
 | Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload); storage: world compendium `world.dt-combat-snapshots` (JournalEntry, one entry per snapshot, `flags.<id>.meta` + `flags.<id>.snapshot` = JSON string); hidden `combatSnapshotData` (world) = 1.11.0 storage, migrated into the pack and emptied; API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |

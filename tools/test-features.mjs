@@ -2348,6 +2348,185 @@ await test("template targeting: dnd5e 6 — the usage card's recorded targets ar
 globalThis.canvas = ttSavedCanvas;
 game.user = ttSavedUser;
 
+/* ---------- Emanations in Token Size ---------- */
+{
+  const etModule = await import(pathToFileURL(join(ROOT, "scripts/features/emanation-token-size.js")).href);
+  etModule.default.init();
+  const { isDefaultTokenBase, baseFromToken, pickToken, applyToken } = etModule.internals;
+  const savedCanvas = globalThis.canvas;
+  const savedUser = game.user;
+  const savedDeepClone = foundry.utils.deepClone;
+  foundry.utils.deepClone = o => structuredClone(o);
+  const scene = { id: "etScene" };
+  const placeables = [];
+  globalThis.canvas = { ready: true, scene, grid: { size: 100, sizeX: 100, sizeY: 100, distance: 5 }, tokens: { placeables } };
+  const user = { id: "me", isGM: false };
+  game.user = user;
+  // 100 px square grid; a token's shape is its rectangle (local coordinates)
+  const etToken = (id, x, y, size = 1, extra = {}) => {
+    const src = { _id: id, x, y, width: size, height: size, shape: 4, elevation: 0, depth: size, level: "L1", hidden: false, sort: 0, ...(extra.source ?? {}) };
+    const doc = { id, documentName: "Token", parent: scene, _source: src, hidden: src.hidden, isSecret: !!extra.secret };
+    const t = { document: doc, visible: extra.visible ?? true, shape: { contains: (px, py) => px >= 0 && py >= 0 && px <= size * 100 && py <= size * 100 } };
+    placeables.push(t);
+    return t;
+  };
+  const emanation = (x, y, extra = {}) => ({ type: "emanation", base: { type: "token", x, y, width: 1, height: 1, shape: 4, hole: false }, radius: 300, ...extra });
+  const regionDoc = (shapes, extra = {}) => ({
+    parent: scene,
+    _source: { shapes, attachment: { token: null }, levels: ["L1"], hidden: false, elevation: { bottom: null, top: null }, flags: {}, ...extra },
+    updates: [],
+    updateSource(c) { this.updates.push(c); Object.assign(this._source, c); }
+  });
+  const preCreate = (doc, options = {}) => hooks.preCreateRegion.forEach(h => h(doc, {}, options, "me"));
+  Object.assign(settings, { emanationTokenSize: true, emanationSelfOnCaster: false });
+
+  await test("emanation size: pure helpers — default 1×1 token base, base from a token, top-most token", () => {
+    assert.equal(isDefaultTokenBase(emanation(0, 0)), true);
+    assert.equal(isDefaultTokenBase(emanation(0, 0, { base: { type: "token", x: 0, y: 0, width: 2, height: 2 } })), false);
+    assert.equal(isDefaultTokenBase({ type: "emanation", base: { type: "circle", width: 1, height: 1 } }), false);
+    assert.equal(isDefaultTokenBase({ type: "circle", x: 0, y: 0, radius: 100 }), false);
+    assert.deepEqual(baseFromToken({ x: 1, y: 2, width: 3, height: 3, shape: 0, elevation: 9 }), { x: 1, y: 2, width: 3, height: 3, shape: 0 });
+    const all = () => true;
+    assert.equal(pickToken([{ token: "low", contains: all, elevation: 0, sort: 5 }, { token: "high", contains: all, elevation: 10, sort: 0 }], {}), "high");
+    assert.equal(pickToken([{ token: "a", contains: all, elevation: 0, sort: 1 }, { token: "b", contains: all, elevation: 0, sort: 2 }], {}), "b");
+    assert.equal(pickToken([{ token: "a", contains: () => false, elevation: 0, sort: 1 }], {}), null);
+    const data = { shapes: [emanation(0, 0)], elevation: { bottom: 0, top: 10 }, attachment: { token: null } };
+    applyToken(data, 0, { id: "t", _source: { x: 100, y: 100, width: 2, height: 2, shape: 4, elevation: 20, depth: 2, level: "L2", hidden: true } }, { attach: true, gridDistance: 5 });
+    assert.deepEqual(data.elevation, { bottom: 20, top: 40 }, "core: bottom + elevation, top + elevation + depth × distance");
+    assert.deepEqual([data.attachment.token, data.levels, data.hidden], ["t", ["L2"], true]);
+  });
+
+  const large = etToken("large", 200, 200, 2);
+  await test("emanation size: a 1×1 emanation on a Large token takes its size and is attached (levels, hidden, elevation like core)", () => {
+    large.document._source.elevation = 10; large.document._source.hidden = true; large.document.hidden = true;
+    const doc = regionDoc([emanation(250, 250)], { elevation: { bottom: -30, top: 30 } });
+    preCreate(doc);
+    assert.equal(doc.updates.length, 1);
+    assert.deepEqual(doc._source.shapes[0].base, { type: "token", x: 200, y: 200, width: 2, height: 2, shape: 4, hole: false });
+    assert.equal(doc._source.shapes[0].radius, 300, "the radius stays");
+    assert.deepEqual(doc._source.attachment, { token: "large" });
+    assert.deepEqual(doc._source.levels, ["L1"]);
+    assert.equal(doc._source.hidden, true);
+    assert.deepEqual(doc._source.elevation, { bottom: -20, top: 50 });
+    large.document._source.elevation = 0; large.document._source.hidden = false; large.document.hidden = false;
+    const open = regionDoc([emanation(250, 250)]);
+    preCreate(open);
+    assert.deepEqual(open._source.elevation, { bottom: null, top: null }, "unbounded elevation stays unbounded");
+  });
+  await test("emanation size: guards — no token there, already attached, undo/paste, switched off, other shapes, other scene, dnd5e Regions", () => {
+    const cases = [
+      [regionDoc([emanation(800, 800)]), {}, "no token under the base's centre"],
+      [regionDoc([emanation(250, 250)], { attachment: { token: "other" } }), {}, "already attached"],
+      [regionDoc([emanation(250, 250)]), { isUndo: true }, "undo"],
+      [regionDoc([emanation(250, 250)]), { isPaste: true }, "paste"],
+      [regionDoc([{ type: "circle", x: 250, y: 250, radius: 100 }]), {}, "not an emanation"],
+      [regionDoc([emanation(250, 250, { base: { type: "circle", x: 250, y: 250, radius: 10, width: 1, height: 1 } })]), {}, "not a token base"],
+      [regionDoc([emanation(250, 250)], { flags: { dnd5e: { activity: "x" } } }), {}, "dnd5e Regions go through dnd5e.createMeasuredTemplate"],
+      [Object.assign(regionDoc([emanation(250, 250)]), { parent: { id: "elsewhere" } }), {}, "not the viewed scene"]
+    ];
+    for (const [doc, options, why] of cases) {
+      preCreate(doc, options);
+      assert.equal(doc.updates.length, 0, why);
+    }
+    settings.emanationTokenSize = false;
+    const off = regionDoc([emanation(250, 250)]);
+    preCreate(off);
+    assert.equal(off.updates.length, 0, "switched off");
+    settings.emanationTokenSize = true;
+  });
+  await test("emanation size: a Region with several shapes gets the sizes but no attachment", () => {
+    const doc = regionDoc([emanation(250, 250), { type: "circle", x: 0, y: 0, radius: 50 }]);
+    preCreate(doc);
+    assert.equal(doc._source.shapes[0].base.width, 2);
+    assert.deepEqual(doc._source.shapes[1], { type: "circle", x: 0, y: 0, radius: 50 });
+    assert.deepEqual(doc._source.attachment, { token: null });
+  });
+  await test("emanation size: invisible / secret tokens count for the GM only, other levels never", () => {
+    const hidden = etToken("unseen", 600, 600, 3, { visible: false });
+    const secret = etToken("secret", 1000, 1000, 2, { secret: true });
+    const upstairs = etToken("upstairs", 1400, 1400, 2, { source: { level: "L2" } });
+    for (const [x, t] of [[650, "unseen"], [1050, "secret"]]) {
+      const doc = regionDoc([emanation(x, x)]);
+      preCreate(doc);
+      assert.equal(doc.updates.length, 0, `player: ${t} is not found`);
+    }
+    user.isGM = true;
+    secret.document.isSecret = false;                           // TokenDocument#isSecret is false for owners (GM)
+    for (const [x, t] of [[650, "unseen"], [1050, "secret"]]) {
+      const doc = regionDoc([emanation(x, x)]);
+      preCreate(doc);
+      assert.equal(doc._source.attachment.token, t, `GM: ${t} is found`);
+    }
+    const doc = regionDoc([emanation(1450, 1450)]);
+    preCreate(doc);
+    assert.equal(doc.updates.length, 0, "a token on another level is ignored");
+    user.isGM = false;
+    placeables.splice(placeables.indexOf(hidden), 1);
+    placeables.splice(placeables.indexOf(secret), 1);
+    placeables.splice(placeables.indexOf(upstairs), 1);
+  });
+
+  // dnd5e 6: dnd5e.createMeasuredTemplate(activity, regionData) — plain data before creation
+  const caster = etToken("caster", 600, 200, 2);
+  globalThis.fromUuidSync = uuid => (uuid === "Scene.etScene.Token.caster" ? caster.document : null);
+  const dnd5eData = (x, y, extra = {}) => ({
+    shapes: [emanation(x, y)], levels: ["L1"], attachment: { token: undefined },
+    flags: { dnd5e: { activity: "Actor.a.Item.i.Activity.x", origin: "Scene.etScene.Token.caster" } }, ...extra
+  });
+  const activity = (units, stationary = false) => ({ range: { units }, target: { template: { stationary } }, getUsageToken: () => caster.document });
+  const place5e = (act, data) => { hooks["dnd5e.createMeasuredTemplate"].forEach(h => h(act, data)); return data; };
+
+  await test("emanation size (dnd5e 6): a placement on a token gets its size; stationary ones are not attached", () => {
+    const [moving] = place5e(activity("ft"), [dnd5eData(250, 250)]);
+    assert.equal(moving.shapes[0].base.width, 2);
+    assert.equal(moving.attachment.token, "large");
+    assert.equal(moving.elevation, undefined, "dnd5e sends no elevation — none is added");
+    const [still] = place5e(activity("ft", true), [dnd5eData(250, 250)]);
+    assert.deepEqual([still.shapes[0].base.x, still.shapes[0].base.width], [200, 2]);
+    assert.equal(still.attachment.token, undefined, "dnd5e's stationary rule wins");
+    const [nothing] = place5e(activity("ft"), [dnd5eData(1800, 1800)]);
+    assert.equal(nothing.shapes[0].base.width, 1, "not self-range, no token under the click");
+    const [attached] = place5e(activity("ft"), [dnd5eData(250, 250, { attachment: { token: "other" } })]);
+    assert.equal(attached.shapes[0].base.width, 1, "hover worked → left alone");
+    settings.emanationTokenSize = false;
+    const [off] = place5e(activity("ft"), [dnd5eData(250, 250)]);
+    assert.equal(off.shapes[0].base.width, 1, "switched off");
+    settings.emanationTokenSize = true;
+  });
+  await test("emanation size (dnd5e 6): self-range emanations snap to the caster unless clicked on another token", () => {
+    settings.emanationSelfOnCaster = true;
+    const [self] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.deepEqual(self.shapes[0].base, { type: "token", x: 600, y: 200, width: 2, height: 2, shape: 4, hole: false });
+    assert.equal(self.attachment.token, "caster");
+    const [still] = place5e(activity("self", true), [dnd5eData(1800, 1800)]);
+    assert.deepEqual([still.shapes[0].base.x, still.attachment.token], [600, undefined], "stationary: on the caster, not attached");
+    const [other] = place5e(activity("self"), [dnd5eData(250, 250)]);
+    assert.equal(other.attachment.token, "large", "a click on another token keeps it there");
+    const [ft] = place5e(activity("ft"), [dnd5eData(1800, 1800)]);
+    assert.equal(ft.shapes[0].base.width, 1, "only self-range activities");
+    settings.emanationTokenSize = false;
+    const [onlySelf] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.equal(onlySelf.attachment.token, "caster", "works without the size setting");
+    const [otherNoSize] = place5e(activity("self"), [dnd5eData(250, 250)]);
+    assert.equal(otherNoSize.shapes[0].base.width, 1, "without the size setting a click on another token is left alone");
+    const [onCaster] = place5e(activity("self"), [dnd5eData(650, 250)]);
+    assert.equal(onCaster.attachment.token, "caster", "a click on the caster itself");
+    const fallback = { ...activity("self"), getUsageToken: () => caster.document };
+    const [noOrigin] = place5e(fallback, [dnd5eData(1800, 1800, { flags: { dnd5e: { activity: "x" } } })]);
+    assert.equal(noOrigin.attachment.token, "caster", "no origin flag → activity.getUsageToken()");
+    settings.emanationTokenSize = true;
+    settings.emanationSelfOnCaster = false;
+    const [selfOff] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.equal(selfOff.shapes[0].base.width, 1, "self setting off");
+  });
+
+  delete globalThis.fromUuidSync;
+  foundry.utils.deepClone = savedDeepClone;
+  if (savedDeepClone === undefined) delete foundry.utils.deepClone;
+  globalThis.canvas = savedCanvas;
+  game.user = savedUser;
+}
+
 /* ---------- Combat Snapshots ---------- */
 {
   const lib = await import(pathToFileURL(join(ROOT, "scripts/lib/snapshot-diff.js")).href);

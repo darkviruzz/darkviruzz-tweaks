@@ -320,6 +320,12 @@
   "DT.Settings.TemplateTargetHidden.Hint": "Off: hidden tokens are never targeted (their names would show up in the chat card's targets). Players never target tokens they can't see.",
   "DT.Settings.TemplateTargetDefeated.Name": "Also Target Defeated Creatures",
   "DT.Settings.TemplateTargetDefeated.Hint": "Off: creatures with the Defeated / Dead status are left out.",
+  "DT.Categories.EmanationTokenSize.Label": "Emanations in Token Size",
+  "DT.Categories.EmanationTokenSize.Hint": "Emanations (auras like Spirit Guardians) start from a 1×1 base, so an emanation from a Large creature comes out too small. This feature gives them the size of the token they come from. World-level (set by the GM).",
+  "DT.Settings.EmanationTokenSize.Name": "Emanations Take the Token's Size",
+  "DT.Settings.EmanationTokenSize.Hint": "When an emanation is drawn or placed on a token (the centre of its base on the token), it takes that token's size and shape and follows the token — even if the token wasn't highlighted at the click or isn't yours. Only tokens you can see count. Applies to the Region tool's emanation and to D&D 5e 6 templates; stationary D&D templates get the size but stay where they are.",
+  "DT.Settings.EmanationSelfOnCaster.Name": "Self-Range Emanations on the Caster (D&D 5e 6)",
+  "DT.Settings.EmanationSelfOnCaster.Hint": "An emanation of an activity with range Self (Spirit Guardians, auras …) always goes onto the caster's token, in its size, wherever you click — unless you click on another token, then it stays there. Follows the caster unless the template is stationary.",
 
   "DT.ChatExport.Mode.All": "Whole chat log",
   "DT.ChatExport.Format.Label": "Format",
