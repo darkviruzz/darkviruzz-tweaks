@@ -170,6 +170,191 @@ await test("postUse: not the owner → nothing", async () => {
   assert.equal(TrayV6.calls.length, 0);
 });
 
+// 1.12: any item type, the activity-type guard, choices, list helpers, quick add, context menu.
+const sea = await import(pathToFileURL(join(ROOT, "scripts/lib/autoapply-list.js")).href);
+const seaInternals = (await import(pathToFileURL(join(ROOT, "scripts/features/spell-effect-autoapply.js")).href)).internals;
+const featActivity = (actor, name, type = "utility", units = "self") => ({
+  actor, type, range: { units }, applicableEffects: [{ id: "e1" }],
+  item: { id: "i2", type: "feat", name, system: { range: { units } } }
+});
+
+await test("postUse: a listed FEATURE (Rage) applies like a spell", async () => {
+  settings.spellAutoApplyWhitelist = "Mage Armor, Rage";
+  customElements.registry["effect-application"] = TrayV6; TrayV6.calls = []; createdEffects = [];
+  const actor = makeActor();
+  hooks["dnd5e.postUseActivity"][0](featActivity(actor, "Rage"), {}, { message: v6Message([], [{ uuid: "Item.rage" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 1); assert.equal(createdEffects.length, 1);
+});
+await test("guard: attack / save / damage / enchant activities never inject targets or apply", async () => {
+  settings.spellAutoApplyWhitelist = "Color Spray";
+  for (const type of ["attack", "save", "damage", "enchant"]) {
+    TrayV6.calls = [];
+    const a = featActivity(makeActor(), "Color Spray", type); a.item.type = "spell";
+    const cfg = { data: { system: { targets: [] } } };
+    hooks["dnd5e.preUseActivity"][0](a, {}, {}, cfg);
+    assert.equal(cfg.data.system.targets.length, 0, type);
+    hooks["dnd5e.postUseActivity"][0](a, {}, { message: v6Message([], [{ uuid: "Item.blind" }]) });
+    await tick();
+    assert.equal(TrayV6.calls.length, 0, type);
+  }
+  // A utility activity of the same item still works.
+  const ok = featActivity(makeActor(), "Color Spray", "utility"); ok.item.type = "spell";
+  hooks["dnd5e.postUseActivity"][0](ok, {}, { message: v6Message([], [{ uuid: "x" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 1);
+});
+
+// Choices: a stub DialogV2 and a tiny document for the dialog content.
+const dialogCalls = [];
+let dialogAnswer = null;
+const fakeEl = tag => ({ tag, children: [], textContent: "", name: "", value: "", append(...n) { this.children.push(...n); } });
+globalThis.document = { createElement: fakeEl };
+foundry.applications = { api: { DialogV2: { wait: async config => { dialogCalls.push(config); return dialogAnswer; } } } };
+await test("choices: ask OFF → several effects are not applied, no dialog", async () => {
+  settings.spellAutoApplyWhitelist = "Guidance"; settings.spellAutoApplyAskChoice = false;
+  TrayV6.calls = []; dialogCalls.length = 0;
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]) });
+  await tick();
+  assert.equal(TrayV6.calls.length, 0); assert.equal(dialogCalls.length, 0);
+});
+await test("choices: ask ON → the user picks one, exactly that effect is applied", async () => {
+  settings.spellAutoApplyAskChoice = true; dialogAnswer = "1";
+  TrayV6.calls = []; dialogCalls.length = 0;
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  const msg = v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]);
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: msg });
+  await tick();
+  assert.equal(dialogCalls.length, 1);
+  const select = dialogCalls[0].content.children[1];
+  assert.deepEqual(select.children.map(o => o.textContent), ["Arcana", "Stealth"]);
+  assert.equal(TrayV6.calls.length, 1); assert.equal(TrayV6.calls[0].effect.name, "Stealth");
+  assert.ok(msg.flags[`${MODULE_ID}.autoApplied`]);
+});
+await test("choices: ask ON, dialog cancelled/closed → nothing applied", async () => {
+  dialogAnswer = null; TrayV6.calls = [];
+  const a = featActivity(makeActor(), "Guidance", "utility", "touch"); a.item.type = "spell";
+  const msg = v6Message([], [{ name: "Arcana" }, { name: "Stealth" }]);
+  hooks["dnd5e.postUseActivity"][0](a, {}, { message: msg });
+  await tick();
+  assert.equal(TrayV6.calls.length, 0); assert.equal(msg.flags[`${MODULE_ID}.autoApplied`], undefined);
+  settings.spellAutoApplyAskChoice = false;
+});
+delete globalThis.document;
+delete foundry.applications;
+
+await test("list: parse / serialise / add / remove are case-insensitive and keep the comma format", () => {
+  assert.deepEqual(sea.parseList(" Mage Armor ,rage;; mage armor\nFly "), ["Mage Armor", "rage", "Fly"]);
+  assert.equal(sea.serialiseList(["Fly", "fly", " Rage "]), "Fly, Rage");
+  assert.equal(sea.addToList("Fly", "Jump, Shield", "fly"), "Fly, Jump, Shield");
+  assert.equal(sea.removeFromList("Fly, Hunter's Mark", "hunter's mark"), "Fly");
+  assert.equal(sea.listHas("Fly, Rage", "RAGE"), true);
+});
+const sItem = (name, type, activities, effectIds = ["e1"], extra = {}) => ({
+  name, type, system: { activities, range: { units: "self" }, ...extra },
+  effects: new Map(effectIds.map(id => [id, { id }]))
+});
+const act = (type, units, effects = [{ _id: "e1" }], value) => ({ type, range: { units, value }, effects });
+await test("classify: ok, choice, never (range / rider / no effect / no activity)", () => {
+  assert.deepEqual(sea.classifyItem(sItem("Mage Armor", "spell", [act("utility", "touch")])), { status: "ok", count: 1 });
+  const guidance = sItem("Guidance", "spell", [act("utility", "touch", [{ _id: "a" }, { _id: "b" }, { _id: "c" }])], ["a", "b", "c"]);
+  assert.deepEqual(sea.classifyItem(guidance), { status: "choice", count: 3 });
+  // Hunter's Mark: the marking activity has range 90 ft, the damage activity no effect.
+  const hm = sItem("Hunter's Mark", "spell", [act("damage", "any", []), act("utility", "ft", [{ _id: "e1" }], 90)]);
+  assert.deepEqual(sea.classifyItem(hm), { status: "never", count: 0, reason: "range", range: "90 ft" });
+  const colorSpray = sItem("Color Spray", "spell", [act("save", "self")]);
+  assert.equal(sea.classifyItem(colorSpray).reason, "rider");
+  assert.equal(sea.classifyItem(sItem("Natural Weapons", "spell", [act("enchant", "self")])).reason, "rider");
+  assert.equal(sea.classifyItem(sItem("Dagger", "weapon", [act("attack", "ft", [], 20)])).reason, "noEffect");
+  assert.equal(sea.classifyItem(sItem("Rope", "loot", [])).reason, "noActivity");
+  // Missing effect documents don't count; an external uuid does.
+  assert.equal(sea.classifyItem(sItem("Ghost", "spell", [act("utility", "self", [{ _id: "gone" }])])).reason, "noEffect");
+  assert.equal(sea.classifyItem(sItem("Ext", "spell", [act("utility", "self", [{ uuid: "Compendium.x.y" }])], [])).status, "ok");
+  // Activities as a Collection-like Map; mixed self/enemy item stays ok.
+  const mixed = sItem("Celestial Revelation", "feat", new Map([["a", act("save", "self")], ["b", act("utility", "self")]]));
+  assert.equal(sea.classifyItem(mixed).status, "ok");
+});
+await test("index / candidates / groups / suggestions", () => {
+  const entries = [
+    { item: sItem("Mage Armor", "spell", [act("utility", "touch")], ["e1"], { level: 1 }), pc: false },
+    { item: sItem("mage armor", "spell", [act("utility", "ft", [{ _id: "e1" }], 30)], ["e1"], { level: 1 }), pc: true },
+    { item: sItem("Rage", "feat", [act("utility", "self")]), pc: true },
+    { item: sItem("Potion of Flying", "consumable", [act("utility", "self")]), pc: false },
+    { item: sItem("Hunter's Mark", "spell", [act("utility", "ft", [{ _id: "e1" }], 90)], ["e1"], { level: 1 }), pc: true },
+    { item: sItem("Guidance", "spell", [act("utility", "touch", [{ _id: "a" }, { _id: "b" }])], ["a", "b"], { level: 0 }), pc: false }
+  ];
+  const index = sea.buildIndex(entries);
+  assert.equal(index.get("mage armor").status, "ok"); assert.equal(index.get("mage armor").pc, true);
+  assert.equal(index.get("potion of flying").group, "item");
+  assert.deepEqual(sea.candidatesFromIndex(index, "Rage"), ["Mage Armor", "Guidance", "Potion of Flying"]);
+  const groups = sea.groupList("Rage, Hunter's Mark, Guidance, Mage Armor, Potion of Flying, Unheard Of", index);
+  assert.deepEqual(groups.map(g => g.group), ["spell", "feature", "item", "unknown"]);
+  assert.deepEqual(groups[0].entries.map(e => e.name), ["Guidance", "Hunter's Mark", "Mage Armor"]);
+  const missing = sea.missingSuggestions(sea.CURATED_NAMES.filter(n => n !== "Rage" && n !== "Guidance").join(", "));
+  assert.deepEqual(missing, [{ group: "choices", names: ["Guidance"] }, { group: "features", names: ["Rage"] }]);
+});
+await test("defaults: the curated list is the setting default and has no Hunter's Mark", () => {
+  const def = features.spell.settings.find(s => s.key === "spellAutoApplyWhitelist").options.default;
+  assert.deepEqual(sea.parseList(def), [...sea.CURATED_NAMES]);
+  assert.ok(!sea.listHas(def, "Hunter's Mark"));
+  assert.ok(sea.listHas(def, "Rage") && sea.listHas(def, "Potion of Flying") && sea.listHas(def, "Guidance"));
+  const ask = features.spell.settings.find(s => s.key === "spellAutoApplyAskChoice").options;
+  assert.equal(ask.type, Boolean); assert.equal(ask.default, false); assert.equal(ask.scope, "world");
+});
+await test("settings list status: ok / choice depends on Ask / never with reason / unknown", () => {
+  assert.equal(seaInternals.entryStatus({ status: "ok", count: 1 }, false).key, "ok");
+  assert.equal(seaInternals.entryStatus({ status: "choice", count: 18 }, true).key, "choice");
+  const off = seaInternals.entryStatus({ status: "choice", count: 18 }, false);
+  assert.equal(off.key, "never"); assert.match(off.tooltip, /ChoiceOff/);
+  const hm = seaInternals.entryStatus({ status: "never", reason: "range", range: "90 ft" }, true);
+  assert.match(hm.tooltip, /Status\.Range.*90 ft/);
+  assert.equal(seaInternals.entryStatus(null, true).key, "unknown");
+});
+
+const usageMsg = (item, activity, type = "usage") => ({ type, getAssociatedActivity: () => activity, getAssociatedItem: () => item, system: {} });
+await test("quick add: offered on a GM's usage card of an unlisted self/touch item with an effect", () => {
+  settings.spellAutoApplyWhitelist = "Mage Armor";
+  game.user.isGM = true;
+  const item = sItem("Barkskin", "spell", []);
+  const a = act("utility", "touch"); a.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), "Barkskin");
+  // Guards: listed, not GM, feature off, rider activity, ranged activity, not a usage card.
+  settings.spellAutoApplyWhitelist = "barkskin";
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null);
+  settings.spellAutoApplyWhitelist = "Mage Armor";
+  game.user.isGM = false; assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null); game.user.isGM = true;
+  settings.spellAutoApplyEnabled = false; assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a)), null); settings.spellAutoApplyEnabled = true;
+  const save = act("save", "self"); save.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, save)), null);
+  const ranged = act("utility", "ft", [{ _id: "e1" }], 90); ranged.item = item;
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, ranged)), null);
+  assert.equal(seaInternals.quickAddCandidate(usageMsg(item, a, "attack")), null);
+  game.user.isGM = false;
+});
+await test("context menu: GM gets add/remove in the menu's own shape (dnd5e 6 and 5.3)", async () => {
+  const writes = [];
+  game.settings.set = async (ns, k, v) => { writes.push(v); settings[k] = v; };
+  game.user.isGM = true; notes.length = 0;
+  const item = sItem("Barkskin", "spell", [act("utility", "touch")]);
+  const v6Menu = [{ label: "DND5E.ItemView", icon: "fa-solid fa-eye", onClick() {} }];
+  hooks["dnd5e.getItemContextOptions"][0](item, v6Menu);
+  assert.equal(v6Menu.length, 2); assert.equal(v6Menu[1].label, "DT.SpellAutoApply.Context.Add");
+  v6Menu[1].onClick(); await tick();
+  assert.equal(writes.at(-1), "Mage Armor, Barkskin"); assert.equal(notes.length, 1);
+  const v5Menu = [{ name: "DND5E.ItemView", icon: "<i></i>", callback() {} }];
+  hooks["dnd5e.getItemContextOptions"][0](item, v5Menu);
+  assert.equal(v5Menu[1].name, "DT.SpellAutoApply.Context.Remove"); assert.match(v5Menu[1].icon, /^<i class=/);
+  v5Menu[1].callback(); await tick();
+  assert.equal(writes.at(-1), "Mage Armor");
+  // No entry: not GM; or an unlisted item without a usable activity.
+  game.user.isGM = false; const m1 = []; hooks["dnd5e.getItemContextOptions"][0](item, m1); assert.equal(m1.length, 0);
+  game.user.isGM = true; const m2 = [];
+  hooks["dnd5e.getItemContextOptions"][0](sItem("Color Spray", "spell", [act("save", "self")]), m2); assert.equal(m2.length, 0);
+  game.user.isGM = false; delete game.settings.set;
+  settings.spellAutoApplyWhitelist = "Mage Armor, Shield of Faith";
+});
+
 /* ---------- Defeated Tokens ---------- */
 const makeToken = (id, sort, scene) => {
   const t = { id, sort, flags: {}, updates: [],
@@ -230,6 +415,368 @@ await test("defeated: effects that aren't 'dead' or live on items are ignored", 
   const f = deadEffect(); f.parent = { documentName: "Item" }; await fire("createActiveEffect", f);
   assert.equal(e.lastUpdate, undefined); assert.equal(f.lastUpdate, undefined);
 });
+
+/* ---------- Dropping to 0 Hit Points ---------- */
+{
+  const zhpModule = await import(pathToFileURL(join(ROOT, "scripts/features/zero-hit-points.js")).href);
+  const zhp = zhpModule.internals;
+  zhpModule.default.init();
+  const HP = "system.attributes.hp.value";
+  const saved = { AE: globalThis.ActiveEffect, isGM: game.user.isGM, users: userList.slice() };
+
+  // Timers run on demand.
+  const timers = [];
+  zhp.timing.schedule = fn => { timers.push(fn); return timers.length; };
+  const runTimers = async () => { while (timers.length) await timers.shift()(); };
+
+  const merge = (target, src) => {
+    for (const [k, v] of Object.entries(src)) {
+      if (v && (typeof v === "object") && !Array.isArray(v)) merge(target[k] ??= {}, v);
+      else target[k] = v;
+    }
+    return target;
+  };
+  const effect = (actor, id, statuses, flags = {}, duration = {}) => {
+    const e = { id, parent: actor, statuses: new Set(statuses), flags, duration, updates: [],
+      update: async d => { e.updates.push(d); merge(e, d); } };
+    return e;
+  };
+  const created = [];
+  globalThis.ActiveEffect = { implementation: {
+    fromStatusEffect: async id => ({
+      data: { _id: `static${id}`, statuses: [id], flags: {} },
+      updateSource(u) { merge(this.data, u); },
+      toObject() { return structuredClone(this.data); }
+    }),
+    create: async (data, { parent, keepId }) => {
+      created.push({ data, parent, keepId });
+      const e = effect(parent, data._id, data.statuses, data.flags, data.duration);
+      parent._effects.push(e);
+      return e;
+    }
+  } };
+  CONFIG.statusEffects = { unconscious: { _id: "staticunconscious" }, dead: { _id: "staticdead" } };
+
+  const actors = {};
+  const actor = (id, { type = "npc", hp = 0, temp = 0, max = 10, inCombat = false, important = false, statuses = [] } = {}) => {
+    const a = { uuid: `Actor.${id}`, id, name: id, img: `${id}.webp`, type, inCombat, isToken: false,
+      system: { attributes: { hp: { value: hp, temp, max, effectiveMax: max } }, traits: { important } },
+      _effects: [], _extra: new Set(statuses), updates: [], toggles: [],
+      get statuses() { return new Set([...a._extra, ...a._effects.flatMap(e => [...e.statuses])]); },
+      effects: {
+        find: f => a._effects.find(f), filter: f => a._effects.filter(f), get: id2 => a._effects.find(e => e.id === id2)
+      },
+      getActiveTokens: () => [{ uuid: `Scene.s.Token.${id}`, name: `${id} token`, texture: { src: `${id}-tok.webp` } }],
+      update: async (data, options) => { a.updates.push({ data, options }); if (HP in data) a.system.attributes.hp.value = data[HP]; },
+      toggleStatusEffect: async (sid, opts) => {
+        a.toggles.push({ sid, opts });
+        a._effects.push(effect(a, `static${sid}`, [sid], opts.overlay ? { core: { overlay: true } } : {}));
+      },
+      deleteEmbeddedDocuments: async (type, ids) => { a._effects = a._effects.filter(e => !ids.includes(e.id)); }
+    };
+    actors[a.uuid] = a;
+    return a;
+  };
+  globalThis.fromUuidSync = uuid => actors[uuid] ?? null;
+  const messages = [];
+  globalThis.ChatMessage = { implementation: { create: async data => { const m = { id: `zm${messages.length}`, ...data }; messages.push(m); return m; } } };
+  const combatants = [];
+  game.combats = [{ getCombatantsByActor: a => combatants.filter(c => c.actor === a) }];
+  const combatant = a => { const c = { actor: a, defeated: false, update: async d => Object.assign(c, d) }; combatants.push(c); return c; };
+  game.time = { worldTime: 1000 };
+  userList.push({ id: "gm", isGM: true }, { id: "p1", isGM: false });
+
+  const drop = (a, prev = {}, options = {}) => {
+    a.system.attributes.hp.value = 0;
+    return fire("updateActor", a, { system: { attributes: { hp: { value: 0 } } } }, { ...options, dnd5e: { hp: { value: 5, temp: 0, max: 10, ...prev } } }, "u1");
+  };
+  const heal = (a, from, to, options = {}) => {
+    a.system.attributes.hp.value = to;
+    return fire("updateActor", a, { system: { attributes: { hp: { value: to } } } }, { ...options, dnd5e: { hp: { value: from, temp: 0, max: 10 } } }, "u1");
+  };
+  const ours = a => a._effects.find(e => e.flags?.[MODULE_ID]?.zeroHp);
+  const reset = async () => { await runTimers(); created.length = 0; messages.length = 0; };
+
+  await test("zero hp: setting off or not the active GM → nothing", async () => {
+    await reset(); settings.zeroHpEnabled = false;
+    const a = actor("off"); await drop(a); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+    settings.zeroHpEnabled = true; activeGMSelf = false;
+    await drop(a); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+    activeGMSelf = true;
+  });
+  await test("zero hp: drop > 0 → 0 creates dnd5e's Unconscious status (static id, our flag) + one GM card", async () => {
+    await reset();
+    const a = actor("gob"); await drop(a);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].keepId, true); assert.equal(created[0].parent, a);
+    assert.deepEqual(created[0].data.statuses, ["unconscious"]);
+    assert.deepEqual(created[0].data.flags[MODULE_ID].zeroHp, { mode: "auto" });
+    assert.equal(created[0].data.flags.dnd5e, undefined, "no dnd5e autoDowned flag");
+    assert.equal(messages.length, 0, "card waits for the grouping delay");
+    await runTimers();
+    assert.equal(messages.length, 1);
+    assert.deepEqual(messages[0].whisper, ["gm"]);
+    assert.deepEqual(messages[0].flags[MODULE_ID].zeroHp, { entries: [{
+      actor: "Actor.gob", token: "Scene.s.Token.gob", name: "gob token", img: "gob-tok.webp", massive: null, origin: null
+    }], origin: null });
+  });
+  await test("zero hp: already at 0, dead, wrong type or no previous HP → nothing", async () => {
+    await reset();
+    const a = actor("zero"); a.system.attributes.hp.value = 0;
+    await fire("updateActor", a, { system: { attributes: { hp: { value: 0 } } } }, { dnd5e: { hp: { value: 0 } } });
+    await drop(actor("deadOne", { statuses: ["dead"] }));
+    await drop(actor("cart", { type: "vehicle" }));
+    await fire("updateActor", actor("noPrev"), { system: { attributes: { hp: { value: 0 } } } }, {});
+    await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+  });
+  await test("zero hp: already Unconscious (e.g. Sleep) → no second effect, card still comes", async () => {
+    await reset();
+    await drop(actor("sleepy", { statuses: ["unconscious"] })); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 1);
+  });
+  await test("zero hp: dnd5e's own Auto-Apply Downed handles it in combat → we skip the effect, not the card", async () => {
+    await reset(); settings.autoApplyDowned = "npcs";
+    await drop(actor("minion", { inCombat: true }));
+    await drop(actor("pc", { type: "character", inCombat: true }));   // "npcs" doesn't cover characters
+    await drop(actor("outside"));                                     // not in combat: dnd5e does nothing
+    await runTimers();
+    assert.deepEqual(created.map(c => c.parent.id), ["pc", "outside"]);
+    assert.equal(messages.length, 1); assert.equal(messages[0].flags[MODULE_ID].zeroHp.entries.length, 3);
+    assert.equal(zhp.dnd5eAppliesDowned(actor("boss", { inCombat: true, important: true })), true);
+    settings.autoApplyDowned = "deadOnly";
+    assert.equal(zhp.dnd5eAppliesDowned(actor("boss2", { inCombat: true, important: true })), false);
+    settings.autoApplyDowned = "none";
+    assert.equal(zhp.dnd5eAppliesDowned(actor("m2", { inCombat: true })), false);
+    delete settings.autoApplyDowned;
+  });
+  await test("zero hp: healing removes OUR auto Unconscious, never someone else's", async () => {
+    await reset();
+    const a = actor("healed"); await drop(a);
+    assert.ok(ours(a));
+    await heal(a, 0, 4);
+    assert.equal(ours(a), undefined);
+    const b = actor("slept"); b._effects.push(effect(b, "sleep", ["unconscious"]));
+    await drop(b); await heal(b, 0, 3);
+    assert.ok(b.effects.get("sleep"));
+  });
+  await test("zero hp: massive damage = remaining after temp HP and HP ≥ max (exact equality counts)", () => {
+    assert.deepEqual(zhp.massiveDamage(25, { value: 5, temp: 5, max: 15 }), { remaining: 15, max: 15 });
+    assert.equal(zhp.massiveDamage(24, { value: 5, temp: 5, max: 15 }), null);
+    assert.deepEqual(zhp.massiveDamage(30, { value: 5, temp: 0, max: 40, effectiveMax: 20 }), { remaining: 25, max: 20 });
+    assert.equal(zhp.massiveDamage(undefined, { value: 5, max: 10 }), null);
+    assert.equal(zhp.massiveDamage(NaN, { value: 5, max: 10 }), null);
+    assert.equal(zhp.massiveDamage(-5, { value: 5, max: 10 }), null);
+  });
+  await test("zero hp: preApplyDamage → preUpdateActor hands amount + origin into the update options once", async () => {
+    await reset();
+    const a = actor("ogre", { hp: 5 });
+    await fire("dnd5e.preApplyDamage", a, 30, { [HP]: 0 }, { origin: { id: "dmg1" } });
+    const options = {};
+    await fire("preUpdateActor", a, { system: { attributes: { hp: { value: 0 } } } }, options);
+    assert.deepEqual(options[MODULE_ID], { zeroHp: { amount: 30, origin: "dmg1" } });
+    const again = {};
+    await fire("preUpdateActor", a, { [HP]: 0 }, again);
+    assert.equal(again[MODULE_ID], undefined, "stash cleared");
+    // A different HP than the damage computed (another update slipped in) → no statement.
+    await fire("dnd5e.preApplyDamage", a, 30, { [HP]: 0 }, { originatingMessage: { id: "dmg2" } });
+    const other = {};
+    await fire("preUpdateActor", a, { [HP]: 7 }, other);
+    assert.equal(other[MODULE_ID], undefined);
+    // Healing (negative amount) stashes nothing; applyDamage clears the stash.
+    await fire("dnd5e.preApplyDamage", a, -5, { [HP]: 10 }, {});
+    await fire("dnd5e.preApplyDamage", a, 8, { [HP]: 0 }, {}); await fire("dnd5e.applyDamage", a, 8, {});
+    assert.equal(zhp.stash.size, 0);
+    // The options reach the GM: massive damage on the card.
+    await drop(a, { value: 5, temp: 0, max: 20 }, options); await runTimers();
+    assert.deepEqual(messages[0].flags[MODULE_ID].zeroHp.entries[0].massive, { remaining: 25, max: 20 });
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.origin, "dmg1");
+  });
+  await test("zero hp: drops within the grouping delay share ONE card (a Fireball, six goblins)", async () => {
+    await reset();
+    for (let i = 0; i < 6; i++) await drop(actor(`fb${i}`), {}, { [MODULE_ID]: { zeroHp: { amount: 8, origin: "fire" } } });
+    await runTimers();
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.entries.length, 6);
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.origin, "fire");
+    assert.match(messages[0].content, /fb0 token, fb1 token/);
+  });
+
+  game.user.isGM = true;
+  await test("zero hp: Dead → Dead status with overlay, our Unconscious gone, 0 HP, defeated", async () => {
+    await reset();
+    const a = actor("victim"); await drop(a); const c = combatant(a);
+    a.system.attributes.hp.value = 2;   // somebody healed meanwhile
+    assert.equal(await zhp.runAction("dead", { actor: a.uuid }), true);
+    assert.deepEqual(a.toggles, [{ sid: "dead", opts: { active: true, overlay: true } }]);
+    assert.equal(ours(a), undefined);
+    assert.equal(a.system.attributes.hp.value, 0);
+    assert.deepEqual(a.updates.at(-1).options, { [MODULE_ID]: { zeroHp: { own: true } } });
+    assert.equal(c.defeated, true);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "dead");
+    // Already dead: the existing Dead effect stays, no second toggle.
+    await zhp.runAction("dead", { actor: a.uuid });
+    assert.equal(a.toggles.length, 1);
+  });
+  await test("zero hp: Knocked out → no Dead, not defeated, 1 HP (own update), Unconscious 1 hour", async () => {
+    await reset();
+    const a = actor("ko"); await drop(a); const c = combatant(a);
+    await zhp.runAction("dead", { actor: a.uuid });
+    await zhp.runAction("knockOut", { actor: a.uuid });
+    assert.equal(a.statuses.has("dead"), false);
+    assert.equal(c.defeated, false);
+    assert.equal(a.system.attributes.hp.value, 1);
+    assert.deepEqual(a.updates.at(-1).options, { [MODULE_ID]: { zeroHp: { own: true } } });
+    const e = ours(a);
+    assert.equal(e.flags[MODULE_ID].zeroHp.mode, "knockedOut");
+    assert.deepEqual(e.duration, { value: 1, units: "hours", expiry: null });
+    assert.equal(zhp.entryState({ actor: a.uuid }), "knockedOut");
+    // Our own 0 → 1 update does not remove it…
+    await heal(a, 0, 1, a.updates.at(-1).options);
+    assert.ok(ours(a));
+    // …regaining any HP later does.
+    await heal(a, 1, 2);
+    assert.equal(ours(a), undefined);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "recovered");
+  });
+  await test("zero hp: Knocked out takes over dnd5e's auto Unconscious (so dnd5e won't delete it at 1 HP)", async () => {
+    const a = actor("dnd5eKo");
+    a._effects.push(effect(a, "staticunconscious", ["unconscious"], { dnd5e: { autoDowned: true } }));
+    await zhp.runAction("knockOut", { actor: a.uuid });
+    assert.equal(a._effects.length, 1);
+    assert.equal(a._effects[0].flags.dnd5e.autoDowned, false);
+    assert.equal(a._effects[0].flags[MODULE_ID].zeroHp.mode, "knockedOut");
+    assert.equal(a._effects[0].start.time, 1000);
+  });
+  await test("zero hp: a knocked-out creature dropped again is back to the automatic mode", async () => {
+    const a = actor("again"); await drop(a); await zhp.runAction("knockOut", { actor: a.uuid });
+    await drop(a, { value: 1 });
+    assert.equal(ours(a).flags[MODULE_ID].zeroHp.mode, "auto");
+    assert.equal(ours(a).duration.value, null);
+  });
+  await test("zero hp: Reset → back to dying (0 HP, our auto Unconscious, no Dead)", async () => {
+    await reset();
+    const a = actor("misclick"); await drop(a); combatant(a);
+    await zhp.runAction("dead", { actor: a.uuid });
+    await zhp.runAction("reset", { actor: a.uuid });
+    assert.equal(a.statuses.has("dead"), false);
+    assert.equal(ours(a).flags[MODULE_ID].zeroHp.mode, "auto");
+    assert.equal(a.system.attributes.hp.value, 0);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "dying");
+    assert.equal(zhp.entryState({ actor: "Actor.missing" }), "gone");
+  });
+  await test("zero hp: the expired knocked-out effect is removed (unless dnd5e already did)", async () => {
+    await runTimers();
+    const a = actor("rested"); await zhp.runAction("knockOut", { actor: a.uuid });
+    const e = ours(a);
+    await fire("updateActiveEffect", e, { duration: { expired: true } }, {});
+    await runTimers();
+    assert.equal(ours(a), undefined);
+    const b = actor("rested2"); await zhp.runAction("knockOut", { actor: b.uuid });
+    const f = ours(b);
+    await fire("updateActiveEffect", f, { duration: { expired: true } }, {});
+    b._effects = [];   // dnd5e deleted it first
+    await runTimers();  // must not throw
+  });
+  await test("zero hp: players can't run actions", async () => {
+    game.user.isGM = false;
+    const a = actor("safe"); await drop(a);
+    assert.equal(await zhp.runAction("dead", { actor: a.uuid }), false);
+    assert.equal(a.toggles.length, 0);
+    game.user.isGM = true;
+  });
+
+  // Minimal DOM for the card.
+  class ZEl {
+    constructor(tag) { Object.assign(this, { tag, className: "", dataset: {}, children: [], listeners: {}, parent: null, disabled: false, _text: "" }); }
+    get classList() {
+      const list = () => this.className.split(" ").filter(Boolean);
+      return { add: c => { if (!list().includes(c)) this.className = [...list(), c].join(" "); }, contains: c => list().includes(c) };
+    }
+    set textContent(v) { this._text = String(v); }
+    get textContent() { return [this._text, ...this.children.map(c => c.textContent)].filter(Boolean).join(" "); }
+    append(...nodes) { for (const n of nodes) { n.parent = this; this.children.push(n); } }
+    replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
+    replaceWith(n) { this.parent.children[this.parent.children.indexOf(this)] = n; n.parent = this.parent; }
+    addEventListener(type, fn) { this.listeners[type] = fn; }
+    *walk() { for (const c of this.children) { yield c; yield* c.walk(); } }
+    querySelectorAll(sel) { const cls = sel.replace(/^\./, ""); return [...this.walk()].filter(e => e.classList.contains(cls)); }
+    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; }
+    click() { return this.listeners.click?.({ preventDefault() {}, stopPropagation() {} }); }
+  }
+  globalThis.HTMLElement = ZEl;
+  globalThis.document = { createElement: tag => new ZEl(tag) };
+  const card = () => { const root = new ZEl("li"); const content = new ZEl("div"); content.className = "message-content"; content.textContent = "fallback"; root.append(content); return { root, content }; };
+  const render = (message, root) => fire("dnd5e.renderChatMessage", message, root);
+  const btns = (node, kind) => node.querySelectorAll(`dt-zhp__btn--${kind}`);
+
+  await test("zero hp card: GM sees live state + buttons; massive highlights Dead; All dead with ≥ 2 undecided", async () => {
+    await reset();
+    const a = actor("c1"); const b = actor("c2"); const d = actor("c3");
+    await drop(a, {}, { [MODULE_ID]: { zeroHp: { amount: 30 } } }); await drop(b); await drop(d);
+    await zhp.runAction("knockOut", { actor: d.uuid });
+    await runTimers();
+    const message = { id: messages[0].id, flags: messages[0].flags };
+    const { root, content } = card();
+    await render(message, root);
+    const box = content.children[0];
+    assert.ok(box.classList.contains("dt-zhp"));
+    const rows = box.querySelectorAll("dt-zhp__entry");
+    assert.deepEqual(rows.map(r => r.dataset.state), ["dying", "dying", "knockedOut"]);
+    assert.ok(rows[0].querySelector("dt-zhp__massive").textContent.includes("DT.ZeroHp.Massive"));
+    assert.ok(btns(rows[0], "dead")[0].classList.contains("dt-zhp__btn--primary"));
+    assert.equal(btns(rows[1], "dead")[0].classList.contains("dt-zhp__btn--primary"), false);
+    assert.deepEqual(rows[2].querySelectorAll("dt-zhp__btn").map(x => x.dataset.zhp), ["dead", "reset"]);
+    assert.equal(btns(box, "allDead").length, 1);
+    // A button click writes and re-renders from the live state.
+    await btns(rows[1], "knockOut")[0].click();
+    const box2 = content.children[0];
+    assert.notEqual(box2, box);
+    assert.deepEqual(box2.querySelectorAll("dt-zhp__entry").map(r => r.dataset.state), ["dying", "knockedOut", "knockedOut"]);
+    assert.equal(btns(box2, "allDead").length, 0, "only one undecided left");
+  });
+  await test("zero hp card: All dead marks every undecided creature", async () => {
+    await reset();
+    const a = actor("ad1"); const b = actor("ad2");
+    await drop(a); await drop(b); await runTimers();
+    const { root, content } = card();
+    await render({ id: "x", flags: messages[0].flags }, root);
+    await btns(content.children[0], "allDead")[0].click();
+    assert.equal(a.statuses.has("dead"), true); assert.equal(b.statuses.has("dead"), true);
+    assert.deepEqual(content.children[0].querySelectorAll("dt-zhp__entry").map(r => r.dataset.state), ["dead", "dead"]);
+  });
+  await test("zero hp card: a later change of the actor refreshes the open card", async () => {
+    await reset();
+    const a = actor("live"); await drop(a); await runTimers();
+    const { root, content } = card();
+    await render({ id: "y", flags: messages[0].flags }, root);
+    await runTimers();
+    await heal(a, 0, 5);
+    await runTimers();
+    assert.equal(content.children[0].querySelector("dt-zhp__entry").dataset.state, "recovered");
+  });
+  await test("zero hp card: players and other messages are left alone", async () => {
+    game.user.isGM = false;
+    const { root, content } = card();
+    await render({ id: "z", flags: messages[0].flags }, root);
+    assert.equal(content.textContent, "fallback");
+    game.user.isGM = true;
+    const other = card();
+    await render({ id: "o", flags: {} }, other.root);
+    assert.equal(other.content.textContent, "fallback");
+  });
+
+  // Clean up the globals of this section.
+  settings.zeroHpEnabled = false;
+  game.user.isGM = saved.isGM;
+  globalThis.ActiveEffect = saved.AE;
+  userList.length = 0; userList.push(...saved.users);
+  for (const k of ["fromUuidSync", "ChatMessage", "HTMLElement", "document"]) delete globalThis[k];
+  delete CONFIG.statusEffects; delete game.combats; delete game.time;
+  zhp.cards.clear();
+}
 
 /* ---------- Movement History ---------- */
 const combat = () => {
@@ -532,6 +1079,185 @@ await test("live drag (receiver): the dragging user disconnects → only their t
   await fire("canvasTearDown");
   assert.equal(ticker.fns.length, 0);
 });
+
+/* ---------- Stacked Tokens Fan Out ---------- */
+const sfModule = await import(pathToFileURL(join(ROOT, "scripts/features/token-stack-fan.js")).href);
+const sf = sfModule.internals;
+const sfHooksBefore = Object.fromEntries(Object.entries(hooks).map(([k, v]) => [k, v.length]));
+sfModule.default.init();
+const sfFire = (name, ...args) => { for (const h of (hooks[name] ?? []).slice(sfHooksBefore[name] ?? 0)) h(...args); };
+// Fake clock: timers run when the test advances time; every advance also runs one ticker frame.
+let sfNow = 0;
+let sfTimers = [];
+Object.assign(sf.clock, {
+  now: () => sfNow,
+  setTimeout: (fn, ms) => { const t = { fn, at: sfNow + ms }; sfTimers.push(t); return t; },
+  clearTimeout: t => { sfTimers = sfTimers.filter(x => x !== t); }
+});
+const sfTicker = { fns: [], add(fn, ctx, priority) { this.fns.push({ fn, priority }); }, remove(fn) { this.fns = this.fns.filter(f => f.fn !== fn); } };
+const sfAdvance = ms => {
+  sfNow += ms;
+  for (const t of sfTimers.filter(x => x.at <= sfNow)) { sfTimers = sfTimers.filter(x => x !== t); t.fn(); }
+  for (const { fn } of sfTicker.fns) fn();
+};
+const sfSavedCanvas = globalThis.canvas;
+const sfSavedControls = ui.controls;
+let sfEmulated = 0;
+foundry.canvas = { interaction: { MouseInteractionManager: { emulateMoveEvent: () => { sfEmulated++; } } } };
+const sfTokens = [];
+globalThis.canvas = {
+  ready: true, scene: { id: "scene1" }, app: { ticker: sfTicker }, mousePosition: { x: 50, y: 50 },
+  tokens: { active: true, hover: null, _draggedToken: null, placeables: sfTokens, get: id => sfTokens.find(t => t.document.id === id) }
+};
+ui.controls = { tool: { name: "select", interaction: true } };
+const pt = () => ({ x: 0, y: 0, set(a, b) { this.x = a; this.y = b; } });
+const sfToken = (id, x, y, { size = 1, sort = 0, visible = true, secret = false } = {}) => {
+  const s = 100 * size;
+  const t = { destroyed: false, isPreview: false, hasPreview: false, visible, renderable: true, isInteractable: true,
+    animationContexts: new Map(), flags: [], w: s, h: s,
+    document: { id, x, y, sort, isSecret: secret },
+    get center() { return { x: t.document.x + (s / 2), y: t.document.y + (s / 2) }; },
+    position: pt(), mesh: { position: pt() },
+    renderFlags: { set: f => t.flags.push(f) } };
+  t.position.set(x, y); t.mesh.position.set(x + (s / 2), y + (s / 2));
+  sfTokens.push(t); return t;
+};
+/** What core does on a refreshPosition render flag, followed by the refreshToken hook. */
+const coreRefresh = t => {
+  t.position.set(t.document.x, t.document.y); const c = t.center; t.mesh.position.set(c.x, c.y);
+  sfFire("refreshToken", t, { refreshPosition: true });
+};
+const sfHover = t => { canvas.tokens.hover = t; sfFire("hoverToken", t, true); };
+const sfUnhover = t => { if (canvas.tokens.hover === t) canvas.tokens.hover = null; sfFire("hoverToken", t, false); };
+const sfReset = () => {
+  sfFire("canvasTearDown"); sfTokens.length = 0; sfTimers = []; canvas.tokens.hover = null; canvas.tokens._draggedToken = null;
+  canvas.mousePosition = { x: 50, y: 50 }; ui.controls.tool = { name: "select", interaction: true }; settings.stackFanEnabled = true;
+};
+const at = t => [t.position.x, t.position.y, t.mesh.position.x, t.mesh.position.y];
+settings.stackFanEnabled = false; settings.stackFanDelay = 600; settings.stackFanDistance = 30;
+
+await test("stack fan: fanOffsets — hovered stays at 0, the other moves 30 % of its size; mixed sizes; deterministic", () => {
+  const two = sf.fanOffsets([{ id: "a", width: 100, height: 100 }, { id: "b", width: 100, height: 100 }], "a", 30);
+  assert.deepEqual(two.get("a"), { dx: 0, dy: 0 });
+  assert.deepEqual(two.get("b"), { dx: 30, dy: -30 });
+  const mixed = sf.fanOffsets([{ id: "a", width: 100, height: 100 }, { id: "big", width: 200, height: 200 }], "a", 30);
+  assert.deepEqual(mixed.get("big"), { dx: 60, dy: -60 }, "offset from the token's own size");
+  const many = n => Array.from({ length: n }, (_, i) => ({ id: `t${i}`, width: 100, height: 100, sort: i }));
+  for (const n of [3, 5, 9]) {
+    const offs = sf.fanOffsets(many(n), "t0", 30);
+    assert.deepEqual(offs.get("t0"), { dx: 0, dy: 0 });
+    const pts = [...offs.values()];
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const d = Math.max(Math.abs(pts[i].dx - pts[j].dx), Math.abs(pts[i].dy - pts[j].dy));
+      assert.ok(d >= 30 - 1e-6, `${n} tokens: ${i}/${j} only ${d}px apart`);
+    }
+    const shuffled = sf.fanOffsets(many(n).reverse(), "t0", 30);
+    assert.deepEqual([...shuffled.entries()].sort(), [...offs.entries()].sort(), "same layout whatever the input order");
+  }
+});
+await test("stack fan: stackIds — centre distance relative to size, transitive, far tokens excluded", () => {
+  const c = (id, cx, cy, size = 100) => ({ id, cx, cy, width: size, height: size });
+  const list = [c("a", 50, 50), c("b", 90, 50), c("c", 130, 50), c("d", 250, 50), c("e", 50, 99)];
+  assert.deepEqual(sf.stackIds(list, "a"), ["a", "b", "c", "e"]);
+  assert.deepEqual(sf.stackIds(list, "d"), ["d"]);
+  assert.deepEqual(sf.stackIds([c("a", 0, 0), c("tiny", 20, 0, 20)], "a"), ["a"], "uses the smaller token's size");
+  assert.deepEqual(sf.stackIds(list, "missing"), []);
+});
+await test("stack fan: setting off → hovering a stack does nothing", () => {
+  sfToken("a", 0, 0, { sort: 1 }); sfToken("b", 10, 10);
+  sfHover(sfTokens[0]); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+  assert.equal(sfTicker.fns.length, 0);
+});
+await test("stack fan: after the delay the hovered token stays, the other is offset by 30 % — display only", () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(599);
+  assert.equal(sf.state.fan, null, "not before the delay");
+  sfAdvance(1); assert.deepEqual(sf.state.fan, { hoveredId: "a", ids: ["a", "b"] });
+  sfAdvance(50); assert.ok(b.position.x > 10 && b.position.x < 40, "eases in");
+  sfAdvance(200);
+  assert.deepEqual(at(a), [0, 0, 50, 50], "token under the mouse never moves");
+  assert.deepEqual(at(b), [40, -20, 90, 30]);
+  assert.deepEqual([b.document.x, b.document.y], [10, 10], "document untouched");
+  assert.ok(sfEmulated > 0, "hover is re-evaluated");
+  coreRefresh(b); assert.deepEqual(at(b), [40, -20, 90, 30], "re-applied after core's refreshPosition");
+  b.position.set(10, 10); sfFire("refreshToken", b, { refreshState: true });
+  assert.deepEqual([b.position.x, b.position.y], [10, 10], "other render flags are left alone");
+  coreRefresh(b);
+});
+await test("stack fan: hovering another member keeps the fan; pointer inside the fanned area keeps it", () => {
+  const [a, b] = sfTokens;
+  sfUnhover(a); sfHover(b); canvas.mousePosition = { x: 135, y: -15 }; // on b's displayed strip
+  sfAdvance(1000);
+  assert.deepEqual(sf.state.fan, { hoveredId: "a", ids: ["a", "b"] }, "no re-layout");
+  assert.deepEqual(at(b), [40, -20, 90, 30]);
+});
+await test("stack fan: pointer leaves → short grace, then collapse back to core", () => {
+  const [a, b] = sfTokens;
+  canvas.mousePosition = { x: 500, y: 500 }; sfAdvance(16); sfAdvance(100);
+  assert.ok(sf.state.fan, "still open inside the grace period");
+  canvas.mousePosition = { x: 50, y: 50 }; sfAdvance(16); sfAdvance(300);
+  assert.ok(sf.state.fan, "coming back resets the grace period");
+  canvas.mousePosition = { x: 500, y: 500 }; canvas.tokens.hover = null; sfAdvance(16); sfAdvance(260);
+  assert.equal(sf.state.fan, null);
+  assert.deepEqual(b.flags.at(-1), { refreshPosition: true }); assert.deepEqual(a.flags.at(-1), { refreshPosition: true });
+  assert.equal(sfTicker.fns.length, 0, "ticker stops");
+  coreRefresh(b); assert.deepEqual(at(b), [10, 10, 60, 60], "no offset after collapse");
+});
+await test("stack fan: moving between members keeps the delay; leaving cancels it", async () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(300);
+  sfHover(b); sfUnhover(a); await tick(1); sfAdvance(300);
+  assert.deepEqual(sf.state.fan, { hoveredId: "b", ids: ["a", "b"] }, "fans at 600 ms around the token now under the mouse");
+  assert.deepEqual(at(b), [10, 10, 60, 60]);
+  sfReset();
+  const c = sfToken("c", 0, 0); sfToken("d", 5, 5);
+  sfHover(c); sfAdvance(300); sfUnhover(c); await tick(1); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+});
+await test("stack fan: single tokens, hidden-from-me and secret tokens don't form a stack", () => {
+  sfReset();
+  const lone = sfToken("lone", 500, 500); sfHover(lone); sfAdvance(1000);
+  assert.deepEqual(sf.state, { pending: false, fan: null });
+  const a = sfToken("a", 0, 0); const inv = sfToken("inv", 5, 5, { visible: false });
+  sfHover(a); assert.equal(sf.state.pending, false, "invisible token is no stack member");
+  inv.visible = true; inv.document.isSecret = true;
+  sfHover(a); assert.equal(sf.state.pending, false, "secret token is no stack member");
+  inv.document.isSecret = false; a.isInteractable = false;
+  sfHover(a); assert.equal(sf.state.pending, false, "not interactable (layer/tool) → nothing");
+});
+const sfOpen = () => {
+  sfReset();
+  const a = sfToken("a", 0, 0, { sort: 1 }); const b = sfToken("b", 10, 10);
+  sfHover(a); sfAdvance(600); sfAdvance(200);
+  assert.ok(sf.state.fan); return { a, b };
+};
+await test("stack fan: collapse triggers — drag, member update/delete, Token HUD, tool, animation, setting off, teardown", () => {
+  let { b } = sfOpen();
+  sfFire("refreshToken", { isPreview: true, previewType: "dragging", document: { id: "b" } }, { refreshPosition: true });
+  assert.equal(sf.state.fan, null, "drag preview");
+  ({ b } = sfOpen()); sfFire("updateToken", b.document, { name: "x" }); assert.ok(sf.state.fan, "unrelated update");
+  sfFire("updateToken", b.document, { x: 20 }); assert.equal(sf.state.fan, null, "member moved");
+  ({ b } = sfOpen()); sfFire("deleteToken", b.document); assert.equal(sf.state.fan, null, "member deleted");
+  ({ b } = sfOpen()); sfFire("renderTokenHUD", { object: b }); assert.equal(sf.state.fan, null, "HUD");
+  sfOpen(); ui.controls.tool = { name: "ruler", interaction: false }; sfAdvance(16); assert.equal(sf.state.fan, null, "tool");
+  ({ b } = sfOpen()); b.animationContexts.set("x", {}); sfAdvance(16); assert.equal(sf.state.fan, null, "animation");
+  sfOpen(); canvas.tokens._draggedToken = {}; sfAdvance(16); assert.equal(sf.state.fan, null, "drag in progress");
+  sfOpen(); settings.stackFanEnabled = false; sfModule.default.settings[0].options.onChange(false);
+  assert.equal(sf.state.fan, null, "setting off"); assert.equal(sfTicker.fns.length, 0);
+  ({ b } = sfOpen()); const flags = b.flags.length; sfFire("canvasTearDown");
+  assert.deepEqual(sf.state, { pending: false, fan: null }); assert.equal(b.flags.length, flags, "no redraw of torn-down tokens");
+});
+await test("stack fan: a destroyed member doesn't throw — the fan just closes", () => {
+  const { b } = sfOpen(); b.destroyed = true;
+  sfAdvance(16); assert.equal(sf.state.fan, null);
+  sfReset(); settings.stackFanEnabled = false;
+});
+globalThis.canvas = sfSavedCanvas;
+ui.controls = sfSavedControls;
+delete foundry.canvas;
 
 /* ---------- File Browser Preview ---------- */
 const fpModule = await import(pathToFileURL(join(ROOT, "scripts/features/file-picker-preview.js")).href);
@@ -2028,6 +2754,168 @@ await test("token tools: no tool → nothing, one → its own button, two → on
   menu.children[0].click(); assert.equal(palette.hidden, false, "button opens the palette");
   canvas.tokens.controlled = [];
 });
+// Do two straight paths a→A and b→B cross (proper intersection)?
+const pathsCross = (a, A, b, B) => {
+  const o = (p, q, r) => Math.sign(((q.x - p.x) * (r.y - p.y)) - ((q.y - p.y) * (r.x - p.x)));
+  return (o(a, A, b) * o(a, A, B) < 0) && (o(b, B, a) * o(b, B, A) < 0);
+};
+const crossings = (units, map, sameGroup = () => true) => {
+  let n = 0;
+  for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
+    if (sameGroup(units[i], units[j]) && pathsCross(units[i], map.get(units[i].id), units[j], map.get(units[j].id))) n++;
+  }
+  return n;
+};
+await test("formations: ranked orders — identical creatures settle by least movement and never cross; ranks and sizes still decide", () => {
+  // Four identical creatures in a line behind the formation: before the rework largeFirst handed out
+  // the places middle-out in list order, so they crossed over.
+  const line = [0, 100, 200, 300].map((x, i) => ({ id: `i${i}`, r: 50, x, y: 600 }));
+  for (const order of ["largeFirst", "largeLast", "defenders", "attackers"]) {
+    const map = formations.planFormation(line, { type: "block", columns: 4, anchor: { x: 150, y: 0 }, order });
+    assert.deepEqual(line.map(u => Math.round(map.get(u.id).x)), [0, 100, 200, 300], `${order}: everyone straight ahead`);
+  }
+  const scattered = [...Array(9).keys()].map(i => ({ id: `s${i}`, r: 50, x: ((i * 377) % 900), y: ((i * 613) % 700) }));
+  for (const type of ["block", "hex", "crowd"]) {
+    const map = formations.planFormation(scattered, { type, order: "largeFirst", seed: 4 });
+    assert.equal(crossings(scattered, map), 0, `${type}: no crossing paths among identical tokens`);
+  }
+  // Mixed sizes: the Large one still takes the first place (front row), the rest settle behind it.
+  const mixed = [...line, { id: "L", r: 100, x: 900, y: 900 }];
+  const big = formations.planFormation(mixed, { type: "block", columns: 3, anchor: { x: 0, y: 0 }, order: "largeFirst" });
+  assert.ok(line.every(u => big.get("L").y < big.get(u.id).y), "Large in the front row");
+  assert.equal(overlaps(big, mixed, 1), 0);
+  // Explicit ranks (defenders / attackers): rank 0 in the front row, rank 1 behind; no crossing inside a rank.
+  const ranked = [...Array(6).keys()].map(i => ({ id: `r${i}`, r: 50, x: i * 150, y: 400 + ((i % 2) * 50), rank: i % 2 }));
+  const front = formations.planFormation(ranked, { type: "block", columns: 3, anchor: { x: 300, y: 0 }, order: "defenders" });
+  const yOf = rank => ranked.filter(u => u.rank === rank).map(u => front.get(u.id).y);
+  assert.ok(Math.max(...yOf(0)) < Math.min(...yOf(1)), "rank 0 ahead of rank 1");
+  assert.equal(crossings(ranked, front, (a, b) => a.rank === b.rank), 0);
+  assert.equal(formations.rankOf({ r: 50 }, "largeLast"), 50); assert.equal(formations.rankOf({ r: 50 }, "largeFirst"), -50);
+  assert.equal(formations.rankOf({ r: 50, rank: 2 }, "largeFirst"), 2);
+});
+await test("formations: ring — identical tokens take the ring slots nearest to them", () => {
+  // Slots of 4 Medium tokens (rotation 0) lie at -45°, 45°, 135°, 225°; put each token far out in one of those directions.
+  const dirs = [135, -45, 225, 45];
+  const units = dirs.map((deg, i) => ({ id: `q${i}`, r: 50, x: Math.cos(deg * Math.PI / 180) * 1000, y: Math.sin(deg * Math.PI / 180) * 1000 }));
+  for (const order of ["largeFirst", "largeLast", "attackers"]) {
+    const ring = formations.planFormation(units, { type: "circle", anchor: { x: 0, y: 0 }, order });
+    units.forEach((u, i) => {
+      const p = ring.get(u.id);
+      const deg = Math.atan2(p.y, p.x) * 180 / Math.PI;
+      assert.ok(Math.abs((((deg - dirs[i]) % 360) + 540) % 360 - 180) < 1, `${order}: ${u.id} at its own side`);
+    });
+  }
+});
+await test("formation: dnd5e ranks — AC order, melee / reach / ranged lines by attack bonus, fallbacks for missing data", () => {
+  // dnd5e 5.3.3 and 6.0.6 share these prepared shapes (activities iterate as values; arrays stand in for the Collection).
+  const atk = (type, modifier, reach) => ({ type: "attack", attack: { type: { value: type } }, labels: { modifier }, range: { reach } });
+  const weapon = (activity, { equipped = true, props = [], reach = null, units = "ft", sort = 0 } = {}) => ({
+    type: "weapon", sort, system: { equipped, properties: new Set(props), range: { reach, units }, activities: [activity] } });
+  const actor = (items, { ac = 15, hp = 20, abilities = {}, prof = 2 } = {}) => ({ items, system: { abilities, attributes: { ac: { value: ac }, hp: { max: hp }, prof } } });
+  assert.deepEqual(fm.primaryAttack(actor([weapon(atk("melee", "+5"))])), { type: "melee", reach: 5, units: "ft", bonus: 5 });
+  assert.equal(fm.primaryAttack(actor([weapon(atk("melee", "+4"), { props: ["rch"] })])).reach, 10, "Reach property → 10 ft");
+  assert.equal(fm.primaryAttack(actor([weapon(atk("melee", "+4", 10))])).reach, 10, "activity reach");
+  const bow = weapon(atk("ranged", "+7"), { sort: 2 });
+  const unequippedSword = weapon(atk("melee", "+9"), { equipped: false, sort: 1 });
+  assert.equal(fm.primaryAttack(actor([unequippedSword, bow])).type, "ranged", "equipped weapons first");
+  const spell = { type: "spell", system: { activities: [atk("ranged", "+6")] } };
+  const claw = { type: "feat", system: { activities: [atk("melee", "+3")] } };
+  assert.equal(fm.primaryAttack(actor([spell, claw])).bonus, 3, "natural attacks before spells");
+  const noLabel = { type: "attack", attack: { type: { value: "melee" } }, labels: {}, range: {} };
+  assert.equal(fm.primaryAttack(actor([weapon(noLabel)], { abilities: { str: { mod: 3 }, dex: { mod: 1 } }, prof: 3 })).bonus, 6, "fallback mod + prof");
+  assert.equal(fm.primaryAttack(actor([{ type: "loot", system: {} }])), null);
+  assert.equal(fm.primaryAttack({}), null);
+  assert.deepEqual([null, { type: "melee", reach: 5 }, { type: "melee", reach: 10 }, { type: "ranged", reach: 0 }, { type: "melee", reach: 3, units: "m" }].map(fm.attackerLine), [3, 0, 1, 2, 1]);
+  assert.deepEqual(fm.denseRanks([[1, 2], [0, 5], [1, 2], [0, 1]]), [2, 1, 2, 0]);
+  const profiles = [{ ac: 18, hpMax: 30 }, { ac: 15, hpMax: 50 }, { ac: 18, hpMax: 30 }, { ac: null, hpMax: 99 }];
+  assert.deepEqual(fm.systemRanks("defenders", profiles), [0, 1, 0, 2], "AC first, equal → equal rank, no AC last");
+  assert.equal(fm.systemRanks("defenders", [{ ac: null }, {}]), null, "no data → size fallback");
+  const p = a => ({ attack: a });
+  assert.deepEqual(fm.systemRanks("attackers", [p({ type: "ranged", bonus: 9 }), p({ type: "melee", reach: 5, bonus: 4 }),
+    p({ type: "melee", reach: 5, bonus: 6 }), p({ type: "melee", reach: 10, bonus: 7 }), p(null)]), [3, 1, 0, 2, 4]);
+  assert.equal(fm.systemRanks("attackers", [p(null)]), null);
+  assert.equal(fm.systemRanks("nearest", profiles), null);
+  assert.deepEqual(fm.combatProfile(null), { ac: null, hpMax: null, attack: null });
+});
+await test("formation: defenders / attackers in the plan (dnd5e only), places outside the scene but inside the canvas allowed", () => {
+  canvas.grid = { type: 0 };
+  canvas.dimensions = { uiScale: 1, rect: { contains: (x, y) => x >= 0 && y >= 0 && x <= 3000 && y <= 3000 },
+    sceneRect: { contains: (x, y) => x >= 500 && y >= 500 && x <= 2500 && y <= 2500 } };
+  const acActor = ac => ({ items: [], system: { attributes: { ac: { value: ac }, hp: { max: 10 } } } });
+  const tokens = [fToken("a", 200, 100), fToken("b", 300, 100), fToken("c", 200, 300), fToken("d", 300, 300)];
+  [12, 18, 12, 18].forEach((ac, i) => { tokens[i].actor = acActor(ac); });
+  const moves = fm.computePlan(tokens, { type: "block", spacing: 1, columns: 2, rotation: 0, order: "defenders", snap: false });
+  const y = id => moves.find(m => m.token.id === id).centre.y;
+  assert.ok(Math.max(y("b"), y("d")) < Math.min(y("a"), y("c")), "AC 18 in the front row");
+  assert.ok(moves.every(m => m.centre.x < 500 && m.centre.y < 500), "tokens in the padding stay in the padding");
+  assert.ok(moves.every(m => !m.blocked));
+  // At the canvas edge: places beyond it are invalid.
+  const edge = [fToken("e", 0, 0), fToken("f", 0, 100), fToken("g", 0, 200), fToken("h", 0, 300)];
+  const edged = fm.computePlan(edge, { type: "block", spacing: 1, columns: 4, rotation: 0, order: "nearest", snap: false });
+  assert.ok(edged.every(m => m.centre.x >= 0 && m.centre.y >= 0), "nothing outside the canvas");
+  // Other systems: the dnd5e orders are not offered, a stored one falls back to size.
+  assert.deepEqual(fm.availableOrders(), formations.ORDERS);
+  game.system.id = "pf2e";
+  assert.deepEqual(fm.availableOrders(), ["nearest", "largeFirst", "largeLast"]);
+  assert.equal(fm.computePlan(tokens, { type: "block", spacing: 1, order: "attackers", snap: false }).length, 4);
+  game.system.id = "dnd5e";
+});
+await test("formation: in-window preview layout + SVG; HUD_TOOL.available / open for other entry points", () => {
+  const tokens = [fToken("a", 0, 0), fToken("b", 1000, 0, 2)];
+  tokens[0].document.name = "Goblin"; tokens[1].document.texture = { src: "ogre.webp" };
+  const moves = [{ token: tokens[0], centre: { x: 400, y: 400 }, blocked: false, unchanged: false },
+    { token: tokens[1], centre: { x: 600, y: 400 }, blocked: true, unchanged: false }];
+  const layout = fm.schematicLayout(moves, 90);
+  assert.equal(layout.width, 300); assert.ok(layout.height >= 160 && layout.height <= 300);
+  for (const pl of layout.places) for (const q of [pl.from, pl.to]) {
+    assert.ok(q.x - pl.r >= -1e-6 && q.x + pl.r <= layout.width + 1e-6 && q.y - pl.r >= -1e-6 && q.y + pl.r <= layout.height + 1e-6, "old and new positions fit");
+  }
+  assert.ok(Math.abs(layout.places[1].r - (2 * layout.places[0].r)) < 1e-6, "circle size by token size");
+  assert.deepEqual(layout.places.map(pl => [pl.label, pl.img, pl.blocked]), [["G", null, false], ["", "ogre.webp", true]]);
+  assert.equal(layout.front.angle, 90);
+  assert.equal(fm.buildSchematic(layout), null, "no createElementNS → skipped");
+  document.createElementNS = (ns, tag) => new WmEl(tag);
+  const svg = fm.buildSchematic(layout);
+  delete document.createElementNS;
+  assert.equal(svg.tag, "svg");
+  const tags = [...svg.walk()].map(n => n.tag);
+  assert.equal(tags.filter(t => t === "image").length, 1, "token image clipped into its circle");
+  assert.equal(tags.filter(t => t === "line").length, 2, "an arrow per moved token");
+  assert.ok([...svg.walk()].some(n => n.attrs?.class === "dt-formation__place is-blocked"), "blocked place marked");
+  assert.ok([...svg.walk()].some(n => n.tag === "text" && n.textContent === "G"));
+  // HUD_TOOL contract for Token Action HUD (package B): independent of the per-user HUD setting.
+  settings.formationEnabled = true; settings.formationHudButton = false;
+  assert.equal(fm.HUD_TOOL.available([tokens[0]]), false, "one token");
+  assert.equal(fm.HUD_TOOL.available([tokens[0], fToken("x", 0, 0, 1, false)]), false, "not owned");
+  assert.equal(fm.HUD_TOOL.available(tokens), true);
+  settings.formationEnabled = false;
+  assert.equal(fm.HUD_TOOL.available(tokens), false, "world switch off");
+  notes.length = 0;
+  assert.equal(fm.HUD_TOOL.open(tokens), null); assert.deepEqual(notes, ["DT.Formation.Disabled"]);
+  settings.formationEnabled = true;
+});
+await test("formation: real tokens dimmed to 20 % while the window is open (display only), re-applied after core refreshes, restored", () => {
+  const dimToken = id => ({ id, alpha: 1, mesh: { alpha: 0.9 }, document: { alpha: 0.9 }, _getTargetAlpha: () => 1,
+    flags: [], renderFlags: { set(f) { this.owner.flags.push(f); } } });
+  const a = dimToken("a"); const b = dimToken("b");
+  a.renderFlags.owner = a; b.renderFlags.owner = b;
+  fm.setDimmed([a, b]);
+  assert.equal(a.alpha, fm.DIM_ALPHA); assert.ok(Math.abs(a.mesh.alpha - (0.2 * 0.9)) < 1e-9, "mesh = alpha × document alpha");
+  assert.equal(fm.GHOST_ALPHA, 0.8);
+  a.alpha = 1; a.mesh.alpha = 0.9; // core's _refreshState reset it
+  hooks.refreshToken.forEach(h => h(a, { refreshPosition: true }));
+  assert.equal(a.alpha, 1, "unrelated refresh → untouched");
+  hooks.refreshToken.forEach(h => h(a, { refreshState: true }));
+  assert.equal(a.alpha, 0.2, "re-applied after refreshState");
+  fm.setDimmed([a]);
+  assert.deepEqual(b.flags, [{ refreshState: true }], "a token no longer arranged gets its alpha back");
+  fm.restoreAll();
+  assert.deepEqual(a.flags, [{ refreshState: true }]); assert.equal(fm.dimmed.size, 0);
+  a.alpha = 1;
+  hooks.refreshToken.forEach(h => h(a, { refreshState: true }));
+  assert.equal(a.alpha, 1, "after restoring nothing is dimmed any more");
+  assert.equal("alpha" in a.document && a.document.alpha, 0.9, "document never written");
+});
 
 /* ---------- Attack Targets on RSReforged Cards ---------- */
 const rsrModule = await import(pathToFileURL(join(ROOT, "scripts/features/rsr-attack-targets.js")).href);
@@ -2099,6 +2987,244 @@ await test("TAH layer: pinned to the chosen z-index, re-applied after TAH's righ
   assert.equal(element.style.zIndex, "100", "switched off → TAH's own layer again");
   assert.equal(observers.at(-1).off, true);
   delete globalThis.MutationObserver;
+});
+
+/* ---------- Token Tools in Token Action HUD ---------- */
+const tttModule = await import(pathToFileURL(join(ROOT, "scripts/features/tah-token-tools.js")).href);
+const ttt = tttModule.internals;
+const tokenToolsLib = await import(pathToFileURL(join(ROOT, "scripts/lib/token-tools.js")).href);
+tttModule.default.init();
+// A local dummy tool with the TAH contract (never shown in the Token HUD) and one without it.
+const tttOpened = [];
+let tttDummyOk = true;
+tokenToolsLib.registerTokenTool({ id: "tttDummy", order: 50, icon: "fa-solid fa-flask\"><script>", label: "DT.Test.Dummy",
+  visible: () => false, onClick: () => {}, available: tokens => tttDummyOk && tokens.length >= 2, open: tokens => tttOpened.push(tokens) });
+tokenToolsLib.registerTokenTool({ id: "tttLegacy", order: 5, icon: "fa-solid fa-ban", label: "DT.Test.Legacy",
+  visible: () => false, onClick: () => {} });
+const tttHandler = () => {
+  const handler = { added: [], extenders: [],
+    addActions(actions, group) { this.added.push({ actions, group }); },
+    addActionHandlerExtender(ext) { ext.actionHandler = this; this.extenders.push(ext); } };
+  return handler;
+};
+const tttOwned = id => ({ id, document: { isOwner: true } });
+
+await test("TAH token tools: registeredTools() lists every tool in order; the Token HUD API is unchanged", () => {
+  const ids = tokenToolsLib.registeredTools().map(t => t.id);
+  assert.ok(ids.includes("tokenArt") && ids.includes("tttDummy") && ids.includes("tttLegacy"));
+  assert.ok(ids.indexOf("tttLegacy") < ids.indexOf("tokenArt") && ids.indexOf("tokenArt") < ids.indexOf("tttDummy"), "sorted by order");
+  assert.equal(typeof tokenToolsLib.availableTools, "function");
+  assert.ok(!tokenToolsLib.availableTools({ document: { isOwner: true } }).some(t => t.id.startsWith("ttt")), "visible() still decides the Token HUD");
+});
+
+await test("TAH token tools: extender attached once per action handler; missing TAH API shapes don't throw", async () => {
+  const handler = tttHandler();
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  assert.equal(handler.extenders.length, 1);
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", {});
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", undefined);
+  const ext = ttt.makeExtender(); ext.actionHandler = {};
+  settings.tahTokenTools = "all";
+  assert.doesNotThrow(() => ext.extendActionHandler());
+});
+
+await test("TAH token tools: setting off / gm / all decides who gets the actions (isGM = GM or Assistant GM)", async () => {
+  const savedModules = game.modules; const savedControlled = canvas.tokens.controlled;
+  game.modules = { get: id => (id === "too-many-tokens-online" ? { active: false } : undefined) };
+  settings.tokenArtEnabled = true;
+  canvas.tokens.controlled = [tttOwned("a"), tttOwned("b")];
+  const handler = tttHandler();
+  await fire("tokenActionHudCoreAddActionHandlerExtenders", handler);
+  const build = () => { handler.added.length = 0; handler.extenders[0].extendActionHandler(); return handler.added; };
+  settings.tahTokenTools = "off"; game.user.isGM = true;
+  assert.equal(build().length, 0, "off → nothing, even for a GM");
+  settings.tahTokenTools = "gm"; game.user.isGM = false;
+  assert.equal(build().length, 0, "gm → not for players");
+  game.user.isGM = true;
+  let added = build();
+  assert.equal(added.length, 1);
+  assert.deepEqual(added[0].group, { id: "token", type: "system" }, "Core's own Utility → Token group");
+  const ids = added[0].actions.map(a => a.id);
+  assert.ok(ids.includes("dt-tool-tokenArt") && ids.includes("dt-tool-tttDummy"));
+  assert.ok(!ids.includes("dt-tool-tttLegacy"), "tools without available/open are not offered");
+  assert.ok(ids.indexOf("dt-tool-tokenArt") < ids.indexOf("dt-tool-tttDummy"), "palette order");
+  const art = added[0].actions.find(a => a.id === "dt-tool-tokenArt");
+  assert.equal(art.name, "DT.TokenArt.HudButton"); assert.equal(art.icon1, '<i class="fa-solid fa-images"></i>');
+  assert.equal(added[0].actions.find(a => a.id === "dt-tool-tttDummy").icon1, '<i class="fa-solid fa-flaskscript"></i>', "icon classes are sanitised");
+  game.user.isGM = false; settings.tahTokenTools = "all";
+  added = build();
+  assert.ok(added[0].actions.some(a => a.id === "dt-tool-tokenArt"), "all → players too");
+  // The tool's own guards still apply.
+  canvas.tokens.controlled = [{ id: "x", document: { isOwner: false } }, { id: "y", document: { isOwner: false } }];
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "art picker needs an owned token");
+  canvas.tokens.controlled = [tttOwned("a")];
+  added = build();
+  assert.deepEqual(added[0].actions.map(a => a.id).filter(id => id.startsWith("dt-tool-ttt")), [], "dummy wants ≥ 2 tokens");
+  settings.tokenArtEnabled = false;
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "art picker switched off");
+  settings.tokenArtEnabled = true; game.modules = { get: () => undefined };
+  assert.ok(!(build()[0]?.actions ?? []).some(a => a.id === "dt-tool-tokenArt"), "Too Many Tokens not installed");
+  canvas.tokens.controlled = [];
+  assert.equal(build().length, 0, "no tokens → nothing");
+  game.modules = savedModules; canvas.tokens.controlled = savedControlled; settings.tahTokenTools = "off";
+});
+
+await test("TAH token tools: onClick opens the tool for the tokens controlled at click time; a failing tool is skipped", async () => {
+  const savedControlled = canvas.tokens.controlled; const savedError = console.error;
+  const errors = []; console.error = (...a) => errors.push(a);
+  settings.tahTokenTools = "all"; tttOpened.length = 0;
+  canvas.tokens.controlled = [tttOwned("a"), tttOwned("b")];
+  const actions = ttt.buildActions(canvas.tokens.controlled);
+  const dummy = actions.find(a => a.id === "dt-tool-tttDummy");
+  canvas.tokens.controlled = [tttOwned("c"), tttOwned("d"), tttOwned("e")];
+  dummy.onClick();
+  assert.equal(tttOpened.length, 1); assert.deepEqual(tttOpened[0].map(t => t.id), ["c", "d", "e"]);
+  tttDummyOk = undefined;
+  tokenToolsLib.registerTokenTool({ ...tokenToolsLib.registeredTools().find(t => t.id === "tttDummy"), available: () => { throw new Error("boom"); } });
+  assert.ok(!ttt.buildActions(canvas.tokens.controlled).some(a => a.id === "dt-tool-tttDummy"));
+  assert.equal(errors.length, 1);
+  console.error = savedError; canvas.tokens.controlled = savedControlled; settings.tahTokenTools = "off";
+});
+
+await test("TAH token tools: changing the setting asks TAH to rebuild", () => {
+  const savedCallAll = Hooks.callAll; const called = [];
+  Hooks.callAll = name => called.push(name);
+  tttModule.default.settings[0].options.onChange("gm");
+  assert.deepEqual(called, ["forceUpdateTokenActionHud"]);
+  Hooks.callAll = savedCallAll;
+  const opts = tttModule.default.settings[0].options;
+  assert.equal(opts.default, "off"); assert.deepEqual(Object.keys(opts.choices), ["off", "gm", "all"]); assert.equal(opts.scope, "world");
+});
+
+/* ---------- Token Action HUD Position ---------- */
+const tapModule = await import(pathToFileURL(join(ROOT, "scripts/features/tah-position.js")).href);
+const tap = tapModule.internals;
+tapModule.default.init();
+const BAR = { width: 400, height: 50, ox: 0, oy: 0 };
+const VP = (width, height) => ({ width, height });
+const rectAt = (left, top, box = BAR) => ({ left: left + box.ox, top: top + box.oy, right: left + box.ox + box.width, bottom: top + box.oy + box.height });
+
+await test("TAH position: nearest edges are recorded with the top-left corner's distance", () => {
+  assert.deepEqual(tap.computeAnchor({ left: 150, top: 80 }, rectAt(150, 80), VP(1920, 1080)),
+    { top: 80, left: 150, h: "left", v: "top", dx: 150, dy: 80, vw: 1920, vh: 1080 });
+  const a = tap.computeAnchor({ left: 1400, top: 960 }, rectAt(1400, 960), VP(1920, 1080));
+  assert.deepEqual([a.h, a.v, a.dx, a.dy], ["right", "bottom", 520, 120]);
+});
+
+await test("TAH position: top-left stays; bottom and right anchors follow the window; clamp keeps the bar in view", () => {
+  const tl = tap.computeAnchor({ left: 150, top: 80 }, rectAt(150, 80), VP(1920, 1080));
+  assert.deepEqual(tap.resolvePosition(tl, VP(1280, 720), BAR), { left: 150, top: 80 }, "top-left anchored stays");
+  const bottom = tap.computeAnchor({ left: 100, top: 960 }, rectAt(100, 960), VP(1920, 1080));
+  assert.equal(bottom.v, "bottom");
+  assert.deepEqual(tap.resolvePosition(bottom, VP(1920, 720), BAR), { left: 100, top: 600 }, "shorter window: same distance to the bottom");
+  assert.deepEqual(tap.resolvePosition(bottom, VP(1920, 1440), BAR), { left: 100, top: 1320 }, "taller window");
+  const right = tap.computeAnchor({ left: 1400, top: 80 }, rectAt(1400, 80), VP(1920, 1080));
+  assert.equal(right.h, "right");
+  assert.deepEqual(tap.resolvePosition(right, VP(2560, 1080), BAR), { left: 2040, top: 80 }, "right anchor follows");
+  // Too small: pushed into view; bigger again: back at the anchored place (the anchor is unchanged).
+  assert.deepEqual(tap.resolvePosition(right, VP(1000, 1080), BAR), { left: 480, top: 80 }, "right anchor follows a narrower window");
+  assert.deepEqual(tap.resolvePosition(right, VP(450, 1080), BAR), { left: 0, top: 80 }, "too narrow → clamped into view");
+  const far = { h: "left", v: "top", dx: 900, dy: 700 };
+  assert.deepEqual(tap.resolvePosition(far, VP(800, 600), BAR), { left: 400, top: 550 });
+  assert.deepEqual(tap.resolvePosition(far, VP(1920, 1080), BAR), { left: 900, top: 700 }, "back at its place");
+  assert.deepEqual(tap.resolvePosition(far, VP(300, 40), BAR), { left: 0, top: 0 }, "bar bigger than the window → top-left visible");
+  // Scaled bar with an offset from the element corner.
+  assert.deepEqual(tap.resolvePosition(far, VP(800, 600), { width: 600, height: 75, ox: 10, oy: -20 }), { left: 190, top: 545 });
+});
+
+await test("TAH position: plan — matching anchor used, old flag adopted once, off-screen flag only clamped", () => {
+  assert.equal(tap.planPosition({ flag: null, stored: null, viewport: VP(1920, 1080), box: BAR }), null, "no TAH position → Core's default");
+  const stored = tap.computeAnchor({ left: 100, top: 960 }, rectAt(100, 960), VP(1920, 1080));
+  let plan = tap.planPosition({ flag: { top: 960, left: 100 }, stored, viewport: VP(1366, 768), box: BAR });
+  assert.deepEqual(plan.position, { left: 100, top: 648 }); assert.equal(plan.adopt, false);
+  plan = tap.planPosition({ flag: { top: 700, left: 100 }, stored, viewport: VP(1366, 768), box: BAR });
+  assert.equal(plan.adopt, true, "different flag → adopt with the current window");
+  assert.deepEqual([plan.anchor.v, plan.anchor.dy, plan.anchor.vh], ["bottom", 68, 768]);
+  assert.deepEqual(plan.position, { left: 100, top: 700 });
+  plan = tap.planPosition({ flag: { top: 960, left: 100 }, stored: {}, viewport: VP(1366, 768), box: BAR });
+  assert.equal(plan.adopt, false, "outside this window → not adopted");
+  assert.deepEqual(plan.position, { left: 100, top: 718 }, "but shown clamped (Core would fall back to 80/150)");
+});
+
+await test("TAH position: apply() shows the anchored place display-only, syncs topPos and the expand direction", async () => {
+  const saved = { set: game.settings.set, getFlag: game.user.getFlag, window: globalThis.window, tah: game.tokenActionHud };
+  const writes = []; game.settings.set = async (ns, k, v) => { writes.push([k, v]); settings[k] = v; };
+  const flags = { position: { top: 960, left: 100 } };
+  game.user.getFlag = (ns, k) => (ns === "token-action-hud-core" ? flags[k] : undefined);
+  globalThis.window = { innerWidth: 1920, innerHeight: 1080, addEventListener() {} };
+  const container = new WmEl("div"); container.className = "expand-up";
+  const name = new WmEl("div");
+  const element = { isConnected: true, style: { left: "100px", top: "960px" },
+    getBoundingClientRect() { return { left: parseFloat(this.style.left), top: parseFloat(this.style.top) }; },
+    querySelector: sel => (sel === "#token-action-hud" ? bar : sel === '[data-part="characterName"]' ? name : null),
+    querySelectorAll: sel => (sel === '[data-part="subgroupsContainer"]' ? [container] : []) };
+  const bar = { getBoundingClientRect: () => { const l = parseFloat(element.style.left); const t = parseFloat(element.style.top); return { left: l, top: t, width: 400, height: 50, right: l + 400, bottom: t + 50 }; } };
+  const app = { element, isDocked: false, isCollapsed: false, topPos: 960,
+    get direction() { return this.topPos > globalThis.window.innerHeight / 2 ? "up" : "down"; } };
+  game.tokenActionHud = app;
+  settings.tahPositionAnchor = false; settings.tahPositionAnchorData = {};
+  tap.apply();
+  assert.deepEqual(writes, []); assert.equal(element.style.top, "960px", "off → untouched");
+  settings.tahPositionAnchor = true;
+  // A drag ended on this client: anchor recorded (bottom-left).
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 960 } } } });
+  assert.equal(writes.length, 1); assert.deepEqual([writes[0][1].h, writes[0][1].v, writes[0][1].dy], ["left", "bottom", 120]);
+  // Other users, other flags, or this user's other client (HUD not at that place) record nothing.
+  tap.onUpdateUser({ id: "other", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 1 } } } });
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { isUnlocked: true } } });
+  element.style.top = "500px";
+  tap.onUpdateUser({ id: "me", getFlag: game.user.getFlag }, { flags: { "token-action-hud-core": { position: { top: 960 } } } });
+  assert.equal(writes.length, 1);
+  // Smaller window: shown 120 px above the bottom; TAH's flag is not touched.
+  writes.length = 0;
+  globalThis.window.innerHeight = 600; element.style.top = "960px"; // TAH's setPosition re-applied the flag
+  tap.apply();
+  assert.equal(element.style.top, "480px"); assert.equal(app.topPos, 480);
+  assert.deepEqual(flags.position, { top: 960, left: 100 }, "TAH's flag unchanged");
+  assert.deepEqual(writes, [], "nothing persisted for a display position");
+  // Tiny window: clamped; then large again → back at the edge distance.
+  globalThis.window.innerHeight = 100; tap.apply();
+  assert.equal(element.style.top, "0px"); assert.equal(app.topPos, 0);
+  assert.ok(container.classList.contains("expand-down") && !container.classList.contains("expand-up"), "upper half → expands down");
+  globalThis.window.innerHeight = 1080; tap.apply();
+  assert.equal(element.style.top, "960px");
+  assert.ok(container.classList.contains("expand-up"), "lower half again → expands up");
+  assert.ok(name.classList.contains("tah-hidden"));
+  // Docked styles and an empty HUD are left alone.
+  app.isDocked = true; globalThis.window.innerHeight = 600; element.style.top = "960px"; tap.apply();
+  assert.equal(element.style.top, "960px");
+  app.isDocked = false; element.isConnected = false; tap.apply();
+  assert.equal(element.style.top, "960px");
+  element.isConnected = true;
+  // Switching off hands the position back to TAH.
+  let tahSet = 0; app.setPosition = () => { tahSet++; };
+  tap.onToggle(false); assert.equal(tahSet, 1);
+  if (saved.set === undefined) delete game.settings.set; else game.settings.set = saved.set;
+  if (saved.getFlag === undefined) delete game.user.getFlag; else game.user.getFlag = saved.getFlag;
+  if (saved.window === undefined) delete globalThis.window; else globalThis.window = saved.window;
+  game.tokenActionHud = saved.tah; settings.tahPositionAnchor = false;
+});
+
+await test("TAH position: the render hook schedules one frame, only for the TAH app and only when on", () => {
+  const savedRaf = globalThis.requestAnimationFrame; const frames = [];
+  globalThis.requestAnimationFrame = fn => { frames.push(fn); return frames.length; };
+  settings.tahPositionAnchor = false;
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 0);
+  settings.tahPositionAnchor = true;
+  hooks.renderApplicationV2.forEach(h => h({ id: "something-else" }));
+  assert.equal(frames.length, 0);
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 1, "bursts coalesce into one frame");
+  const savedTah = game.tokenActionHud; game.tokenActionHud = undefined;
+  frames[0]();                                  // no HUD → nothing, no error
+  hooks.renderApplicationV2.forEach(h => h({ id: "token-action-hud-app" }));
+  assert.equal(frames.length, 2, "next render schedules again");
+  frames[1]();
+  game.tokenActionHud = savedTah; settings.tahPositionAnchor = false;
+  if (savedRaf === undefined) delete globalThis.requestAnimationFrame; else globalThis.requestAnimationFrame = savedRaf;
 });
 
 /* ---------- Template Auto-Targeting ---------- */
@@ -2347,6 +3473,185 @@ await test("template targeting: dnd5e 6 — the usage card's recorded targets ar
 });
 globalThis.canvas = ttSavedCanvas;
 game.user = ttSavedUser;
+
+/* ---------- Emanations in Token Size ---------- */
+{
+  const etModule = await import(pathToFileURL(join(ROOT, "scripts/features/emanation-token-size.js")).href);
+  etModule.default.init();
+  const { isDefaultTokenBase, baseFromToken, pickToken, applyToken } = etModule.internals;
+  const savedCanvas = globalThis.canvas;
+  const savedUser = game.user;
+  const savedDeepClone = foundry.utils.deepClone;
+  foundry.utils.deepClone = o => structuredClone(o);
+  const scene = { id: "etScene" };
+  const placeables = [];
+  globalThis.canvas = { ready: true, scene, grid: { size: 100, sizeX: 100, sizeY: 100, distance: 5 }, tokens: { placeables } };
+  const user = { id: "me", isGM: false };
+  game.user = user;
+  // 100 px square grid; a token's shape is its rectangle (local coordinates)
+  const etToken = (id, x, y, size = 1, extra = {}) => {
+    const src = { _id: id, x, y, width: size, height: size, shape: 4, elevation: 0, depth: size, level: "L1", hidden: false, sort: 0, ...(extra.source ?? {}) };
+    const doc = { id, documentName: "Token", parent: scene, _source: src, hidden: src.hidden, isSecret: !!extra.secret };
+    const t = { document: doc, visible: extra.visible ?? true, shape: { contains: (px, py) => px >= 0 && py >= 0 && px <= size * 100 && py <= size * 100 } };
+    placeables.push(t);
+    return t;
+  };
+  const emanation = (x, y, extra = {}) => ({ type: "emanation", base: { type: "token", x, y, width: 1, height: 1, shape: 4, hole: false }, radius: 300, ...extra });
+  const regionDoc = (shapes, extra = {}) => ({
+    parent: scene,
+    _source: { shapes, attachment: { token: null }, levels: ["L1"], hidden: false, elevation: { bottom: null, top: null }, flags: {}, ...extra },
+    updates: [],
+    updateSource(c) { this.updates.push(c); Object.assign(this._source, c); }
+  });
+  const preCreate = (doc, options = {}) => hooks.preCreateRegion.forEach(h => h(doc, {}, options, "me"));
+  Object.assign(settings, { emanationTokenSize: true, emanationSelfOnCaster: false });
+
+  await test("emanation size: pure helpers — default 1×1 token base, base from a token, top-most token", () => {
+    assert.equal(isDefaultTokenBase(emanation(0, 0)), true);
+    assert.equal(isDefaultTokenBase(emanation(0, 0, { base: { type: "token", x: 0, y: 0, width: 2, height: 2 } })), false);
+    assert.equal(isDefaultTokenBase({ type: "emanation", base: { type: "circle", width: 1, height: 1 } }), false);
+    assert.equal(isDefaultTokenBase({ type: "circle", x: 0, y: 0, radius: 100 }), false);
+    assert.deepEqual(baseFromToken({ x: 1, y: 2, width: 3, height: 3, shape: 0, elevation: 9 }), { x: 1, y: 2, width: 3, height: 3, shape: 0 });
+    const all = () => true;
+    assert.equal(pickToken([{ token: "low", contains: all, elevation: 0, sort: 5 }, { token: "high", contains: all, elevation: 10, sort: 0 }], {}), "high");
+    assert.equal(pickToken([{ token: "a", contains: all, elevation: 0, sort: 1 }, { token: "b", contains: all, elevation: 0, sort: 2 }], {}), "b");
+    assert.equal(pickToken([{ token: "a", contains: () => false, elevation: 0, sort: 1 }], {}), null);
+    const data = { shapes: [emanation(0, 0)], elevation: { bottom: 0, top: 10 }, attachment: { token: null } };
+    applyToken(data, 0, { id: "t", _source: { x: 100, y: 100, width: 2, height: 2, shape: 4, elevation: 20, depth: 2, level: "L2", hidden: true } }, { attach: true, gridDistance: 5 });
+    assert.deepEqual(data.elevation, { bottom: 20, top: 40 }, "core: bottom + elevation, top + elevation + depth × distance");
+    assert.deepEqual([data.attachment.token, data.levels, data.hidden], ["t", ["L2"], true]);
+  });
+
+  const large = etToken("large", 200, 200, 2);
+  await test("emanation size: a 1×1 emanation on a Large token takes its size and is attached (levels, hidden, elevation like core)", () => {
+    large.document._source.elevation = 10; large.document._source.hidden = true; large.document.hidden = true;
+    const doc = regionDoc([emanation(250, 250)], { elevation: { bottom: -30, top: 30 } });
+    preCreate(doc);
+    assert.equal(doc.updates.length, 1);
+    assert.deepEqual(doc._source.shapes[0].base, { type: "token", x: 200, y: 200, width: 2, height: 2, shape: 4, hole: false });
+    assert.equal(doc._source.shapes[0].radius, 300, "the radius stays");
+    assert.deepEqual(doc._source.attachment, { token: "large" });
+    assert.deepEqual(doc._source.levels, ["L1"]);
+    assert.equal(doc._source.hidden, true);
+    assert.deepEqual(doc._source.elevation, { bottom: -20, top: 50 });
+    large.document._source.elevation = 0; large.document._source.hidden = false; large.document.hidden = false;
+    const open = regionDoc([emanation(250, 250)]);
+    preCreate(open);
+    assert.deepEqual(open._source.elevation, { bottom: null, top: null }, "unbounded elevation stays unbounded");
+  });
+  await test("emanation size: guards — no token there, already attached, undo/paste, switched off, other shapes, other scene, dnd5e Regions", () => {
+    const cases = [
+      [regionDoc([emanation(800, 800)]), {}, "no token under the base's centre"],
+      [regionDoc([emanation(250, 250)], { attachment: { token: "other" } }), {}, "already attached"],
+      [regionDoc([emanation(250, 250)]), { isUndo: true }, "undo"],
+      [regionDoc([emanation(250, 250)]), { isPaste: true }, "paste"],
+      [regionDoc([{ type: "circle", x: 250, y: 250, radius: 100 }]), {}, "not an emanation"],
+      [regionDoc([emanation(250, 250, { base: { type: "circle", x: 250, y: 250, radius: 10, width: 1, height: 1 } })]), {}, "not a token base"],
+      [regionDoc([emanation(250, 250)], { flags: { dnd5e: { activity: "x" } } }), {}, "dnd5e Regions go through dnd5e.createMeasuredTemplate"],
+      [Object.assign(regionDoc([emanation(250, 250)]), { parent: { id: "elsewhere" } }), {}, "not the viewed scene"]
+    ];
+    for (const [doc, options, why] of cases) {
+      preCreate(doc, options);
+      assert.equal(doc.updates.length, 0, why);
+    }
+    settings.emanationTokenSize = false;
+    const off = regionDoc([emanation(250, 250)]);
+    preCreate(off);
+    assert.equal(off.updates.length, 0, "switched off");
+    settings.emanationTokenSize = true;
+  });
+  await test("emanation size: a Region with several shapes gets the sizes but no attachment", () => {
+    const doc = regionDoc([emanation(250, 250), { type: "circle", x: 0, y: 0, radius: 50 }]);
+    preCreate(doc);
+    assert.equal(doc._source.shapes[0].base.width, 2);
+    assert.deepEqual(doc._source.shapes[1], { type: "circle", x: 0, y: 0, radius: 50 });
+    assert.deepEqual(doc._source.attachment, { token: null });
+  });
+  await test("emanation size: invisible / secret tokens count for the GM only, other levels never", () => {
+    const hidden = etToken("unseen", 600, 600, 3, { visible: false });
+    const secret = etToken("secret", 1000, 1000, 2, { secret: true });
+    const upstairs = etToken("upstairs", 1400, 1400, 2, { source: { level: "L2" } });
+    for (const [x, t] of [[650, "unseen"], [1050, "secret"]]) {
+      const doc = regionDoc([emanation(x, x)]);
+      preCreate(doc);
+      assert.equal(doc.updates.length, 0, `player: ${t} is not found`);
+    }
+    user.isGM = true;
+    secret.document.isSecret = false;                           // TokenDocument#isSecret is false for owners (GM)
+    for (const [x, t] of [[650, "unseen"], [1050, "secret"]]) {
+      const doc = regionDoc([emanation(x, x)]);
+      preCreate(doc);
+      assert.equal(doc._source.attachment.token, t, `GM: ${t} is found`);
+    }
+    const doc = regionDoc([emanation(1450, 1450)]);
+    preCreate(doc);
+    assert.equal(doc.updates.length, 0, "a token on another level is ignored");
+    user.isGM = false;
+    placeables.splice(placeables.indexOf(hidden), 1);
+    placeables.splice(placeables.indexOf(secret), 1);
+    placeables.splice(placeables.indexOf(upstairs), 1);
+  });
+
+  // dnd5e 6: dnd5e.createMeasuredTemplate(activity, regionData) — plain data before creation
+  const caster = etToken("caster", 600, 200, 2);
+  globalThis.fromUuidSync = uuid => (uuid === "Scene.etScene.Token.caster" ? caster.document : null);
+  const dnd5eData = (x, y, extra = {}) => ({
+    shapes: [emanation(x, y)], levels: ["L1"], attachment: { token: undefined },
+    flags: { dnd5e: { activity: "Actor.a.Item.i.Activity.x", origin: "Scene.etScene.Token.caster" } }, ...extra
+  });
+  const activity = (units, stationary = false) => ({ range: { units }, target: { template: { stationary } }, getUsageToken: () => caster.document });
+  const place5e = (act, data) => { hooks["dnd5e.createMeasuredTemplate"].forEach(h => h(act, data)); return data; };
+
+  await test("emanation size (dnd5e 6): a placement on a token gets its size; stationary ones are not attached", () => {
+    const [moving] = place5e(activity("ft"), [dnd5eData(250, 250)]);
+    assert.equal(moving.shapes[0].base.width, 2);
+    assert.equal(moving.attachment.token, "large");
+    assert.equal(moving.elevation, undefined, "dnd5e sends no elevation — none is added");
+    const [still] = place5e(activity("ft", true), [dnd5eData(250, 250)]);
+    assert.deepEqual([still.shapes[0].base.x, still.shapes[0].base.width], [200, 2]);
+    assert.equal(still.attachment.token, undefined, "dnd5e's stationary rule wins");
+    const [nothing] = place5e(activity("ft"), [dnd5eData(1800, 1800)]);
+    assert.equal(nothing.shapes[0].base.width, 1, "not self-range, no token under the click");
+    const [attached] = place5e(activity("ft"), [dnd5eData(250, 250, { attachment: { token: "other" } })]);
+    assert.equal(attached.shapes[0].base.width, 1, "hover worked → left alone");
+    settings.emanationTokenSize = false;
+    const [off] = place5e(activity("ft"), [dnd5eData(250, 250)]);
+    assert.equal(off.shapes[0].base.width, 1, "switched off");
+    settings.emanationTokenSize = true;
+  });
+  await test("emanation size (dnd5e 6): self-range emanations snap to the caster unless clicked on another token", () => {
+    settings.emanationSelfOnCaster = true;
+    const [self] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.deepEqual(self.shapes[0].base, { type: "token", x: 600, y: 200, width: 2, height: 2, shape: 4, hole: false });
+    assert.equal(self.attachment.token, "caster");
+    const [still] = place5e(activity("self", true), [dnd5eData(1800, 1800)]);
+    assert.deepEqual([still.shapes[0].base.x, still.attachment.token], [600, undefined], "stationary: on the caster, not attached");
+    const [other] = place5e(activity("self"), [dnd5eData(250, 250)]);
+    assert.equal(other.attachment.token, "large", "a click on another token keeps it there");
+    const [ft] = place5e(activity("ft"), [dnd5eData(1800, 1800)]);
+    assert.equal(ft.shapes[0].base.width, 1, "only self-range activities");
+    settings.emanationTokenSize = false;
+    const [onlySelf] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.equal(onlySelf.attachment.token, "caster", "works without the size setting");
+    const [otherNoSize] = place5e(activity("self"), [dnd5eData(250, 250)]);
+    assert.equal(otherNoSize.shapes[0].base.width, 1, "without the size setting a click on another token is left alone");
+    const [onCaster] = place5e(activity("self"), [dnd5eData(650, 250)]);
+    assert.equal(onCaster.attachment.token, "caster", "a click on the caster itself");
+    const fallback = { ...activity("self"), getUsageToken: () => caster.document };
+    const [noOrigin] = place5e(fallback, [dnd5eData(1800, 1800, { flags: { dnd5e: { activity: "x" } } })]);
+    assert.equal(noOrigin.attachment.token, "caster", "no origin flag → activity.getUsageToken()");
+    settings.emanationTokenSize = true;
+    settings.emanationSelfOnCaster = false;
+    const [selfOff] = place5e(activity("self"), [dnd5eData(1800, 1800)]);
+    assert.equal(selfOff.shapes[0].base.width, 1, "self setting off");
+  });
+
+  delete globalThis.fromUuidSync;
+  foundry.utils.deepClone = savedDeepClone;
+  if (savedDeepClone === undefined) delete foundry.utils.deepClone;
+  globalThis.canvas = savedCanvas;
+  game.user = savedUser;
+}
 
 /* ---------- Combat Snapshots ---------- */
 {

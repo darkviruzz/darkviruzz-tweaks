@@ -15,8 +15,10 @@ import spellEffectAutoApply from "./spell-effect-autoapply.js";
 import findMyToken from "./find-my-token.js";
 import movementHistoryReset from "./movement-history-reset.js";
 import defeatedTokens from "./defeated-tokens.js";
+import zeroHitPoints from "./zero-hit-points.js";
 import pauseControl from "./pause-control.js";
 import liveTokenDrag from "./live-token-drag.js";
+import tokenStackFan from "./token-stack-fan.js";
 import filePickerPreview from "./file-picker-preview.js";
 import tokenArtPicker from "./token-art-picker.js";
 import savageAttacker from "./savage-attacker.js";
@@ -25,8 +27,11 @@ import chatExport from "./chat-export.js";
 import tokenStatusIcons from "./token-status-icons.js";
 import tokenFormation from "./token-formation.js";
 import templateTargeting from "./template-targeting.js";
+import emanationTokenSize from "./emanation-token-size.js";
 import rsrAttackTargets from "./rsr-attack-targets.js";
 import tahLayer from "./tah-layer.js";
+import tahTokenTools from "./tah-token-tools.js";
+import tahPosition from "./tah-position.js";
 import combatSnapshot from "./combat-snapshot.js";
 
 export const FEATURES = [
@@ -35,17 +40,22 @@ export const FEATURES = [
   findMyToken,
   movementHistoryReset,
   defeatedTokens,
+  zeroHitPoints,
   tokenStatusIcons,
   pauseControl,
   combatSnapshot,
   liveTokenDrag,
+  tokenStackFan,
   filePickerPreview,
   tokenArtPicker,
   tokenFormation,
   templateTargeting,
+  emanationTokenSize,
   savageAttacker,
   weaponMastery,
   rsrAttackTargets,
   chatExport,
-  tahLayer
+  tahLayer,
+  tahTokenTools,
+  tahPosition
 ];

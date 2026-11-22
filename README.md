@@ -58,9 +58,9 @@ sheet (Tidy already makes the modifier a roll button).
 
 ### 2. Spell Effect Auto-Apply  ·  *dnd5e · world (GM)*
 
-Applies the Active Effect of a self-cast spell automatically, so nobody has to press
-**apply** on the chat card. Typical case: *Mage Armor*, which you almost always cast on
-yourself.
+Applies the Active Effect of a spell, feature or item you use **on yourself** automatically,
+so nobody has to press **apply** on the chat card. Typical cases: *Mage Armor*, *Rage*, a
+*Potion of Flying*.
 
 **Why the click exists in the first place:** the chat card's effect tray is a GM tool. In
 dnd5e 5.x only the GM sees it for spell effects; in dnd5e 6.x players see it only if the GM
@@ -69,16 +69,16 @@ even then someone still has to click **apply**. That's why the GM ends up clicki
 someone else's Mage Armor.
 
 **How it works:** the module listens to dnd5e's `dnd5e.postUseActivity` hook, which fires on
-the caster's own client. When all of the conditions below hold, it hands the effect to
+the acting user's own client. When all of the conditions below hold, it hands the effect to
 **dnd5e's own chat-tray code** — the same code the apply button runs, in whichever dnd5e
 version (5.x or 6.x) is installed — so the result is identical: same origin, same
-concentration link, and re-casting **refreshes** the existing effect instead of stacking a
+concentration link, and using it again **refreshes** the existing effect instead of stacking a
 second copy.
 
-**The chat card** is adjusted to match. Casting a Self/Touch spell without targeting anything
+**The chat card** is adjusted to match. Using a Self/Touch activity without targeting anything
 normally leaves dnd5e's target list empty, so the card's effect tray falls back to reading
-your canvas selection and shows *"No Tokens Selected"*. This feature records the caster as the
-target, so the card lists them properly, and adds an **"Automatically applied to …"** banner
+your canvas selection and shows *"No Tokens Selected"*. This feature records your actor as the
+target, so the card lists it properly, and adds an **"Automatically applied to …"** banner
 (above the tray, or at the end of the card when the tray isn't shown to you). The banner is
 re-checked against the actor's live effects every time the card renders, so it disappears on
 its own if the effect is later removed — it never claims something is applied when it isn't.
@@ -86,24 +86,76 @@ its own if the effect is later removed — it never claims something is applied 
 An effect is auto-applied only when **all** of these are true:
 
 1. the feature is enabled,
-2. the item is a **spell** whose name is on the whitelist (case-insensitive),
-3. the spell's **range is Self or Touch**,
-4. **the caster is the target** — implicit for Self; for Touch this means either nothing was
-   targeted, or the caster's own token was the only target,
-5. the casting user **owns** the actor (dnd5e refuses effect application otherwise, and this
+2. the item's name is on the list (case-insensitive) — spells, features (e.g. *Rage*) and
+   items (e.g. potions) alike,
+3. the activity is **not** an attack, save, damage or enchant activity. Their effects are meant
+   for the creature that is hit (*Color Spray* → Blinded, the Smites, *Shocking Grasp* …) or
+   for an item, even when the range says Self — so they are never put on the user,
+4. the activity's **range is Self or Touch**,
+5. **you are the target** — implicit for Self; for Touch this means either nothing was
+   targeted, or your own token was the only target,
+6. the acting user **owns** the actor (dnd5e refuses effect application otherwise, and this
    feature does not try to work around that),
-6. the spell offers **exactly one** effect. Spells with several effect variants to choose
-   from are left to the player — dnd5e's tray pre-selects only one effect as well.
+7. the activity offers **exactly one** effect — or several and **Ask When Several Effects** is
+   on: then a small dialog asks which one to apply (*Apply nothing* / closing it applies
+   nothing). Without that setting, items offering a choice (*Guidance*: one effect per skill)
+   are left to the chat card as before.
 
-Anything else — a Touch spell aimed at an ally, a ranged spell, a spell not on the list, a
-multi-effect spell — behaves exactly as before and still waits for a manual apply.
+Anything else — a Touch spell aimed at an ally, a ranged spell, an item not on the list —
+behaves exactly as before and still waits for a manual apply.
+
+**The list in the settings window** shows every entry as a chip, grouped into *Spells* (sorted
+by level), *Features*, *Items* and *Not found in this world*. The group and a status come from
+the items on the world's actors with that name; hover a chip for details:
+
+- **ok** (check mark) — a Self/Touch activity offers exactly one effect.
+- **choice of N** — the activities offer several effects; works only with *Ask When Several
+  Effects* (otherwise shown as a warning).
+- **never fires** (red), with the reason: no Self or Touch activity offers an effect (e.g.
+  *Hunter's Mark*: range 90 ft — its effect marks the enemy, so it doesn't belong on the list);
+  only attack/save/damage activities carry the effects; or no activity references an effect at
+  all. Such entries are kept until you remove them — the feature simply never fires for them.
+- **unknown** (question mark, dashed) — no actor in this world has an item of that name (still allowed, e.g. for later).
+
+× removes an entry. The add field suggests names of items on the world's actors (player
+characters first) that can auto-apply and aren't listed yet; Enter or **Add** adds it, and a
+comma-separated paste adds several. **Suggestions** lists the curated defaults below that are
+not on the list yet — click one, or **Add all suggestions**. Saving still goes through the
+normal **Save Changes** button; the setting itself stays one comma-separated text, so lists
+from older versions keep working.
+
+**Quick add for the GM:** when a spell, feature or item that isn't on the list is used through a
+Self/Touch activity that offers an effect, its chat card shows a small **Auto-apply "…" in
+future** button (GM only, while the feature is on). One click puts the name on the list. On
+dnd5e's own actor sheets the item context menu (right-click) also has **Auto-apply on self-use:
+add / remove** for items with such an activity.
+
+**Curated defaults** — the default list for worlds that never saved the setting, and the
+content of **Suggestions** (each checked against the dnd5e 6.0.6 SRD and the PHB/DMG modules:
+a Self/Touch activity offering exactly one effect, except the choices):
+
+- **Spells:** Mage Armor, Shield, Longstrider, Jump, Darkvision, See Invisibility,
+  Invisibility, Greater Invisibility, Fly, Gaseous Form, Spider Climb, Barkskin, Stoneskin,
+  Tongues, Comprehend Languages, Speak with Animals, Detect Magic, Detect Evil and Good,
+  Detect Poison and Disease, Disguise Self, Alter Self, Divine Favor, Heroism, Protection from
+  Evil and Good, Protection from Poison, Pass without Trace, Death Ward, Freedom of Movement,
+  Nondetection, True Seeing, Mind Blank, Foresight, Glibness, Etherealness, Fount of Moonlight
+- **Choices** (need *Ask When Several Effects*): Guidance, Resistance, Enhance Ability,
+  Protection from Energy
+- **Features:** Rage, Draconic Flight, Innate Sorcery, Monk's Focus, Large Form, Stonecunning,
+  Nature's Veil, Dragon Wings, Superior Defense, Cunning Action, Defensive Duelist, Peerless
+  Athlete
+- **Items:** Potion of Flying, Potion of Invisibility, Potion of Greater Invisibility, Potion of
+  Invulnerability, Potion of Water Breathing, Potion of Climbing, Winged Boots, Wings of
+  Flying, Cloak of the Bat
 
 | Setting | Default | Effect |
 |---|---|---|
-| **Auto-Apply Self-Cast Spell Effects** | off | Master switch for the feature. |
-| **Auto-Apply Spell Whitelist** | `Mage Armor` | Comma-separated spell names allowed to auto-apply, e.g. `Mage Armor, Shield of Faith`. |
+| **Auto-Apply Self-Use Effects** | off | Master switch for the feature (also for the quick-add button and the context-menu entry). |
+| **Ask When Several Effects** | off | Items offering several effects ask the user which one to apply instead of being skipped. |
+| **Auto-Apply List** | the curated defaults above | The names allowed to auto-apply, edited with the list widget (stored as one comma-separated text). |
 
-> Names are matched against the spell's name **as it appears on the character sheet**, so if
+> Names are matched against the item's name **as it appears on the character sheet**, so if
 > your world uses translated compendium items, put the translated name in the list. The range
 > check is deliberately based on *range*, not target type: the 2024 *Mage Armor* is
 > `range: touch` with target type `willing`, so a target-type check would never match it.
@@ -172,7 +224,55 @@ the defeated status is removed (e.g. the creature is revived).
 > combat (system setting `autoApplyDowned` in dnd5e's combat settings, off by default); its
 > "Dead" effect already uses the overlay and works together with this feature.
 
-### 6. Token Status Icons  ·  *any system · world (GM)*
+### 6. Dropping to 0 Hit Points  ·  *dnd5e · world (GM)*
+
+The D&D 2024 rules for 0 HP, with the decision left to the GM: a creature at 0 HP is
+Unconscious; a monster usually dies; massive damage kills outright; and an attacker may instead
+knock a creature out (1 HP, Unconscious, wakes after a Short Rest).
+
+**How it works:** when a character or NPC drops from above 0 to 0 HP — by any means: damage
+from a chat card, the token's HP bar, the sheet — the GM's client gives it the **Unconscious**
+condition (dnd5e's own status effect), in and out of combat. Then the GM gets a chat card,
+whispered to GMs only, with every creature that just dropped (all creatures dropped by the
+same damage application — e.g. one Fireball — share one card). Each line shows the creature,
+its current state (read live from the actor, so it stays correct after healing or manual
+changes) and buttons:
+
+- **Dead** — removes the automatic Unconscious, keeps the HP at 0, applies the **Dead** status
+  as a full-token overlay and marks the creature **defeated** in every encounter of the Combat
+  Tracker it is part of (like the tracker's own skull toggle).
+- **Knocked out** — removes Dead (and the defeated mark) if set, sets the HP to **1** (dnd5e
+  resets the death saves) and keeps it **Unconscious for 1 hour** of world time — the Short Rest
+  the rules prescribe. It ends early as soon as the creature regains any HP. By the rules only a
+  melee attack can knock out; the button is always offered — your call.
+- **Reset** (small) — back to undecided: 0 HP, Unconscious, not dead. For a misclick.
+- **All dead** — with two or more undecided creatures on one card.
+
+**Massive damage:** when the damage was applied through dnd5e (chat card damage buttons, the
+token HP bar), the card knows the amount. If the damage left after reaching 0 HP (after
+temporary HP) equals or exceeds the creature's HP maximum, the line says *"Massive damage: …
+dead by the rules"* and highlights **Dead**. HP edited directly on the sheet carry no damage
+amount — then the card says nothing about it.
+
+**Unconscious ends by itself:** the automatic Unconscious is removed as soon as the HP rise
+above 0; a knocked-out creature's when it regains any HP or after the hour. Unconscious effects
+that this feature did not create (a Sleep spell, one set by hand) are never removed by it.
+Players see only the condition on the token; the card is GM-only.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Unconscious at 0 HP + GM Decision Card** | off | Unconscious at 0 HP, the GM card with Dead / Knocked out / Reset, massive-damage note. |
+
+> **dnd5e's own option:** dnd5e 6 can apply Unconscious/Dead in combat itself (*Configure
+> Combat → Auto-Apply Downed*, default *Never*). It can stay on *Never* — this feature covers
+> in and out of combat. If it is switched on, dnd5e applies its status in combat as before
+> (minions straight to Dead) and this feature only adds the card; *Knocked out* takes over
+> dnd5e's Unconscious so it doesn't vanish at 1 HP.
+>
+> **With *Defeated Tokens* (5.):** the Dead status set by the card already has the overlay; *Send
+> Defeated Tokens to the Back* reacts to it as to any other Dead status.
+
+### 7. Token Status Icons  ·  *any system · world (GM)*
 
 Clearer condition icons on tokens: the conditions that matter most as the big overlay, and
 larger icons when a token only has a few.
@@ -209,7 +309,7 @@ effect or token is changed.
 > itself (every module sees it); *Token Status Icons* only changes how tokens are drawn. Both
 > work together.
 
-### 7. Pause Control  ·  *any system · world (GM)*
+### 8. Pause Control  ·  *any system · world (GM)*
 
 Automatic pausing and unpausing — a replacement for the unmaintained
 *Koboldworks – Pause Control* module (last release 2024, made for Foundry 12). **Disable
@@ -238,7 +338,7 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
-### 8. Live Token Drag  ·  *any system · world (GM)*
+### 9. Live Token Drag  ·  *any system · world (GM)*
 
 While someone drags a token, everyone else sees the token itself follow the mouse in real
 time — on its own, Foundry only shows them the planned path (the ruler). A replacement for
@@ -283,7 +383,43 @@ in Foundry.
 > The feature uses the module's own message channel, which Foundry sets up when a world is
 > launched. If live drags don't show up right after installing or updating the module,
 > return to setup and launch the world again.
-### 9. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
+
+### 10. Stacked Tokens Fan Out  ·  *any system · world (GM)*
+
+Tokens lying (almost) on top of each other are hard to pick. With this on, resting the mouse
+on such a stack spreads it out a little **on your own screen only**, so every token of it can
+be clicked — for the GM and for players alike.
+
+**How it works:** a *stack* is the token under the mouse plus every token whose centre is
+closer to it than half the smaller token's width/height (and so on: A over B over C is one
+stack). Only tokens you can see and select or target count — hidden tokens you can't see,
+secret tokens and tokens on another layer or with a non-selecting tool are left out. When the
+mouse has rested on a stack for the **delay**, it fans out:
+
+- the token **under the mouse never moves** — waiting and then clicking always selects the
+  token that was under the mouse;
+- every other token moves the **distance** (default 30 % of its own width/height) away, evenly
+  spread around it (two tokens: the other one moves up and to the right); with many tokens the
+  circle grows a little so they don't cover each other. The layout is always the same for the
+  same stack.
+
+While the stack is fanned out you can move the mouse onto any of its tokens and click, select
+or target it; the layout stays put. It folds back when the mouse leaves the fanned tokens (after
+a moment), you start dragging a token, a token of the stack moves, changes size, is hidden,
+deleted or animated, the Token HUD opens for one of them (it sits at the real position), you
+switch tool, layer or scene, or the GM switches the setting off.
+
+Only the tokens' pictures (with border, bars, name, status icons and the clickable area) move:
+nothing is changed for real, nothing is sent to other players, and vision, light and the
+tokens' real positions stay where they are.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Fan out stacked tokens** | off | Stacks of tokens spread apart while the mouse rests on them (each person sees it only on their own screen). |
+| **Delay (ms)** | 600 | How long the mouse has to rest on the stack (200–2000). |
+| **Distance (% of token size)** | 30 | How far the tokens move apart (10–100 % of their width/height). |
+
+### 11. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
 
 See images in Foundry's File Browser without clicking them — and without downloading big
 maps over and over. Covers what the *Asset Preview* module does (which needs a click), so
@@ -329,7 +465,7 @@ dropped tile from that image, so swapping in a 512 px thumbnail would shrink it.
 | **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
 | **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
 | **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 512 px. World setting (GM). |
-### 10. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
+### 12. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
 
 Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –
 Online* in a gallery with preview — a replacement for that module's macro *"DND/PF – Get Too
@@ -339,7 +475,8 @@ are loaded from GitHub exactly as before.
 
 **How it works:**
 
-- **Open it** for the selected tokens with the Token HUD button (option below) or a
+- **Open it** for the selected tokens with the Token HUD button (option below), from Token
+  Action HUD (see *Token Tools in Token Action HUD*) or a
   keybinding; for an actor's prototype token via **right-click on the actor in the Actors
   sidebar → Token Art (Too Many Tokens)**; or from a macro:
   `game.modules.get("darkviruzz-tweaks").api.openTokenArtPicker();`
@@ -378,14 +515,18 @@ are loaded from GitHub exactly as before.
 > links and keep working with Too Many Tokens deactivated; actors with an old Too Many Tokens
 > wildcard need converting once (see above).
 
-### 11. Token Formations  ·  *any system · world (GM) + per-user HUD entry*
+### 13. Token Formations  ·  *any system · world (GM) + per-user HUD entry*
 
 Arrange a group of tokens in one go — made for gridless maps.
 
 **How it works:** select several tokens and open **Formation** (Token HUD, a keybinding or
 `game.modules.get("darkviruzz-tweaks").api.openFormation()`). A small window offers four
-formations, and the canvas shows a live preview — a ghost image at every new place and a line
-from each token to it:
+formations and shows a **preview picture** of the result right in the window: a faint dashed
+circle where each token stands now, a solid circle (with the token's image or initial) at its new
+place, an arrow in between, an orange arrow for the front, red for places a wall blocks. The canvas
+shows the same as "where on the map": while the window is open the real tokens are dimmed to
+20 % (only on your screen — nothing is saved), ghosts of the new places are drawn at 80 % and thin
+arrows (with a dark outline, readable on bright and dark maps) lead from each token to its place:
 
 - **Block** — rows and columns, as square as possible and rather wider than deep (7 tokens →
   3 + 3 + 1); *Width (columns)* makes it a broad line (all in one rank) or a column (1).
@@ -398,12 +539,26 @@ crowded (half overlapping), up to 5 = far apart — and larger creatures automat
 larger distance. *Facing* turns the formation (the front row of a block faces up at 0°).
 *Who goes where*: **least movement** (default — every token takes a place close to where it
 stands, tokens of the same size swap until the total way is shortest), **larger creatures in
-the middle / front** or **outside / behind**. On maps with a grid, *Snap to grid* is offered.
+the middle / front** or **outside / behind**, and in dnd5e worlds also:
+
+- **Defenders in front** — highest AC first (ties: more max HP first);
+- **Attackers in front** — melee attackers first, ordered by the attack bonus of their primary
+  attack (first equipped weapon, else a natural attack / feature, else a spell attack); creatures
+  whose primary attack has **reach** (over 5 ft) form the second line, **ranged** attackers go to
+  the back, creatures without an attack last.
+
+"First" means the front row of a block, the centre of a hex, the first places on a ring. Creatures
+that rank equally and have the same size (e.g. four identical goblins) settle among themselves by
+least movement — they never cross each other's paths. If no selected creature has the data (no AC /
+no attacks), these orders fall back to "larger creatures first". On maps with a grid, *Snap to
+grid* is offered.
 
 Places behind walls are skipped: a place counts only if the straight line from the formation's
-centre to it isn't blocked by a wall, and it lies inside the scene. *Apply* moves all tokens
+centre to it isn't blocked by a wall, and it lies on the canvas — the map **or the padding around
+it** (Foundry's own limit for token movement), so tokens parked next to the map stay there instead
+of being pulled onto it. *Apply* moves all tokens
 together as a normal movement, so Foundry still stops a token at a wall on its own way there
-(the preview marks those in red). The formation is centred where the group stands; afterwards
+(the previews mark those in red). The formation is centred where the group stands; afterwards
 the tokens stay selected, so you can drag the whole formation somewhere else. Players can
 arrange the tokens they own.
 
@@ -420,7 +575,7 @@ both — so the HUD doesn't fill up.
 
 ---
 
-### 12. Template Auto-Targeting  ·  *any system (chat cards: dnd5e 6) · world (GM)*
+### 14. Template Auto-Targeting  ·  *any system (chat cards: dnd5e 6) · world (GM)*
 
 Place a template — every creature in it is targeted.
 
@@ -464,7 +619,43 @@ Which creatures count follows the D&D rules for areas of effect:
 
 ---
 
-### 13. Savage Attacker  ·  *dnd5e · world (GM)*
+### 15. Emanations in Token Size  ·  *any system (caster: dnd5e 6) · world (GM)*
+
+Emanations (auras such as *Spirit Guardians*) get the size of the token they come from.
+
+**How it works:** in Foundry every emanation starts from a 1×1 base. Foundry gives it a token's
+size — and lets it follow that token — only if the mouse happened to highlight the token at the
+moment of the click while placing a spell's template; the Region tool's emanation never does.
+So the aura of a Large creature often comes out one size too small, and doesn't move with it.
+
+- **Emanations Take the Token's Size:** when an emanation is created with its base still 1×1 and
+  the centre of that base lies on a token, the base becomes that token's size, shape and position.
+  If the Region consists of just that emanation and isn't attached yet, it is also **attached** to
+  the token (it follows the token's moves and size changes), exactly as Foundry does when the
+  highlight worked — including the token's level, its hidden state and its elevation. This also
+  works for tokens you don't own (as in Foundry itself), but only for tokens you can see; secret
+  tokens count only for their owners and the GM. If several tokens overlap, the top one counts.
+  It applies to emanations drawn with the Region tool and to D&D 5e 6 spell templates.
+  **Stationary** D&D templates (*target.template.stationary*) get the size and position but are
+  not attached. Undo, paste and Regions that are already attached are left alone; a Region with
+  several shapes gets the sizes but no attachment.
+- **Self-Range Emanations on the Caster (D&D 5e 6):** an emanation of an activity with range
+  *Self* always goes onto the caster's token, in its size and attached to it (unless stationary),
+  **wherever you click** — you no longer have to hit your own token. Clicking on another token
+  keeps it there. The caster is the token dnd5e uses for the activity (your controlled token,
+  else the first one on the scene). Works independently of the first setting.
+
+The corrected base also changes what *Template Auto-Targeting* sees: the area now starts at the
+token's edge, and the token the emanation comes from is left out.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Emanations Take the Token's Size** | off | World switch (GM): a 1×1 emanation drawn or placed on a token takes that token's size and follows it. |
+| **Self-Range Emanations on the Caster (D&D 5e 6)** | off | Emanations of *Self*-range activities snap to the caster's token wherever the click was. |
+
+---
+
+### 16. Savage Attacker  ·  *dnd5e · world (GM)*
 
 Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
 roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
@@ -497,7 +688,7 @@ not damage).
 
 ---
 
-### 14. Weapon Mastery  ·  *dnd5e · world (GM)*
+### 17. Weapon Mastery  ·  *dnd5e · world (GM)*
 
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this
@@ -576,7 +767,7 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
 | **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
 | **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
 
-### 15. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
+### 18. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
 
 See whom an attack was rolled against when you use **RSReforged**.
 
@@ -592,7 +783,7 @@ clickable target pills, sorted hits first. Who sees AC and hit/miss follows dnd5
 |---|---|---|
 | **Show Attack Targets on RSReforged Cards** | off | Adds the targets row to RSReforged's attack section (RSReforged on dnd5e 6). |
 
-### 16. Chat Export by Time Range  ·  *any system · world (GM)*
+### 19. Chat Export by Time Range  ·  *any system · world (GM)*
 
 Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
 chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
@@ -633,7 +824,7 @@ timestamps); a second argument `{ format: "foundry" }` writes Foundry's format.
 | **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
 | **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
 
-### 17. Token Action HUD Layer  ·  *any system · world (GM)*
+### 20. Token Action HUD Layer  ·  *any system · world (GM)*
 
 Keeps **Token Action HUD** visible above the interface.
 
@@ -648,7 +839,61 @@ HUD behaves as the module made it.
 | **Keep Token Action HUD Above the Interface** | off | Pin the HUD to the layer below. |
 | **Token Action HUD: Layer (z-index)** | 50 | 31–99; 50 = above the Carousel (30), below windows (100+). |
 
-### 18. Combat Snapshots  ·  *any system · world (GM)*
+### 21. Token Tools in Token Action HUD  ·  *any system · world (GM)*
+
+Puts this module's token tools — **Token Art Picker** and **Token Formations** — into
+**Token Action HUD** as actions, so you don't have to right-click the token for them.
+
+**How to get them into the HUD (GM / Assistant GM):**
+
+1. Switch on the tool itself (*Enable Token Art Picker*, *Token Formations*) and set
+   **Token Tools in Token Action HUD** below to *GMs and Assistant GMs* (or *Everyone*).
+2. Select one or more tokens. The tools appear in Token Action HUD on the **Utility** tab
+   (German: *Nützliches*) in the **Token** group — next to *Make Invisible* and *Add to
+   Combat*. A tool only shows where it can be used: the art picker for tokens you own (and only
+   when *Too Many Tokens – Online* is installed), Formations when several tokens are selected.
+   Clicking one opens it for the currently selected tokens.
+3. **Not there?** Your HUD layout may no longer have the Token group, or you want the tools
+   somewhere else. With suitable tokens selected (the list only offers tools usable right now),
+   click the **padlock** on the HUD to unlock it, click the **+** in the group you want, and pick
+   the action (*Token art (Too Many Tokens)*, *Formation*) from the list —
+   then lock the HUD again. Token Action HUD remembers it in your layout. (World macros can be
+   added to the HUD the same way.)
+
+The per-user *Token HUD Button* options of the tools are independent of this: they only
+control the right-click Token HUD. Without Token Action HUD installed, this option does nothing.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Token Tools in Token Action HUD** | Off | *Off* · *GMs and Assistant GMs* · *Everyone* (players get the tools only for tokens they own, as the tools themselves allow). |
+
+### 22. Token Action HUD Position  ·  *any system · world (GM), position per user*
+
+Keeps **Token Action HUD** where you put it on every screen size.
+
+**How it works:** Token Action HUD stores its position counted from the top-left corner of the
+window. Placed at the top that works everywhere — placed at the bottom (e.g. above the macro
+bar) it lands below the visible area on a smaller window or another monitor, and Token Action
+HUD then even jumps back to its default spot. With this option:
+
+- When you **finish dragging** the HUD, the module remembers the nearest edges (e.g. *bottom
+  left*) and the distance to them. This is stored per user, so it follows you to other
+  computers.
+- After every HUD refresh and whenever the window size changes, the HUD is shown at that
+  distance from its edges. A bottom-placed HUD stays above the macro bar at any resolution;
+  one at the right edge stays at the right.
+- If the window is too small, the HUD is pushed into the visible area — **only for the
+  moment**: make the window larger again and it returns to its place at the edge. Nothing about
+  the pushed position is saved; only your own drags change the remembered place.
+- A position you saved before switching this on is taken over once (if it is inside the current
+  window). Docked HUD styles are left alone. Switched off, Token Action HUD positions itself as
+  before.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Anchor Token Action HUD to the Nearest Screen Edge** | off | Remember the HUD's place relative to the nearest screen edges and keep it inside the window. |
+
+### 23. Combat Snapshots  ·  *any system · world (GM)*
 
 Pause a fight between sessions, use the same world for something else (a one-shot), and afterwards
 check — and if needed restore — the fight exactly as you left it.

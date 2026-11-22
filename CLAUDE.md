@@ -84,12 +84,14 @@ scripts/
   features/
     index.js                    FEATURES registry (settings-display order) — add new features here
     ability-score-prominence.js dnd5e display tweak (per-user)
-    spell-effect-autoapply.js   dnd5e auto-apply of self-cast spell effects (world/GM)
+    spell-effect-autoapply.js   dnd5e auto-apply of self-used spell/feature/item effects (world/GM; pure list logic in lib/autoapply-list.js)
     find-my-token.js            pan/zoom/select/ping your own token (per-user + keybinding)
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
+    zero-hit-points.js          dnd5e: Unconscious at 0 HP + GM card Dead / Knocked out / Reset, massive damage (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
     live-token-drag.js          everyone sees token drags live (world/GM; module socket)
+    token-stack-fan.js          stacked tokens fan out locally on mouse rest (world setting; display only)
     file-picker-preview.js      File Browser hover preview, thumbnail cache, tile names (user + world)
     token-art-picker.js         Too Many Tokens art picker window + wildcard on placement (world + user)
     savage-attacker.js          dnd5e: Savage Attacker — pooled weapon dice once per turn + card button (world/GM)
@@ -98,8 +100,11 @@ scripts/
     token-status-icons.js       token icons: overlay by priority list, dynamic icon size, ignored effects (world; display only)
     token-formation.js          arrange selected tokens: block / hex / ring / crowd with canvas preview (world + user HUD entry)
     template-targeting.js       target the creatures in a placed template by D&D area rules; dnd5e 6 card targets (world)
+    emanation-token-size.js     emanations take the size of the token they come from; dnd5e 6 self-range → caster (world)
     rsr-attack-targets.js       dnd5e 6: dnd5e's targets row inside RSReforged's attack section (world)
     tah-layer.js                keep Token Action HUD on a fixed z-index above the docked UI (world)
+    tah-token-tools.js          token tools (art picker, formation…) as Token Action HUD actions (world: off/gm/all)
+    tah-position.js             Token Action HUD remembers the nearest screen edges, clamped into view (world; anchor per user)
     combat-snapshot.js          save a combat + its tokens/actors, compare, restore selected differences (world/GM)
   lib/
     settings-categories.js      renderSettingsConfig -> per-feature category headers
@@ -107,8 +112,9 @@ scripts/
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
     attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
     rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
-    token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette)
-    formations.js               pure formation geometry (block, hex, ring, crowd; spacing, order, walls via callback)
+    token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette); registeredTools() + tool available()/open() for Token Action HUD
+    formations.js               pure formation geometry (block, hex, ring, crowd; spacing, rank/order with tie-group swapping, walls via callback)
+    autoapply-list.js           pure list logic of Spell Effect Auto-Apply: parse/serialise, classify items (ok / choice / never fires), candidates, CURATED_DEFAULTS
     area-coverage.js            pure AoE coverage: grid space / creature-base sections vs. an inside(x, y) callback
     snapshot-diff.js            pure diff of toObject() data: flatten, field/collection diff, update data with -= deletions
 styles/
@@ -203,6 +209,10 @@ Features that act on selected tokens and want a Token HUD button register a tool
 `scripts/lib/token-tools.js` instead of adding their own button: the HUD then shows only the
 tools whose `visible()` is true — one as its own button, several behind one "Token Tools"
 button with a palette (the user's wish: no extra submenu when only one tool applies).
+A tool may also define `available(tokens)` (usable for these controlled tokens right now —
+independent of any per-user Token HUD button setting) and `open(tokens)`; then *Token Tools in
+Token Action HUD* (`tah-token-tools.js`) offers it as a Token Action HUD action.
+`registeredTools()` returns every registered tool in `order`.
 
 ## Tooling
 
@@ -524,6 +534,41 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
   `flags.core.overlay: true` and `flags.dnd5e.autoDowned`; removed again above 0 HP.
 - **Combat5e** overrides `_onStartTurn`/`_onEndTurn`/`_onStartRound` but only adds
   `_recoverUses` after `super` — no movement-history changes.
+- **Auto-apply for any item type (feature *Spell Effect Auto-Apply*, 2026-11-22, verified against the
+  bundled `dnd5e.mjs` of 6.0.6 and 5.3.3 — NOT tested on the table yet).** Up to 1.11 the feature only
+  fired for `item.type === "spell"`, so `feat` items on the user's list (Rage, Draconic Flight) were dead;
+  multi-effect items (Guidance: 18 effects, one per skill) never fired either; Hunter's Mark (range 90 ft,
+  its effect marks the enemy) can't fire by design. Facts behind the rework:
+  - `activity.type` is a read-only schema field (`BaseActivityData`, initial `metadata.type`) in both
+    versions: attack, save, damage, heal, utility, check, enchant, summon, cast, forward, transform.
+    Effects of attack/save/damage activities are riders for the creature hit — Color Spray, the Smites,
+    Ensnaring Strike, Spirit Guardians have range **self** but are save activities; Shocking Grasp /
+    Chill Touch are touch attacks. Enchant effects go onto items. We never auto-apply from those four.
+  - Activity `range` is the effective value: `prepareFinalData` → `_setOverride("range")` copies the
+    item's range unless `range.override` (6.0.6 ~l. 20580).
+  - Activity effects (`AppliedEffectField`): `{_id, uuid?, level {min, max}}`; 6.0 adds `uuid` (effect
+    outside the item) and `getEffect()` (the old `effect` getter is deprecated until 6.2).
+    `activity.applicableEffects` filters by `relevantLevel`.
+  - An effect referenced by an activity is prepared with `transfer = disabled = false`
+    (`ActiveEffect5e`-system `prepareBaseData`, `isOnActivity`) even if stored `transfer: true,
+    disabled: true` (Rage) — `message.system.getEffects()` resolves `system.effects` uuids (relative to
+    the item) to documents and returns them; `_prepareEffectData` copies `toObject()` with
+    `disabled: false, transfer: false` and `_stats.duplicateSource = effect.uuid`, so applying an
+    item's own effect to its own actor is fine.
+  - Usage messages: `message.type === "usage"` in both versions (5.3 creates them with `type: "usage"`);
+    `ChatMessage5e#getAssociatedActivity()` / `getAssociatedItem()` exist in both (6.0 with `{scaled}`).
+  - **`dnd5e.getItemContextOptions(item, menuItems)`** is fired by dnd5e's own actor-sheet inventory
+    (`_onOpenContextMenu`, not for activity rows) in both versions; mutate `menuItems`. Entry shape:
+    6.0 `{label, icon: "fa-solid …", visible, onClick, group}`, 5.3 `{name, icon: "<i …></i>",
+    condition, callback}` — we mirror the shape the menu already uses. Tidy sheets don't fire it
+    (not checked).
+  - **DialogV2 (14.370 `client/applications/api/dialog.mjs`):** `wait({rejectClose = false, …})`
+    resolves to the button callback's return value (else its `action`), `null` when dismissed;
+    button `label` is localised (`_loc`); `content` may be a `<div>` WITHOUT attributes (its innerHTML
+    is used, not cleaned) or a string (cleaned with `cleanHTML`).
+  Untested at the table: the settings list widget (no DOM tests — only its pure parts), the choice
+  dialog, the quick-add button's placement on real cards, the context-menu entry, and whether the
+  curated defaults behave as the research says in the world's actual items.
 
 ### Pause (feature *Pause Control*, v1.7.0)
 
@@ -544,6 +589,61 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 - A previous session noted a non-GM unpause workaround
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
+
+### Dropping to 0 HP (feature *Dropping to 0 Hit Points*, verified 2026-11-22 against dnd5e 6.0.6 / 5.3.3 `dnd5e.mjs` and the core 14.370 client source — NOT tested on the table yet)
+
+- **Previous HP in every HP update:** dnd5e's `preUpdateHP` (6.0.6 ~10212, 5.3.3 ~26275) does
+  `setProperty(options, "dnd5e.hp", {...this.attributes.hp})` (the derived object: `value, temp, max,
+  effectiveMax …`) and, when HP go from ≤ 0 to > 0, sets `death.success/failure = 0` in the changes. So
+  `updateActor`'s `options.dnd5e.hp.value` is the HP before the update on every client.
+- **Custom update options reach every client:** core 14.370 `client/data/client-backend.mjs`
+  `#preUpdateDocumentArray` runs `doc._preUpdate` then `Hooks.call("preUpdate<Type>", doc, changes,
+  options, userId)` with a shallow copy of the options and then `Object.assign(operation, options)` ("Hooks
+  may have changed options") — keys a `preUpdateActor` listener adds go out with the request. That they
+  come back to other clients' `updateActor` is inferred from dnd5e relying on `options.dnd5e.hp` there
+  (server code not read).
+- **Unlinked tokens:** a synthetic actor's update is sent as an ActorDelta update
+  (`#adjustActorDeltaRequest`), but `preUpdateActor` fires with the synthetic actor (pre-update runs
+  before the translation) and `ActorDelta#_onUpdate` (`client/documents/actor-delta.mjs`) calls
+  `Hooks.callAll("updateActor", this.syntheticActor, changed, {...options, documentName: "Actor"},
+  userId)` on every client.
+- **`Actor5e#applyDamage`** (6.0.6 ~43261, same hook in 5.3.3 ~36739): `amount` = total after
+  resistances/multiplier; temp HP absorb first (`deltaTemp = min(temp, amount)`), the HP loss is
+  CLAMPED to the current HP (overflow lost), then `Hooks.call("dnd5e.preApplyDamage", actor, amount,
+  updates, options)` (cancelable; `updates["system.attributes.hp.value"]` = the new HP), the
+  `modifyTokenAttribute` hook (may cancel too), `actor.update(updates, …)` and `dnd5e.applyDamage`. All on
+  the applying client. The damage tray passes `origin: chatMessage` (and `originatingMessage` from its
+  target options), another caller only `originatingMessage`. The token HP bar
+  (`modifyTokenAttribute`) also goes through `applyDamage`; a sheet edit does not. → massive damage:
+  remaining = `amount − previous temp − previous value`, massive when ≥ `effectiveMax ?? max`.
+- **dnd5e 6 `autoApplyDowned`** (world, `config: false`, in *Configure Combat*, labels "Auto-Apply
+  Downed": Never / For NPCs (dead only) / For NPCs (dead and unconscious) / Always; default `none`;
+  not in 5.3.3). `Actor5e#updateDowned` runs from `onUpdateHP` only on the updating client
+  (`userId === game.userId`), async after the update: HP > 0 → deletes all effects flagged
+  `flags.dnd5e.autoDowned`; HP 0 and `inCombat` and not dead → NPC without `traits.important` → dead,
+  important NPC (not `deadOnly`) / character (`all`) → unconscious (dead with 3 failed death saves);
+  created with `fromStatusEffect` + `keepId` (static id). Our feature skips its own auto effect exactly
+  when that function will apply something, and turns dnd5e's Unconscious into ours (`autoDowned: false`)
+  before setting 1 HP for a knock-out — otherwise dnd5e would delete it right after the HP update, and
+  creating our own with the same static id would collide.
+- **Status effects:** `Actor#toggleStatusEffect(id, {active, overlay})` (14.370) finds the static-`_id`
+  effect; `ActiveEffect.fromStatusEffect` → dnd5e 6 `_fromStatusEffect` makes it `type: "condition"`,
+  `system.type: <id>`; dnd5e's Unconscious adds `incapacitated` and the rider `prone`.
+  `Combat#getCombatantsByActor(actor)` handles synthetic actors (by token); `Actor#inCombat` only looks
+  at `game.combat`. Core's tracker skull = `combatant.update({defeated})` + `toggleStatusEffect(DEFEATED,
+  {overlay: true, active})` — "Dead" mirrors that over all `game.combats`.
+- **Timed effects (14.370):** `duration {value, units ∈ CONST.ACTIVE_EFFECT_DURATION_UNITS (years …
+  seconds, rounds, turns), expiry}`; `expiry` defaults to `"turnStart"` when `value` is a number, so pass
+  `expiry: null` for "time alone" (`isExpiryEvent`: no expiry → true). `Time` calls
+  `ActiveEffect.registry.refresh("updateWorldTime")` on every world-time change; the active GM then marks
+  expired effects `duration.expired: true` (`CONFIG.ActiveEffect.expiryAction = "update"`). dnd5e 6
+  `ActiveEffect5e#_onUpdate` deletes an expired effect at once when its actor has no combatant in
+  `start.combat ?? game.combat`; we delete ours a moment later only if it still exists. Time-based
+  remaining = `start.time + seconds − worldTime` (`start` filled by `_preCreate` for actor effects; set
+  `start.time` yourself when converting an existing effect).
+- **Card render hook:** `ChatMessage5e#renderHTML` calls core's `renderHTML` (fires
+  `renderChatMessageHTML`) and then `dnd5e.renderChatMessage` for EVERY message (6.0.6 ~55582, 5.3.3
+  ~69159) — so a plain whispered message with our flags is decorated there.
 
 ### Damage rolls (feature *Savage Attacker*, verified 2026-10-25 against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6)
 
@@ -788,6 +888,47 @@ Verified 2026-10-25 against the real v14 source (local install, build 14.364:
   every `refreshToken` of the preview unthrottled via socketlib and moves receivers'
   `token.x/y`/`mesh` directly; no end signal; `animate: false` for the drop; leftover
   `console.log` and an undeclared global `pressedKey`.
+### Stacked tokens fan out (feature *Stacked Tokens Fan Out*, written 2026-11-22 — NOT tested on the table yet)
+
+Verified against the local 14.370 client source (`client/canvas/placeables/{token,placeable-object}.mjs`,
+`client/canvas/layers/tokens.mjs`, `client/canvas/interaction/{_module,mouse-handler}.mjs`).
+
+- Display-only offset = the *Live Token Drag* technique: `token.position` (container — its hit area is
+  `token.shape` in local coordinates, so the clickable area moves too) + `token.mesh.position` (= centre).
+  `Token#_refreshPosition` (14.370 l. ~1596) is the ONLY writer of both (`position.set(doc.x, doc.y)`,
+  `mesh.position = this.center`, turn marker relative to the container) and calls
+  `MouseInteractionManager.emulateMoveEvent()` itself when the container is away from the document
+  position — so handing a token back with `renderFlags.set({refreshPosition: true})` re-evaluates hover.
+  Re-apply offsets in `refreshToken` when `flags.refreshPosition`.
+- `Token#center` = `document.getCenterPoint()`, `Token#w/h` = `document.getSize()`, `Token#bounds` = document
+  rect — all document-based, unaffected by display offsets (stack detection uses them). During a movement
+  animation the document's derived x/y follow the animation, so animating tokens are never fanned.
+- `MouseInteractionManager` is exported as `foundry.canvas.interaction.MouseInteractionManager`;
+  `emulateMoveEvent()` is static and throttled.
+- `Token#isInteractable` (14.370): false for previews, during Region placement (unless attaching), when
+  the token layer is inactive, during token placement / movement planning (except the planned token),
+  without a tool with `interaction`, and for secret tokens. `Token#_canHover` = not secret and no
+  `layer._draggedToken` (no ownership check). `PlaceableObject#_onHoverIn` returns early while a mouse
+  button is held, sets `layer.hover` and calls `Hooks.callAll("hoverToken", token, true)` (local only).
+- `TokenLayer#_draggedToken` is set in `Token#_initializeDragLeft` and cleared in `#_finalizeDragLeft`; the drag
+  preview (`previewType === "dragging"`) shares the original's `document.id` — check `isPreview` before
+  treating a `refreshToken` as the real token. `Token#animationContexts` (Map, any animation),
+  `#movementAnimationPromise`.
+- Design decisions: a stack is transitive "centre distance < 0.5 × the smaller token's shorter side"
+  (`STACK_RATIO`); the hovered token gets offset exactly 0; the others sit on a "square ring" (directions
+  normalised to Chebyshev length 1, start up-right, even angles) with radius = distance % of each token's
+  own size, grown ×1.1 until neighbours are ≥ distance % apart; open = 140 ms ease-out via
+  `canvas.app.ticker` (never `Token#animate`); the ticker only runs while a fan is open (pointer check
+  with `canvas.mousePosition`, 250 ms grace, 10 % margin); hover events only arm the delay — an open fan
+  ignores them (a moved hit area can flicker hover).
+- **Untested at the table:** how it feels (delay, ease, grace), whether hover flickers when a member's
+  hit area moves under a resting pointer, interaction with the Token HUD / targeting (T key) and with
+  Live Token Drag on receivers (both features write `token.position`; a stack member that someone else is
+  live-dragging is not detected as such here — live drag re-positions it every frame, so its display wins),
+  and `TokenLayer#_onDropActiveEffect`, which mixes the quadtree
+  (document bounds) with hit areas in container coordinates (a dropped effect on a fanned member's moved
+  part may miss).
+
 ### File Browser / FilePicker (feature *File Browser Preview*, verified 2026-10-25)
 
 Sources: v14 API docs 14.368 (signatures), the *Asset Preview* module 0.1.2 by
@@ -926,6 +1067,30 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
 - `canvas.controls` (ControlsLayer) is a PIXI container in the interface group — a preview
   container added there with `eventMode = "none"` doesn't catch clicks.
   `canvas.dimensions.sceneRect.contains(x, y)`; `CONST.GRID_TYPES.GRIDLESS = 0`.
+- **Rework 2026-11-22 (verified against 14.370 / dnd5e 6.0.6 + 5.3.3; NOT tested on the table yet):**
+  - **Movement limit = the whole canvas, not the scene.** `Scene#getDimensions()` → `rect` = `(0, 0, width,
+    height)` incl. padding, `sceneRect` = the map. `Token#constrainMovementPath` stops a path when
+    `!canvas.dimensions.rect.contains(center)` (movement origin); move collisions (`PointMovementSource`) use the
+    canvas' `outerBounds` edges only — `innerBounds` (scene rect) are active by default only for sight from inside
+    the scene (`ClockwiseSweepPolygon#_determineEdgeTypes`). Hook `destroyToken(token)` fires from `PlaceableObject#destroy`. So tokens may stand in the padding; the formation
+    used to reject places outside `sceneRect` and pulled such tokens onto the map — now it tests `rect`.
+  - **Ranked orders (lib/formations.js):** units may carry `rank` (lower = earlier place); `largeFirst` /
+    `largeLast` derive it from the radius (`rankOf`). After placing, `improveBySwapping(units, result, passes,
+    sameGroup)` swaps only inside a tie group (same rank AND same radius; nearest mode: same radius). A
+    pairwise-swap-optimal assignment has no crossing paths inside a group (uncrossing two crossing paths always
+    shortens them). Ring: slots of a tie group (equal arcs) are swapped the same way. Rolled NPC HP would split
+    identical creatures into different defender ranks (tie-break by max HP, as specified).
+  - **dnd5e attack data (5.3.3 and 6.0.6 identical):** `AttackActivity#prepareFinalData` sets
+    `labels.modifier` (deterministic simplified formula, dnd5e itself `parseInt`s it for the sheet) and
+    `labels.toHit`; `attack.type.value ||= item.system.attackType ?? "melee"`; weapons:
+    `system.range.reach` (prepared: null for ranged weapons, else 10 ft with property `rch`, else 5 ft),
+    `system.equipped`; `item.system.activities` iterates values (Collection). NPC traits have no
+    `weaponProf`, but natural weapons are `weapon` items with attack activities.
+  - **Token alpha (14.370):** `PlaceableObject#_refreshState` → `this.alpha = _getTargetAlpha()` (1, or 0.4/0.8
+    while dragging); `Token#_refreshState` and `#_refreshMesh` → `mesh.alpha = this.alpha * document.alpha`
+    (`refresh` propagates to `refreshState`). `refreshToken` fires synchronously after `_applyRenderFlags`, so
+    dimming there (when `flags.refreshState || flags.refreshMesh`) shows no undimmed frame; restore with
+    `token.renderFlags.set({refreshState: true})`. The dim is display-only on this client (no document write).
 
 ### dnd5e 6 targets on usage vs. attack cards (feature *Attack Targets on RSReforged Cards*, verified 2026-11-06 against dnd5e 6.0.6 and RSReforged 6.0.2)
 
@@ -966,6 +1131,40 @@ FilePicker implementation details are otherwise **v14 impl unverified** (no publ
   `contextmenu`; `clickGroup` calls `bringToFront()`, which does nothing for frameless apps — so
   the HUD stays at 20 until a reload. `renderApplicationV2(app, element)` fires for it (class
   chain). Our fix pins the inline z-index with a MutationObserver on its `style` attribute.
+
+- **Third-party actions (feature *Token Tools in Token Action HUD*, verified 2026-11-22 against TAH Core 2.1.2 source
+  from its source map, `dist/token-action-hud-core.min.mjs.map` → `sourcesContent`):** `managers/system-manager.mjs`
+  fires `Hooks.callAll("tokenActionHudCoreAddActionHandlerExtenders", actionHandler)` when the HUD's handlers are built;
+  `ActionHandler#addActionHandlerExtender(ext)` sets `ext.hudManager/groupHandler/actionHandler` and
+  `#buildExtendedActionsCore` awaits `ext.extendActionHandler()` on EVERY build (after system, generic, compendium
+  and macro actions). `addActions(actionsData, groupData)` puts every action into `availableActions` (first id wins —
+  that map feeds the "+ Add Action" list, so an action is offered there only while some build adds it), then
+  `groupData.type ??= "system"` and `groupHandler.getGroups(groupData)` — no group → nothing more. Existing group actions
+  with the same id are refreshed (`Object.assign`, `isPreset: true`), so repeated builds don't duplicate. Actions
+  placed by the user in other groups are refreshed from `availableActions` by `#updateNonPresetActions` (incl.
+  `onClick`). `createAction` keeps `onClick`; `RollHandler#handleActionClickCore` calls `action.onClick()` (no
+  arguments) and then `forceUpdateTokenActionHud`. `icon1` is rendered raw (`{{{icon1}}}` in `templates/action.hbs`).
+  Core's own "Toggle Combat" / "Make Invisible" (`generic-action-handler.mjs`) go to `{id: "token", type: "system"}`;
+  token-action-hud-dnd5e 2.2.0's default layout nests it as `utility_token` under the tab `utility` (label
+  `tokenActionHud.utility` = "Utility" / de "Nützliches"). Core's update hooks include `controlToken`, `updateToken`,
+  `updateActor`… and `forceUpdateTokenActionHud`. Foundry 14.370 `common/documents/user.mjs`: `User#isGM` =
+  `hasRole(ASSISTANT)` → Assistant GMs count as GMs. **Untested at the table.**
+- **Position (feature *Token Action HUD Position*, same source):** user flag `flags.token-action-hud-core.position =
+  {top, left}` written only at drag end (`#dragEvent` mouseup: `element.offsetTop/offsetLeft`; the drag moves
+  `style.left/top` in rAFs) and by `resetPosition()` (80/150). `TokenActionHud#setPosition()` ignores its argument;
+  undocked → `document.body.appendChild`, `#setPositionFromFlag` (synchronous when the element exists; values `< 5` or
+  `> window.innerHeight/innerWidth + 5` → 80/150; sets `topPos`/`leftPos`) and `#applyDirection` (private; toggles
+  `expand-up`/`expand-down` on `[data-part="subgroupsContainer"]` and `tah-hidden` on `[data-part="characterName"]`
+  from the public getter `direction`: "auto" = up when `topPos > innerHeight / 2`). Core's `renderTokenActionHud` hook
+  runs `postRender()`. Inner `#token-action-hud` carries `transform: scale(…)` (origin top left); subgroup lists are
+  `position: absolute`, so its bounding rect is the bar only (CSS of the shipped styles — a custom style could differ).
+  No resize handling in Core. **Foundry 14.370 `ApplicationV2#render`** (`client/applications/api/application.mjs`
+  ~l. 586–600): `_onFirstRender` → `_onRender` + the `render*` hooks → `_postRender` → THEN
+  `setPosition(options.position)` if `"position" in options` (TAH renders with `position: {}`) — so anything that
+  moves the HUD must run after the hook, we use `requestAnimationFrame`. Our writes touch only `style.left/top`;
+  `tah-layer.js`'s style observer only touches `zIndex` — no loop. The same user's other open clients also get the
+  `updateUser`; only the client whose HUD sits at the new flag position records the anchor. **Untested at the table**
+  (incl. other HUD styles, scale ≠ 1, and the multi-monitor case).
 
 ### Template Regions & D&D area rules (feature *Template Auto-Targeting*, verified 2026-11-06)
 
@@ -1020,6 +1219,8 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   tool) and never attaches. Our targeting just follows the Region's geometry (`testPoint`), so the
   area size is never our bug. (Reported by Markus 2026-11-12: "emanation bei large creatures sollte
   größer sein".)
+- **Since feature *Emanations in Token Size* (2026-11-22) the module can fix that base** (see the
+  facts at the end of this section). The paragraph above still describes core and dnd5e.
 - **Targets are recorded BEFORE the template exists:** `Activity#use` builds the usage message
   with `system.targets: TargetsField.getDescriptors()` (the user's targets at that moment), creates
   it, then `_finalizeUsage` places the template, then `dnd5e.postUseActivity`. Readers of those
@@ -1059,6 +1260,45 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
   Emanation extends from a creature and moves with it. Creature space DMG 2024: Large 2×2 (3
   hexes), Huge 3×3 (7), Gargantuan 4×4+ (12+). Sage Advice could not be checked (sageadvice.eu,
   dndbeyond.com and wizards.com are not reachable from the cloud session).
+
+**Emanations in Token Size** (feature `emanationTokenSize`, written 2026-11-22 — NOT tested on the table yet; verified
+against the 14.370 client source and the dnd5e 6.0.6 bundle):
+
+- `RegionLayer#attachPlacementToToken(position)` (`client/canvas/layers/regions.mjs`, 14.370) runs on every pointermove of
+  a placement with `attachToToken` and reads `canvas.tokens.hover?.document`. For a token emanation it writes the base
+  from the hovered token's `_source` `{x, y, width, height, shape}` and `elevation = {bottom: data.elevation.bottom +
+  source.elevation, top: data.elevation.top + source.elevation + source.depth × canvas.grid.distance}` (each only if the
+  ORIGINAL placement data's bound is finite, else null), plus `levels: [source.level]`, `hidden: token.hidden`,
+  `attachment: {token: id}`; without a hover it restores the original 1×1 base and `attachment: {token: null}`. During a
+  placement `Token#isInteractable` returns `attachToToken`; `_canHover` = `!document.isSecret` (no ownership check);
+  `TokenDocument#isSecret` = SECRET disposition AND no OBSERVER permission (false for the GM).
+- The Region tool's emanation (`shapeData` `{type: "emanation", base: {type: "token", x: 0, y: 0, width: 1, height: 1,
+  shape: hex ? ELLIPSE_1 : RECTANGLE_1}, radius: 0, gridBased}`) never looks for a token. Its creation data
+  (`_createDragPreviewData`) has no elevation → schema default (null = ±Infinity) in template mode.
+- `RegionDocument.createTokenEmanation(token, range, …)` is core's canonical "emanation from a token" (base from
+  `token._source`, `attachment.token`, `levels: [level]`).
+- Core keeps an attached base in sync (`TokenDocument##computeAttachedRegionUpdates`, `client/documents/token.mjs`) only
+  if it EXACTLY equals the token's old x/y/width/height/shape; otherwise the shape is only translated. Hence the feature
+  writes the token's exact `_source` values and attaches single-shape Regions.
+- `preCreate<Document>` hooks receive `(doc, createData, options, userId)` where `options` is the operation minus
+  `data/noHook/pack/parent` (`client/data/client-backend.mjs` `#preCreateDocumentArray`). Undo of a deletion creates with
+  `{isUndo: true, keepId: true}` (`placeables-layer.mjs`); copy & paste creates with NO marker (`isPaste` is only set on
+  cut & paste, which UPDATES) — so a pasted 1×1 emanation on a token is corrected too.
+- dnd5e 6.0.6 `TemplatePlacement.fromActivity`: unattached placements (and all stationary ones) are combined into ONE
+  Region (several shapes if `target.count > 1`), each attached one gets its own Region; the regionData sent to
+  `dnd5e.createMeasuredTemplate` has `levels: [canvas.level.id]`, NO `elevation` and NO `hidden` (the placement's
+  elevation is dropped — dnd5e TODO), `attachment.token` undefined when stationary. `activity.getUsageToken()` returns a
+  TokenDocument (`getSceneTargets(actor)[0]?.document`).
+- Our decisions: hand-drawn emanations on a token get size AND attachment (consistent with core's hover); stationary
+  dnd5e templates size + position only; multi-shape Regions sizes only; dnd5e Regions (`flags.dnd5e.activity`) are
+  skipped in `preCreateRegion` and handled in `dnd5e.createMeasuredTemplate`. Self-range (`activity.range.units ===
+  "self"`) emanations: a token under the click wins (with the size setting on, or if it is the caster), otherwise the
+  caster (`flags.dnd5e.origin` via `fromUuidSync`, else `getUsageToken()`).
+- Interplay with *Template Auto-Targeting*: the corrected base enlarges the area it tests, and the new
+  `attachment.token` is the emanation origin it leaves out. No change there.
+- Unverified: hex grids (the base centre uses `grid.sizeX/sizeY` × width/height — a hex token's real footprint is a
+  polygon); whether core's `_preCreateOperation` shape constraints are recomputed correctly after our `updateSource`
+  (expected — that runs after the hooks); the whole feature on the table.
 
 ### Combat snapshots (feature *Combat Snapshots*, written 2026-11-17 — NOT tested on the table yet)
 
@@ -1138,20 +1378,25 @@ First real test on the table (2026-11-12): works for templates placed by a dnd5e
 | Feature | id | File | System | Scope | Settings / keybindings (default) |
 |---|---|---|---|---|---|
 | Ability Score Prominence | `abilityScoreProminence` | `features/ability-score-prominence.js` | dnd5e | user | `abilitySwapScoreAndMod` (off — default dnd5e sheet + Tidy 5e non-classic sheet), `abilityExpandedRollTargets` (off — default sheet only) |
-| Spell Effect Auto-Apply | `spellEffectAutoApply` | `features/spell-effect-autoapply.js` | dnd5e 5.x/6.x | world | `spellAutoApplyEnabled` (off), `spellAutoApplyWhitelist` (`"Mage Armor"`) |
+| Spell Effect Auto-Apply | `spellEffectAutoApply` | `features/spell-effect-autoapply.js` (+ `lib/autoapply-list.js`) | dnd5e 5.x/6.x | world | `spellAutoApplyEnabled` (off), `spellAutoApplyAskChoice` (off — several effects → dialog), `spellAutoApplyWhitelist` (curated `CURATED_DEFAULTS` of `lib/autoapply-list.js`; one comma-separated String, edited with a chip widget in the settings window); any item type, never from attack/save/damage/enchant activities; GM quick add `.dt-sea-quickadd` on usage cards + `dnd5e.getItemContextOptions` entry; message flag `autoApplied` |
 | Find My Token | `findMyToken` | `features/find-my-token.js` | any | user | `findTokenButton` (off, reload), `findTokenZoom` (1.5; 0 = keep zoom), `findTokenPing` (off); keybinding `findMyToken` (unbound) |
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
+| Dropping to 0 Hit Points | `zeroHitPoints` | `features/zero-hit-points.js` | dnd5e 6.x (5.3 same shapes) | world | `zeroHpEnabled` (off); effect flag `zeroHp` `{mode: "auto" \| "knockedOut"}` on dnd5e's static Unconscious status effect; GM card flag `zeroHp` `{entries: [{actor, token, name, img, massive: {remaining, max} \| null, origin}], origin}`; update options `[MODULE_ID].zeroHp` = `{amount, origin}` (damage, set in `preUpdateActor`) or `{own: true}` (our writes, ignored) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
+| Stacked Tokens Fan Out | `tokenStackFan` | `features/token-stack-fan.js` | any | world (computed locally per client) | `stackFanEnabled` (off), `stackFanDelay` (600 ms, 200–2000), `stackFanDistance` (30 %, 10–100) — display only, no socket, no writes |
 | File Browser Preview | `filePickerPreview` | `features/file-picker-preview.js` | any | user + world | `filePreviewHover` (off, user), `filePreviewSize` (384, user), `filePreviewTileNames` (off, user), `filePreviewThumbCache` (off, world), `filePreviewThumbMinKB` (250, world) — thumbnails in `modules/<id>/storage/thumbs/` (`persistentStorage: true`) |
 | Savage Attacker | `savageAttacker` | `features/savage-attacker.js` | dnd5e | world | `savageAttackerMode` (`off` / `auto` / `button`, default `off`); roll option `[MODULE_ID].savage`; actor flag `savageAttackerTurn` (`<combat>:<round>:<turn>`) |
 | Weapon Mastery | `weaponMastery` | `features/weapon-mastery.js` (+ `lib/attack-roll.js`, `lib/rsr-sections.js`, `lib/socket.js`) | dnd5e 5.3/6.x | world | `weaponMasteryEnabled` (off), `weaponMasteryMacro<Mastery>` × 8 (`""` = no macro); effect flag `weaponMastery` `{mastery, source, message, target?}`; attack-message flag `weaponMastery.done.<row>.<mastery>` (true / "requested" / false = undone) + `weaponMastery.undo.<row>.<mastery>` (revert data; row = `t#` or the flag-safe token UUID of a selected token) — once per row, GM Undo in the tray; save-request flag `weaponMasterySave`; attack roll option `[MODULE_ID].weaponMasteryConsume`; socket `{action: "use", messageId}` player → active GM |
 | Chat Export by Time Range | `chatExport` | `features/chat-export.js` (+ `lib/attack-roll.js`) | any (dnd5e 5.3/6.x details) | world | `chatExportEnabled` (off), `chatExportPlayers` (off); button `.dt-chat-export` in `#chat-controls .control-buttons` (created for players); dialog: range (hours / days / from–to / all) + format (detailed default / foundry); API `api.exportChat({hours} \| {days} \| {from, to} \| {all: true}, {format})` |
 | Token Art Picker (Too Many Tokens) | `tokenArtPicker` | `features/token-art-picker.js` (+ `lib/too-many-tokens.js`, `lib/token-tools.js`) | any (needs TMT Online installed) | world + user | `tokenArtEnabled` (off, world), `tokenArtHudButton` (off, user); keybinding `tokenArtPicker` (unbound); actor flag `tokenArtPool` `{base, files}`; API `api.openTokenArtPicker({tokens, actor})` |
 | Token Status Icons | `tokenStatusIcons` | `features/token-status-icons.js` | any | world | `statusOverlayEnabled` (off), `statusOverlayList` (`"dead, unconscious"`, sortable widget in the settings window), `statusIconsDynamicSize` (off), `statusIconsMaxScale` (2), `statusIconsIgnored` (`""`), `statusIconsIgnoredMode` (`small` / `hide`, default `small`) — display only, `refreshToken` hook |
-| Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})` |
+| Token Formations | `tokenFormation` | `features/token-formation.js` (+ `lib/formations.js`, `lib/token-tools.js`) | any | world + user | `formationEnabled` (off, world), `formationHudButton` (off, user), hidden `formationLastOptions` (client; `order` ∈ nearest / largeFirst / largeLast / defenders / attackers — the last two offered only in dnd5e, fallback size); keybinding `tokenFormation` (unbound); API `api.openFormation({tokens})`; `HUD_TOOL.available(tokens)` / `.open(tokens)` for other entry points (Token Action HUD); in-window SVG preview + canvas ghosts 0.8 / arrows / real tokens dimmed to 0.2 (display only) |
 | Template Auto-Targeting | `templateTargeting` | `features/template-targeting.js` (+ `lib/area-coverage.js`) | any (dnd5e 6 card targets) | world | `templateTargetEnabled` (off), `templateTargetGridRule` (`half` / `any` / `center`, default `half`), `templateTargetGridlessRule` (same, default `half`), `templateTargetHidden` (off), `templateTargetDefeated` (off); Region marker `flags.<MODULE_ID>.template` via `CONFIG.Region.templateModeConfig.flags` (14.370+, only while on) |
+| Emanations in Token Size | `emanationTokenSize` | `features/emanation-token-size.js` | any (caster: dnd5e 6) | world | `emanationTokenSize` (off — 1×1 emanation bases on a token take its size + attachment, `preCreateRegion` / `dnd5e.createMeasuredTemplate`), `emanationSelfOnCaster` (off — dnd5e 6 self-range emanations snap to the caster) |
 | Attack Targets on RSReforged Cards | `rsrAttackTargets` | `features/rsr-attack-targets.js` (+ `lib/rsr-sections.js`) | dnd5e 6.x + RSReforged 6 | world | `rsrAttackTargetsEnabled` (off) |
 | Token Action HUD Layer | `tahLayer` | `features/tah-layer.js` | any (Token Action HUD Core 2.1.2) | world | `tahLayerFix` (off), `tahLayerZIndex` (50) |
+| Token Tools in Token Action HUD | `tahTokenTools` | `features/tah-token-tools.js` (+ `lib/token-tools.js` `registeredTools`, tool `available`/`open`) | any (Token Action HUD Core 2.1.2) | world | `tahTokenTools` (`off` / `gm` / `all`, default `off`); actions `dt-tool-<toolId>` in TAH group `{id: "token", type: "system"}` (Utility → Token); no group of our own |
+| Token Action HUD Position | `tahPosition` | `features/tah-position.js` | any (Token Action HUD Core 2.1.2) | world + user | `tahPositionAnchor` (off, world), hidden `tahPositionAnchorData` (user: `{top, left, h, v, dx, dy, vw, vh}`) — display only, TAH's position flag is never written |
 | Combat Snapshots | `combatSnapshot` | `features/combat-snapshot.js` (+ `lib/snapshot-diff.js`) | any (friendly labels for dnd5e paths) | world | `combatSnapshotEnabled` (off — entries *Save combat snapshot* / *Combat snapshots…* in the Combat Tracker's encounter menu ⋮, GM only, no reload); storage: world compendium `world.dt-combat-snapshots` (JournalEntry, one entry per snapshot, `flags.<id>.meta` + `flags.<id>.snapshot` = JSON string); hidden `combatSnapshotData` (world) = 1.11.0 storage, migrated into the pack and emptied; API `api.saveCombatSnapshot(combat, {name, includePCs = true})`, `api.openCombatSnapshots()` |
