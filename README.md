@@ -224,7 +224,55 @@ the defeated status is removed (e.g. the creature is revived).
 > combat (system setting `autoApplyDowned` in dnd5e's combat settings, off by default); its
 > "Dead" effect already uses the overlay and works together with this feature.
 
-### 6. Token Status Icons  ·  *any system · world (GM)*
+### 6. Dropping to 0 Hit Points  ·  *dnd5e · world (GM)*
+
+The D&D 2024 rules for 0 HP, with the decision left to the GM: a creature at 0 HP is
+Unconscious; a monster usually dies; massive damage kills outright; and an attacker may instead
+knock a creature out (1 HP, Unconscious, wakes after a Short Rest).
+
+**How it works:** when a character or NPC drops from above 0 to 0 HP — by any means: damage
+from a chat card, the token's HP bar, the sheet — the GM's client gives it the **Unconscious**
+condition (dnd5e's own status effect), in and out of combat. Then the GM gets a chat card,
+whispered to GMs only, with every creature that just dropped (all creatures dropped by the
+same damage application — e.g. one Fireball — share one card). Each line shows the creature,
+its current state (read live from the actor, so it stays correct after healing or manual
+changes) and buttons:
+
+- **Dead** — removes the automatic Unconscious, keeps the HP at 0, applies the **Dead** status
+  as a full-token overlay and marks the creature **defeated** in every encounter of the Combat
+  Tracker it is part of (like the tracker's own skull toggle).
+- **Knocked out** — removes Dead (and the defeated mark) if set, sets the HP to **1** (dnd5e
+  resets the death saves) and keeps it **Unconscious for 1 hour** of world time — the Short Rest
+  the rules prescribe. It ends early as soon as the creature regains any HP. By the rules only a
+  melee attack can knock out; the button is always offered — your call.
+- **Reset** (small) — back to undecided: 0 HP, Unconscious, not dead. For a misclick.
+- **All dead** — with two or more undecided creatures on one card.
+
+**Massive damage:** when the damage was applied through dnd5e (chat card damage buttons, the
+token HP bar), the card knows the amount. If the damage left after reaching 0 HP (after
+temporary HP) equals or exceeds the creature's HP maximum, the line says *"Massive damage: …
+dead by the rules"* and highlights **Dead**. HP edited directly on the sheet carry no damage
+amount — then the card says nothing about it.
+
+**Unconscious ends by itself:** the automatic Unconscious is removed as soon as the HP rise
+above 0; a knocked-out creature's when it regains any HP or after the hour. Unconscious effects
+that this feature did not create (a Sleep spell, one set by hand) are never removed by it.
+Players see only the condition on the token; the card is GM-only.
+
+| Setting | Default | Effect |
+|---|---|---|
+| **Unconscious at 0 HP + GM Decision Card** | off | Unconscious at 0 HP, the GM card with Dead / Knocked out / Reset, massive-damage note. |
+
+> **dnd5e's own option:** dnd5e 6 can apply Unconscious/Dead in combat itself (*Configure
+> Combat → Auto-Apply Downed*, default *Never*). It can stay on *Never* — this feature covers
+> in and out of combat. If it is switched on, dnd5e applies its status in combat as before
+> (minions straight to Dead) and this feature only adds the card; *Knocked out* takes over
+> dnd5e's Unconscious so it doesn't vanish at 1 HP.
+>
+> **With *Defeated Tokens* (5.):** the Dead status set by the card already has the overlay; *Send
+> Defeated Tokens to the Back* reacts to it as to any other Dead status.
+
+### 7. Token Status Icons  ·  *any system · world (GM)*
 
 Clearer condition icons on tokens: the conditions that matter most as the big overlay, and
 larger icons when a token only has a few.
@@ -261,7 +309,7 @@ effect or token is changed.
 > itself (every module sees it); *Token Status Icons* only changes how tokens are drawn. Both
 > work together.
 
-### 7. Pause Control  ·  *any system · world (GM)*
+### 8. Pause Control  ·  *any system · world (GM)*
 
 Automatic pausing and unpausing — a replacement for the unmaintained
 *Koboldworks – Pause Control* module (last release 2024, made for Foundry 12). **Disable
@@ -290,7 +338,7 @@ Koboldworks Pause Control** when you switch these on, otherwise both act at the 
 > Foundry v13 (it read `combat.data`, which no longer exists); its *unpause on combat*
 > unpaused again on every turn change. Both behave as described above here.
 
-### 8. Live Token Drag  ·  *any system · world (GM)*
+### 9. Live Token Drag  ·  *any system · world (GM)*
 
 While someone drags a token, everyone else sees the token itself follow the mouse in real
 time — on its own, Foundry only shows them the planned path (the ruler). A replacement for
@@ -336,7 +384,7 @@ in Foundry.
 > launched. If live drags don't show up right after installing or updating the module,
 > return to setup and launch the world again.
 
-### 8a. Stacked Tokens Fan Out  ·  *any system · world (GM)*
+### 10. Stacked Tokens Fan Out  ·  *any system · world (GM)*
 
 Tokens lying (almost) on top of each other are hard to pick. With this on, resting the mouse
 on such a stack spreads it out a little **on your own screen only**, so every token of it can
@@ -371,7 +419,7 @@ tokens' real positions stay where they are.
 | **Delay (ms)** | 600 | How long the mouse has to rest on the stack (200–2000). |
 | **Distance (% of token size)** | 30 | How far the tokens move apart (10–100 % of their width/height). |
 
-### 9. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
+### 11. File Browser Preview  ·  *any system · per-user (cache: world / GM)*
 
 See images in Foundry's File Browser without clicking them — and without downloading big
 maps over and over. Covers what the *Asset Preview* module does (which needs a click), so
@@ -417,7 +465,7 @@ dropped tile from that image, so swapping in a 512 px thumbnail would shrink it.
 | **File Browser: File Names in Tiles View** | off | Show the file name on every tile in the Tiles view. Per user. |
 | **File Browser: Cache Thumbnails of Large Images** | off | Save small thumbnails of large images in this module's storage folder and use them for previews. World setting (GM). |
 | **File Browser: Thumbnail Threshold (KB)** | 250 | Images up to this file size are previewed directly; larger ones get a cached thumbnail. `0` = every image larger than 512 px. World setting (GM). |
-### 10. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
+### 12. Token Art Picker (Too Many Tokens)  ·  *any system · world (GM) + per-user button*
 
 Choose token art from the ~16,000 D&D and ~7,700 Pathfinder images of *Too Many Tokens –
 Online* in a gallery with preview — a replacement for that module's macro *"DND/PF – Get Too
@@ -467,7 +515,7 @@ are loaded from GitHub exactly as before.
 > links and keep working with Too Many Tokens deactivated; actors with an old Too Many Tokens
 > wildcard need converting once (see above).
 
-### 11. Token Formations  ·  *any system · world (GM) + per-user HUD entry*
+### 13. Token Formations  ·  *any system · world (GM) + per-user HUD entry*
 
 Arrange a group of tokens in one go — made for gridless maps.
 
@@ -527,7 +575,7 @@ both — so the HUD doesn't fill up.
 
 ---
 
-### 12. Template Auto-Targeting  ·  *any system (chat cards: dnd5e 6) · world (GM)*
+### 14. Template Auto-Targeting  ·  *any system (chat cards: dnd5e 6) · world (GM)*
 
 Place a template — every creature in it is targeted.
 
@@ -571,7 +619,7 @@ Which creatures count follows the D&D rules for areas of effect:
 
 ---
 
-### 12a. Emanations in Token Size  ·  *any system (caster: dnd5e 6) · world (GM)*
+### 15. Emanations in Token Size  ·  *any system (caster: dnd5e 6) · world (GM)*
 
 Emanations (auras such as *Spirit Guardians*) get the size of the token they come from.
 
@@ -607,7 +655,7 @@ token's edge, and the token the emanation comes from is left out.
 
 ---
 
-### 13. Savage Attacker  ·  *dnd5e · world (GM)*
+### 16. Savage Attacker  ·  *dnd5e · world (GM)*
 
 Automates the 2024 feat **Savage Attacker** (*once per turn when you hit a target with a weapon,
 roll the weapon's damage dice twice and use either roll*). In Foundry the feat is only text, and
@@ -640,7 +688,7 @@ not damage).
 
 ---
 
-### 14. Weapon Mastery  ·  *dnd5e · world (GM)*
+### 17. Weapon Mastery  ·  *dnd5e · world (GM)*
 
 Makes the 2024 **weapon masteries** usable from the attack card. dnd5e (5.3 and 6) lets you pick
 a weapon's mastery when you attack and remembers it, but automates none of them. With this
@@ -719,7 +767,7 @@ card) and only when dnd5e recorded a mastery, i.e. the attacker has that weapon'
 | **Weapon Mastery Macro: Topple** | *(empty)* | … for Topple. |
 | **Weapon Mastery Macro: Vex** | *(empty)* | … for Vex. |
 
-### 15. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
+### 18. Attack Targets on RSReforged Cards  ·  *dnd5e 6 · world (GM)*
 
 See whom an attack was rolled against when you use **RSReforged**.
 
@@ -735,7 +783,7 @@ clickable target pills, sorted hits first. Who sees AC and hit/miss follows dnd5
 |---|---|---|
 | **Show Attack Targets on RSReforged Cards** | off | Adds the targets row to RSReforged's attack section (RSReforged on dnd5e 6). |
 
-### 16. Chat Export by Time Range  ·  *any system · world (GM)*
+### 19. Chat Export by Time Range  ·  *any system · world (GM)*
 
 Export only the chat of a time range — e.g. the last session for your notes — instead of the whole
 chat log, which is all Foundry's own export button (floppy disk, GM only) can do.
@@ -776,7 +824,7 @@ timestamps); a second argument `{ format: "foundry" }` writes Foundry's format.
 | **Chat Export by Time Range** | off | The button next to Foundry's chat export (GMs). World setting (GM). |
 | **Chat Export: Also for Players** | off | Players get the button too and export only the messages they can see. |
 
-### 17. Token Action HUD Layer  ·  *any system · world (GM)*
+### 20. Token Action HUD Layer  ·  *any system · world (GM)*
 
 Keeps **Token Action HUD** visible above the interface.
 
@@ -791,7 +839,7 @@ HUD behaves as the module made it.
 | **Keep Token Action HUD Above the Interface** | off | Pin the HUD to the layer below. |
 | **Token Action HUD: Layer (z-index)** | 50 | 31–99; 50 = above the Carousel (30), below windows (100+). |
 
-### 17a. Token Tools in Token Action HUD  ·  *any system · world (GM)*
+### 21. Token Tools in Token Action HUD  ·  *any system · world (GM)*
 
 Puts this module's token tools — **Token Art Picker** and **Token Formations** — into
 **Token Action HUD** as actions, so you don't have to right-click the token for them.
@@ -819,7 +867,7 @@ control the right-click Token HUD. Without Token Action HUD installed, this opti
 |---|---|---|
 | **Token Tools in Token Action HUD** | Off | *Off* · *GMs and Assistant GMs* · *Everyone* (players get the tools only for tokens they own, as the tools themselves allow). |
 
-### 17b. Token Action HUD Position  ·  *any system · world (GM), position per user*
+### 22. Token Action HUD Position  ·  *any system · world (GM), position per user*
 
 Keeps **Token Action HUD** where you put it on every screen size.
 
@@ -845,7 +893,7 @@ HUD then even jumps back to its default spot. With this option:
 |---|---|---|
 | **Anchor Token Action HUD to the Nearest Screen Edge** | off | Remember the HUD's place relative to the nearest screen edges and keep it inside the window. |
 
-### 18. Combat Snapshots  ·  *any system · world (GM)*
+### 23. Combat Snapshots  ·  *any system · world (GM)*
 
 Pause a fight between sessions, use the same world for something else (a one-shot), and afterwards
 check — and if needed restore — the fight exactly as you left it.

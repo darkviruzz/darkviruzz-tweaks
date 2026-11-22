@@ -416,6 +416,368 @@ await test("defeated: effects that aren't 'dead' or live on items are ignored", 
   assert.equal(e.lastUpdate, undefined); assert.equal(f.lastUpdate, undefined);
 });
 
+/* ---------- Dropping to 0 Hit Points ---------- */
+{
+  const zhpModule = await import(pathToFileURL(join(ROOT, "scripts/features/zero-hit-points.js")).href);
+  const zhp = zhpModule.internals;
+  zhpModule.default.init();
+  const HP = "system.attributes.hp.value";
+  const saved = { AE: globalThis.ActiveEffect, isGM: game.user.isGM, users: userList.slice() };
+
+  // Timers run on demand.
+  const timers = [];
+  zhp.timing.schedule = fn => { timers.push(fn); return timers.length; };
+  const runTimers = async () => { while (timers.length) await timers.shift()(); };
+
+  const merge = (target, src) => {
+    for (const [k, v] of Object.entries(src)) {
+      if (v && (typeof v === "object") && !Array.isArray(v)) merge(target[k] ??= {}, v);
+      else target[k] = v;
+    }
+    return target;
+  };
+  const effect = (actor, id, statuses, flags = {}, duration = {}) => {
+    const e = { id, parent: actor, statuses: new Set(statuses), flags, duration, updates: [],
+      update: async d => { e.updates.push(d); merge(e, d); } };
+    return e;
+  };
+  const created = [];
+  globalThis.ActiveEffect = { implementation: {
+    fromStatusEffect: async id => ({
+      data: { _id: `static${id}`, statuses: [id], flags: {} },
+      updateSource(u) { merge(this.data, u); },
+      toObject() { return structuredClone(this.data); }
+    }),
+    create: async (data, { parent, keepId }) => {
+      created.push({ data, parent, keepId });
+      const e = effect(parent, data._id, data.statuses, data.flags, data.duration);
+      parent._effects.push(e);
+      return e;
+    }
+  } };
+  CONFIG.statusEffects = { unconscious: { _id: "staticunconscious" }, dead: { _id: "staticdead" } };
+
+  const actors = {};
+  const actor = (id, { type = "npc", hp = 0, temp = 0, max = 10, inCombat = false, important = false, statuses = [] } = {}) => {
+    const a = { uuid: `Actor.${id}`, id, name: id, img: `${id}.webp`, type, inCombat, isToken: false,
+      system: { attributes: { hp: { value: hp, temp, max, effectiveMax: max } }, traits: { important } },
+      _effects: [], _extra: new Set(statuses), updates: [], toggles: [],
+      get statuses() { return new Set([...a._extra, ...a._effects.flatMap(e => [...e.statuses])]); },
+      effects: {
+        find: f => a._effects.find(f), filter: f => a._effects.filter(f), get: id2 => a._effects.find(e => e.id === id2)
+      },
+      getActiveTokens: () => [{ uuid: `Scene.s.Token.${id}`, name: `${id} token`, texture: { src: `${id}-tok.webp` } }],
+      update: async (data, options) => { a.updates.push({ data, options }); if (HP in data) a.system.attributes.hp.value = data[HP]; },
+      toggleStatusEffect: async (sid, opts) => {
+        a.toggles.push({ sid, opts });
+        a._effects.push(effect(a, `static${sid}`, [sid], opts.overlay ? { core: { overlay: true } } : {}));
+      },
+      deleteEmbeddedDocuments: async (type, ids) => { a._effects = a._effects.filter(e => !ids.includes(e.id)); }
+    };
+    actors[a.uuid] = a;
+    return a;
+  };
+  globalThis.fromUuidSync = uuid => actors[uuid] ?? null;
+  const messages = [];
+  globalThis.ChatMessage = { implementation: { create: async data => { const m = { id: `zm${messages.length}`, ...data }; messages.push(m); return m; } } };
+  const combatants = [];
+  game.combats = [{ getCombatantsByActor: a => combatants.filter(c => c.actor === a) }];
+  const combatant = a => { const c = { actor: a, defeated: false, update: async d => Object.assign(c, d) }; combatants.push(c); return c; };
+  game.time = { worldTime: 1000 };
+  userList.push({ id: "gm", isGM: true }, { id: "p1", isGM: false });
+
+  const drop = (a, prev = {}, options = {}) => {
+    a.system.attributes.hp.value = 0;
+    return fire("updateActor", a, { system: { attributes: { hp: { value: 0 } } } }, { ...options, dnd5e: { hp: { value: 5, temp: 0, max: 10, ...prev } } }, "u1");
+  };
+  const heal = (a, from, to, options = {}) => {
+    a.system.attributes.hp.value = to;
+    return fire("updateActor", a, { system: { attributes: { hp: { value: to } } } }, { ...options, dnd5e: { hp: { value: from, temp: 0, max: 10 } } }, "u1");
+  };
+  const ours = a => a._effects.find(e => e.flags?.[MODULE_ID]?.zeroHp);
+  const reset = async () => { await runTimers(); created.length = 0; messages.length = 0; };
+
+  await test("zero hp: setting off or not the active GM → nothing", async () => {
+    await reset(); settings.zeroHpEnabled = false;
+    const a = actor("off"); await drop(a); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+    settings.zeroHpEnabled = true; activeGMSelf = false;
+    await drop(a); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+    activeGMSelf = true;
+  });
+  await test("zero hp: drop > 0 → 0 creates dnd5e's Unconscious status (static id, our flag) + one GM card", async () => {
+    await reset();
+    const a = actor("gob"); await drop(a);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].keepId, true); assert.equal(created[0].parent, a);
+    assert.deepEqual(created[0].data.statuses, ["unconscious"]);
+    assert.deepEqual(created[0].data.flags[MODULE_ID].zeroHp, { mode: "auto" });
+    assert.equal(created[0].data.flags.dnd5e, undefined, "no dnd5e autoDowned flag");
+    assert.equal(messages.length, 0, "card waits for the grouping delay");
+    await runTimers();
+    assert.equal(messages.length, 1);
+    assert.deepEqual(messages[0].whisper, ["gm"]);
+    assert.deepEqual(messages[0].flags[MODULE_ID].zeroHp, { entries: [{
+      actor: "Actor.gob", token: "Scene.s.Token.gob", name: "gob token", img: "gob-tok.webp", massive: null, origin: null
+    }], origin: null });
+  });
+  await test("zero hp: already at 0, dead, wrong type or no previous HP → nothing", async () => {
+    await reset();
+    const a = actor("zero"); a.system.attributes.hp.value = 0;
+    await fire("updateActor", a, { system: { attributes: { hp: { value: 0 } } } }, { dnd5e: { hp: { value: 0 } } });
+    await drop(actor("deadOne", { statuses: ["dead"] }));
+    await drop(actor("cart", { type: "vehicle" }));
+    await fire("updateActor", actor("noPrev"), { system: { attributes: { hp: { value: 0 } } } }, {});
+    await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 0);
+  });
+  await test("zero hp: already Unconscious (e.g. Sleep) → no second effect, card still comes", async () => {
+    await reset();
+    await drop(actor("sleepy", { statuses: ["unconscious"] })); await runTimers();
+    assert.equal(created.length, 0); assert.equal(messages.length, 1);
+  });
+  await test("zero hp: dnd5e's own Auto-Apply Downed handles it in combat → we skip the effect, not the card", async () => {
+    await reset(); settings.autoApplyDowned = "npcs";
+    await drop(actor("minion", { inCombat: true }));
+    await drop(actor("pc", { type: "character", inCombat: true }));   // "npcs" doesn't cover characters
+    await drop(actor("outside"));                                     // not in combat: dnd5e does nothing
+    await runTimers();
+    assert.deepEqual(created.map(c => c.parent.id), ["pc", "outside"]);
+    assert.equal(messages.length, 1); assert.equal(messages[0].flags[MODULE_ID].zeroHp.entries.length, 3);
+    assert.equal(zhp.dnd5eAppliesDowned(actor("boss", { inCombat: true, important: true })), true);
+    settings.autoApplyDowned = "deadOnly";
+    assert.equal(zhp.dnd5eAppliesDowned(actor("boss2", { inCombat: true, important: true })), false);
+    settings.autoApplyDowned = "none";
+    assert.equal(zhp.dnd5eAppliesDowned(actor("m2", { inCombat: true })), false);
+    delete settings.autoApplyDowned;
+  });
+  await test("zero hp: healing removes OUR auto Unconscious, never someone else's", async () => {
+    await reset();
+    const a = actor("healed"); await drop(a);
+    assert.ok(ours(a));
+    await heal(a, 0, 4);
+    assert.equal(ours(a), undefined);
+    const b = actor("slept"); b._effects.push(effect(b, "sleep", ["unconscious"]));
+    await drop(b); await heal(b, 0, 3);
+    assert.ok(b.effects.get("sleep"));
+  });
+  await test("zero hp: massive damage = remaining after temp HP and HP ≥ max (exact equality counts)", () => {
+    assert.deepEqual(zhp.massiveDamage(25, { value: 5, temp: 5, max: 15 }), { remaining: 15, max: 15 });
+    assert.equal(zhp.massiveDamage(24, { value: 5, temp: 5, max: 15 }), null);
+    assert.deepEqual(zhp.massiveDamage(30, { value: 5, temp: 0, max: 40, effectiveMax: 20 }), { remaining: 25, max: 20 });
+    assert.equal(zhp.massiveDamage(undefined, { value: 5, max: 10 }), null);
+    assert.equal(zhp.massiveDamage(NaN, { value: 5, max: 10 }), null);
+    assert.equal(zhp.massiveDamage(-5, { value: 5, max: 10 }), null);
+  });
+  await test("zero hp: preApplyDamage → preUpdateActor hands amount + origin into the update options once", async () => {
+    await reset();
+    const a = actor("ogre", { hp: 5 });
+    await fire("dnd5e.preApplyDamage", a, 30, { [HP]: 0 }, { origin: { id: "dmg1" } });
+    const options = {};
+    await fire("preUpdateActor", a, { system: { attributes: { hp: { value: 0 } } } }, options);
+    assert.deepEqual(options[MODULE_ID], { zeroHp: { amount: 30, origin: "dmg1" } });
+    const again = {};
+    await fire("preUpdateActor", a, { [HP]: 0 }, again);
+    assert.equal(again[MODULE_ID], undefined, "stash cleared");
+    // A different HP than the damage computed (another update slipped in) → no statement.
+    await fire("dnd5e.preApplyDamage", a, 30, { [HP]: 0 }, { originatingMessage: { id: "dmg2" } });
+    const other = {};
+    await fire("preUpdateActor", a, { [HP]: 7 }, other);
+    assert.equal(other[MODULE_ID], undefined);
+    // Healing (negative amount) stashes nothing; applyDamage clears the stash.
+    await fire("dnd5e.preApplyDamage", a, -5, { [HP]: 10 }, {});
+    await fire("dnd5e.preApplyDamage", a, 8, { [HP]: 0 }, {}); await fire("dnd5e.applyDamage", a, 8, {});
+    assert.equal(zhp.stash.size, 0);
+    // The options reach the GM: massive damage on the card.
+    await drop(a, { value: 5, temp: 0, max: 20 }, options); await runTimers();
+    assert.deepEqual(messages[0].flags[MODULE_ID].zeroHp.entries[0].massive, { remaining: 25, max: 20 });
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.origin, "dmg1");
+  });
+  await test("zero hp: drops within the grouping delay share ONE card (a Fireball, six goblins)", async () => {
+    await reset();
+    for (let i = 0; i < 6; i++) await drop(actor(`fb${i}`), {}, { [MODULE_ID]: { zeroHp: { amount: 8, origin: "fire" } } });
+    await runTimers();
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.entries.length, 6);
+    assert.equal(messages[0].flags[MODULE_ID].zeroHp.origin, "fire");
+    assert.match(messages[0].content, /fb0 token, fb1 token/);
+  });
+
+  game.user.isGM = true;
+  await test("zero hp: Dead → Dead status with overlay, our Unconscious gone, 0 HP, defeated", async () => {
+    await reset();
+    const a = actor("victim"); await drop(a); const c = combatant(a);
+    a.system.attributes.hp.value = 2;   // somebody healed meanwhile
+    assert.equal(await zhp.runAction("dead", { actor: a.uuid }), true);
+    assert.deepEqual(a.toggles, [{ sid: "dead", opts: { active: true, overlay: true } }]);
+    assert.equal(ours(a), undefined);
+    assert.equal(a.system.attributes.hp.value, 0);
+    assert.deepEqual(a.updates.at(-1).options, { [MODULE_ID]: { zeroHp: { own: true } } });
+    assert.equal(c.defeated, true);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "dead");
+    // Already dead: the existing Dead effect stays, no second toggle.
+    await zhp.runAction("dead", { actor: a.uuid });
+    assert.equal(a.toggles.length, 1);
+  });
+  await test("zero hp: Knocked out → no Dead, not defeated, 1 HP (own update), Unconscious 1 hour", async () => {
+    await reset();
+    const a = actor("ko"); await drop(a); const c = combatant(a);
+    await zhp.runAction("dead", { actor: a.uuid });
+    await zhp.runAction("knockOut", { actor: a.uuid });
+    assert.equal(a.statuses.has("dead"), false);
+    assert.equal(c.defeated, false);
+    assert.equal(a.system.attributes.hp.value, 1);
+    assert.deepEqual(a.updates.at(-1).options, { [MODULE_ID]: { zeroHp: { own: true } } });
+    const e = ours(a);
+    assert.equal(e.flags[MODULE_ID].zeroHp.mode, "knockedOut");
+    assert.deepEqual(e.duration, { value: 1, units: "hours", expiry: null });
+    assert.equal(zhp.entryState({ actor: a.uuid }), "knockedOut");
+    // Our own 0 → 1 update does not remove it…
+    await heal(a, 0, 1, a.updates.at(-1).options);
+    assert.ok(ours(a));
+    // …regaining any HP later does.
+    await heal(a, 1, 2);
+    assert.equal(ours(a), undefined);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "recovered");
+  });
+  await test("zero hp: Knocked out takes over dnd5e's auto Unconscious (so dnd5e won't delete it at 1 HP)", async () => {
+    const a = actor("dnd5eKo");
+    a._effects.push(effect(a, "staticunconscious", ["unconscious"], { dnd5e: { autoDowned: true } }));
+    await zhp.runAction("knockOut", { actor: a.uuid });
+    assert.equal(a._effects.length, 1);
+    assert.equal(a._effects[0].flags.dnd5e.autoDowned, false);
+    assert.equal(a._effects[0].flags[MODULE_ID].zeroHp.mode, "knockedOut");
+    assert.equal(a._effects[0].start.time, 1000);
+  });
+  await test("zero hp: a knocked-out creature dropped again is back to the automatic mode", async () => {
+    const a = actor("again"); await drop(a); await zhp.runAction("knockOut", { actor: a.uuid });
+    await drop(a, { value: 1 });
+    assert.equal(ours(a).flags[MODULE_ID].zeroHp.mode, "auto");
+    assert.equal(ours(a).duration.value, null);
+  });
+  await test("zero hp: Reset → back to dying (0 HP, our auto Unconscious, no Dead)", async () => {
+    await reset();
+    const a = actor("misclick"); await drop(a); combatant(a);
+    await zhp.runAction("dead", { actor: a.uuid });
+    await zhp.runAction("reset", { actor: a.uuid });
+    assert.equal(a.statuses.has("dead"), false);
+    assert.equal(ours(a).flags[MODULE_ID].zeroHp.mode, "auto");
+    assert.equal(a.system.attributes.hp.value, 0);
+    assert.equal(zhp.entryState({ actor: a.uuid }), "dying");
+    assert.equal(zhp.entryState({ actor: "Actor.missing" }), "gone");
+  });
+  await test("zero hp: the expired knocked-out effect is removed (unless dnd5e already did)", async () => {
+    await runTimers();
+    const a = actor("rested"); await zhp.runAction("knockOut", { actor: a.uuid });
+    const e = ours(a);
+    await fire("updateActiveEffect", e, { duration: { expired: true } }, {});
+    await runTimers();
+    assert.equal(ours(a), undefined);
+    const b = actor("rested2"); await zhp.runAction("knockOut", { actor: b.uuid });
+    const f = ours(b);
+    await fire("updateActiveEffect", f, { duration: { expired: true } }, {});
+    b._effects = [];   // dnd5e deleted it first
+    await runTimers();  // must not throw
+  });
+  await test("zero hp: players can't run actions", async () => {
+    game.user.isGM = false;
+    const a = actor("safe"); await drop(a);
+    assert.equal(await zhp.runAction("dead", { actor: a.uuid }), false);
+    assert.equal(a.toggles.length, 0);
+    game.user.isGM = true;
+  });
+
+  // Minimal DOM for the card.
+  class ZEl {
+    constructor(tag) { Object.assign(this, { tag, className: "", dataset: {}, children: [], listeners: {}, parent: null, disabled: false, _text: "" }); }
+    get classList() {
+      const list = () => this.className.split(" ").filter(Boolean);
+      return { add: c => { if (!list().includes(c)) this.className = [...list(), c].join(" "); }, contains: c => list().includes(c) };
+    }
+    set textContent(v) { this._text = String(v); }
+    get textContent() { return [this._text, ...this.children.map(c => c.textContent)].filter(Boolean).join(" "); }
+    append(...nodes) { for (const n of nodes) { n.parent = this; this.children.push(n); } }
+    replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
+    replaceWith(n) { this.parent.children[this.parent.children.indexOf(this)] = n; n.parent = this.parent; }
+    addEventListener(type, fn) { this.listeners[type] = fn; }
+    *walk() { for (const c of this.children) { yield c; yield* c.walk(); } }
+    querySelectorAll(sel) { const cls = sel.replace(/^\./, ""); return [...this.walk()].filter(e => e.classList.contains(cls)); }
+    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; }
+    click() { return this.listeners.click?.({ preventDefault() {}, stopPropagation() {} }); }
+  }
+  globalThis.HTMLElement = ZEl;
+  globalThis.document = { createElement: tag => new ZEl(tag) };
+  const card = () => { const root = new ZEl("li"); const content = new ZEl("div"); content.className = "message-content"; content.textContent = "fallback"; root.append(content); return { root, content }; };
+  const render = (message, root) => fire("dnd5e.renderChatMessage", message, root);
+  const btns = (node, kind) => node.querySelectorAll(`dt-zhp__btn--${kind}`);
+
+  await test("zero hp card: GM sees live state + buttons; massive highlights Dead; All dead with ≥ 2 undecided", async () => {
+    await reset();
+    const a = actor("c1"); const b = actor("c2"); const d = actor("c3");
+    await drop(a, {}, { [MODULE_ID]: { zeroHp: { amount: 30 } } }); await drop(b); await drop(d);
+    await zhp.runAction("knockOut", { actor: d.uuid });
+    await runTimers();
+    const message = { id: messages[0].id, flags: messages[0].flags };
+    const { root, content } = card();
+    await render(message, root);
+    const box = content.children[0];
+    assert.ok(box.classList.contains("dt-zhp"));
+    const rows = box.querySelectorAll("dt-zhp__entry");
+    assert.deepEqual(rows.map(r => r.dataset.state), ["dying", "dying", "knockedOut"]);
+    assert.ok(rows[0].querySelector("dt-zhp__massive").textContent.includes("DT.ZeroHp.Massive"));
+    assert.ok(btns(rows[0], "dead")[0].classList.contains("dt-zhp__btn--primary"));
+    assert.equal(btns(rows[1], "dead")[0].classList.contains("dt-zhp__btn--primary"), false);
+    assert.deepEqual(rows[2].querySelectorAll("dt-zhp__btn").map(x => x.dataset.zhp), ["dead", "reset"]);
+    assert.equal(btns(box, "allDead").length, 1);
+    // A button click writes and re-renders from the live state.
+    await btns(rows[1], "knockOut")[0].click();
+    const box2 = content.children[0];
+    assert.notEqual(box2, box);
+    assert.deepEqual(box2.querySelectorAll("dt-zhp__entry").map(r => r.dataset.state), ["dying", "knockedOut", "knockedOut"]);
+    assert.equal(btns(box2, "allDead").length, 0, "only one undecided left");
+  });
+  await test("zero hp card: All dead marks every undecided creature", async () => {
+    await reset();
+    const a = actor("ad1"); const b = actor("ad2");
+    await drop(a); await drop(b); await runTimers();
+    const { root, content } = card();
+    await render({ id: "x", flags: messages[0].flags }, root);
+    await btns(content.children[0], "allDead")[0].click();
+    assert.equal(a.statuses.has("dead"), true); assert.equal(b.statuses.has("dead"), true);
+    assert.deepEqual(content.children[0].querySelectorAll("dt-zhp__entry").map(r => r.dataset.state), ["dead", "dead"]);
+  });
+  await test("zero hp card: a later change of the actor refreshes the open card", async () => {
+    await reset();
+    const a = actor("live"); await drop(a); await runTimers();
+    const { root, content } = card();
+    await render({ id: "y", flags: messages[0].flags }, root);
+    await runTimers();
+    await heal(a, 0, 5);
+    await runTimers();
+    assert.equal(content.children[0].querySelector("dt-zhp__entry").dataset.state, "recovered");
+  });
+  await test("zero hp card: players and other messages are left alone", async () => {
+    game.user.isGM = false;
+    const { root, content } = card();
+    await render({ id: "z", flags: messages[0].flags }, root);
+    assert.equal(content.textContent, "fallback");
+    game.user.isGM = true;
+    const other = card();
+    await render({ id: "o", flags: {} }, other.root);
+    assert.equal(other.content.textContent, "fallback");
+  });
+
+  // Clean up the globals of this section.
+  settings.zeroHpEnabled = false;
+  game.user.isGM = saved.isGM;
+  globalThis.ActiveEffect = saved.AE;
+  userList.length = 0; userList.push(...saved.users);
+  for (const k of ["fromUuidSync", "ChatMessage", "HTMLElement", "document"]) delete globalThis[k];
+  delete CONFIG.statusEffects; delete game.combats; delete game.time;
+  zhp.cards.clear();
+}
+
 /* ---------- Movement History ---------- */
 const combat = () => {
   const c = { round: 4, started: true, cleared: 0,

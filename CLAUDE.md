@@ -88,6 +88,7 @@ scripts/
     find-my-token.js            pan/zoom/select/ping your own token (per-user + keybinding)
     movement-history-reset.js   clear combat movement history each round (world/GM)
     defeated-tokens.js          defeated = full overlay + sent to back (world/GM)
+    zero-hit-points.js          dnd5e: Unconscious at 0 HP + GM card Dead / Knocked out / Reset, massive damage (world/GM)
     pause-control.js            auto pause/unpause: world load, combat start, NPC turns, restore (world/GM)
     live-token-drag.js          everyone sees token drags live (world/GM; module socket)
     token-stack-fan.js          stacked tokens fan out locally on mouse rest (world setting; display only)
@@ -111,8 +112,9 @@ scripts/
     too-many-tokens.js          data adapter for TMT Online's image lists (fetch, parse, match, pools)
     attack-roll.js              hitAgainst(roll, ac): dnd5e hit/miss incl. nat 20/1 (Savage Attacker, Weapon Mastery)
     rsr-sections.js             watchRsrSections(root, selector, decorate): decorate RSReforged 6 attack/damage sections
-    token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette)
-    formations.js               pure formation geometry (block, hex, ring, crowd; spacing, order, walls via callback)
+    token-tools.js              registerTokenTool(): ONE Token HUD entry for all token tools (own button / palette); registeredTools() + tool available()/open() for Token Action HUD
+    formations.js               pure formation geometry (block, hex, ring, crowd; spacing, rank/order with tie-group swapping, walls via callback)
+    autoapply-list.js           pure list logic of Spell Effect Auto-Apply: parse/serialise, classify items (ok / choice / never fires), candidates, CURATED_DEFAULTS
     area-coverage.js            pure AoE coverage: grid space / creature-base sections vs. an inside(x, y) callback
     snapshot-diff.js            pure diff of toObject() data: flatten, field/collection diff, update data with -= deletions
 styles/
@@ -587,6 +589,61 @@ that — it merges as a clean fast-forward. Don't try to resolve the phantom con
 - A previous session noted a non-GM unpause workaround
   (`game.data.paused = false; game.socket.emit('pause', false); …`) — not an official API,
   not re-verified; we don't use it.
+
+### Dropping to 0 HP (feature *Dropping to 0 Hit Points*, verified 2026-11-22 against dnd5e 6.0.6 / 5.3.3 `dnd5e.mjs` and the core 14.370 client source — NOT tested on the table yet)
+
+- **Previous HP in every HP update:** dnd5e's `preUpdateHP` (6.0.6 ~10212, 5.3.3 ~26275) does
+  `setProperty(options, "dnd5e.hp", {...this.attributes.hp})` (the derived object: `value, temp, max,
+  effectiveMax …`) and, when HP go from ≤ 0 to > 0, sets `death.success/failure = 0` in the changes. So
+  `updateActor`'s `options.dnd5e.hp.value` is the HP before the update on every client.
+- **Custom update options reach every client:** core 14.370 `client/data/client-backend.mjs`
+  `#preUpdateDocumentArray` runs `doc._preUpdate` then `Hooks.call("preUpdate<Type>", doc, changes,
+  options, userId)` with a shallow copy of the options and then `Object.assign(operation, options)` ("Hooks
+  may have changed options") — keys a `preUpdateActor` listener adds go out with the request. That they
+  come back to other clients' `updateActor` is inferred from dnd5e relying on `options.dnd5e.hp` there
+  (server code not read).
+- **Unlinked tokens:** a synthetic actor's update is sent as an ActorDelta update
+  (`#adjustActorDeltaRequest`), but `preUpdateActor` fires with the synthetic actor (pre-update runs
+  before the translation) and `ActorDelta#_onUpdate` (`client/documents/actor-delta.mjs`) calls
+  `Hooks.callAll("updateActor", this.syntheticActor, changed, {...options, documentName: "Actor"},
+  userId)` on every client.
+- **`Actor5e#applyDamage`** (6.0.6 ~43261, same hook in 5.3.3 ~36739): `amount` = total after
+  resistances/multiplier; temp HP absorb first (`deltaTemp = min(temp, amount)`), the HP loss is
+  CLAMPED to the current HP (overflow lost), then `Hooks.call("dnd5e.preApplyDamage", actor, amount,
+  updates, options)` (cancelable; `updates["system.attributes.hp.value"]` = the new HP), the
+  `modifyTokenAttribute` hook (may cancel too), `actor.update(updates, …)` and `dnd5e.applyDamage`. All on
+  the applying client. The damage tray passes `origin: chatMessage` (and `originatingMessage` from its
+  target options), another caller only `originatingMessage`. The token HP bar
+  (`modifyTokenAttribute`) also goes through `applyDamage`; a sheet edit does not. → massive damage:
+  remaining = `amount − previous temp − previous value`, massive when ≥ `effectiveMax ?? max`.
+- **dnd5e 6 `autoApplyDowned`** (world, `config: false`, in *Configure Combat*, labels "Auto-Apply
+  Downed": Never / For NPCs (dead only) / For NPCs (dead and unconscious) / Always; default `none`;
+  not in 5.3.3). `Actor5e#updateDowned` runs from `onUpdateHP` only on the updating client
+  (`userId === game.userId`), async after the update: HP > 0 → deletes all effects flagged
+  `flags.dnd5e.autoDowned`; HP 0 and `inCombat` and not dead → NPC without `traits.important` → dead,
+  important NPC (not `deadOnly`) / character (`all`) → unconscious (dead with 3 failed death saves);
+  created with `fromStatusEffect` + `keepId` (static id). Our feature skips its own auto effect exactly
+  when that function will apply something, and turns dnd5e's Unconscious into ours (`autoDowned: false`)
+  before setting 1 HP for a knock-out — otherwise dnd5e would delete it right after the HP update, and
+  creating our own with the same static id would collide.
+- **Status effects:** `Actor#toggleStatusEffect(id, {active, overlay})` (14.370) finds the static-`_id`
+  effect; `ActiveEffect.fromStatusEffect` → dnd5e 6 `_fromStatusEffect` makes it `type: "condition"`,
+  `system.type: <id>`; dnd5e's Unconscious adds `incapacitated` and the rider `prone`.
+  `Combat#getCombatantsByActor(actor)` handles synthetic actors (by token); `Actor#inCombat` only looks
+  at `game.combat`. Core's tracker skull = `combatant.update({defeated})` + `toggleStatusEffect(DEFEATED,
+  {overlay: true, active})` — "Dead" mirrors that over all `game.combats`.
+- **Timed effects (14.370):** `duration {value, units ∈ CONST.ACTIVE_EFFECT_DURATION_UNITS (years …
+  seconds, rounds, turns), expiry}`; `expiry` defaults to `"turnStart"` when `value` is a number, so pass
+  `expiry: null` for "time alone" (`isExpiryEvent`: no expiry → true). `Time` calls
+  `ActiveEffect.registry.refresh("updateWorldTime")` on every world-time change; the active GM then marks
+  expired effects `duration.expired: true` (`CONFIG.ActiveEffect.expiryAction = "update"`). dnd5e 6
+  `ActiveEffect5e#_onUpdate` deletes an expired effect at once when its actor has no combatant in
+  `start.combat ?? game.combat`; we delete ours a moment later only if it still exists. Time-based
+  remaining = `start.time + seconds − worldTime` (`start` filled by `_preCreate` for actor effects; set
+  `start.time` yourself when converting an existing effect).
+- **Card render hook:** `ChatMessage5e#renderHTML` calls core's `renderHTML` (fires
+  `renderChatMessageHTML`) and then `dnd5e.renderChatMessage` for EVERY message (6.0.6 ~55582, 5.3.3
+  ~69159) — so a plain whispered message with our flags is decorated there.
 
 ### Damage rolls (feature *Savage Attacker*, verified 2026-10-25 against the bundled `dnd5e.mjs` of 5.3.3 and 6.0.6)
 
@@ -1325,6 +1382,7 @@ against the 14.370 client source and the dnd5e 6.0.6 bundle):
 | Find My Token | `findMyToken` | `features/find-my-token.js` | any | user | `findTokenButton` (off, reload), `findTokenZoom` (1.5; 0 = keep zoom), `findTokenPing` (off); keybinding `findMyToken` (unbound) |
 | Movement History reset | `movementHistoryReset` | `features/movement-history-reset.js` | any | world | `movementHistoryResetEachRound` (off) |
 | Defeated Tokens | `defeatedTokens` | `features/defeated-tokens.js` | any | world | `defeatedOverlay` (off), `defeatedSendToBack` (off) |
+| Dropping to 0 Hit Points | `zeroHitPoints` | `features/zero-hit-points.js` | dnd5e 6.x (5.3 same shapes) | world | `zeroHpEnabled` (off); effect flag `zeroHp` `{mode: "auto" \| "knockedOut"}` on dnd5e's static Unconscious status effect; GM card flag `zeroHp` `{entries: [{actor, token, name, img, massive: {remaining, max} \| null, origin}], origin}`; update options `[MODULE_ID].zeroHp` = `{amount, origin}` (damage, set in `preUpdateActor`) or `{own: true}` (our writes, ignored) |
 | Pause Control | `pauseControl` | `features/pause-control.js` | any | world | `pauseUnpauseOnLoad`, `pauseUnpauseOnCombatStart`, `pauseDuringNpcTurns`, `pauseRestoreAfterCombat` (all off) |
 | Live Token Drag | `liveTokenDrag` | `features/live-token-drag.js` | any | world | `liveDragEnabled` (off), `liveDragShiftOnly` (off) |
 | Stacked Tokens Fan Out | `tokenStackFan` | `features/token-stack-fan.js` | any | world (computed locally per client) | `stackFanEnabled` (off), `stackFanDelay` (600 ms, 200–2000), `stackFanDistance` (30 %, 10–100) — display only, no socket, no writes |

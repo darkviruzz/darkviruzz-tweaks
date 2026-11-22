@@ -15,6 +15,7 @@ import spellEffectAutoApply from "./spell-effect-autoapply.js";
 import findMyToken from "./find-my-token.js";
 import movementHistoryReset from "./movement-history-reset.js";
 import defeatedTokens from "./defeated-tokens.js";
+import zeroHitPoints from "./zero-hit-points.js";
 import pauseControl from "./pause-control.js";
 import liveTokenDrag from "./live-token-drag.js";
 import tokenStackFan from "./token-stack-fan.js";
@@ -39,6 +40,7 @@ export const FEATURES = [
   findMyToken,
   movementHistoryReset,
   defeatedTokens,
+  zeroHitPoints,
   tokenStatusIcons,
   pauseControl,
   combatSnapshot,

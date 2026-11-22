@@ -4,6 +4,80 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
+## [Unreleased]
+
+### Added
+- **Spell Effect Auto-Apply: a clear list in the settings.** The comma-separated text field is now a
+  list of entries grouped into Spells (by level), Features, Items and "Not found in this world". Each
+  entry shows whether it can fire in this world (hover for the reason, e.g. *Hunter's Mark: never
+  fires — range 90 ft*); × removes it. An add field suggests matching items from your world's actors,
+  and **Suggestions** adds the curated defaults one by one or all at once. The setting is still stored
+  as the same text, so existing lists keep working.
+- **Spell Effect Auto-Apply: quick add.** When the GM sees a usage card of a spell, feature or item
+  that isn't on the list but could auto-apply, the card shows a small "Auto-apply … in future" button.
+  dnd5e's item context menu on actor sheets has "Auto-apply on self-use: add / remove" too.
+- **Spell Effect Auto-Apply: choices.** New setting *Ask When Several Effects* (off by default): items
+  offering several effects (Guidance, Resistance, Enhance Ability, Protection from Energy) ask the
+  user which one to apply.
+- **Spell Effect Auto-Apply: curated defaults** for new worlds: 35 self-buff spells, 4 choice spells,
+  12 features (Rage, Draconic Flight, Innate Sorcery, Monk's Focus …) and 9 items (potions, Winged
+  Boots, Wings of Flying, Cloak of the Bat). Existing worlds keep their list and find these under
+  Suggestions.
+- **Token Tools in Token Action HUD** (off by default): the token tools of this module — Token Art
+  Picker and Token Formations — appear as actions in Token Action HUD (Utility tab → Token group, next
+  to Make Invisible / Add to Combat) for the selected tokens, only where the tool can be used. Choose
+  who gets them: GMs and Assistant GMs, or everyone (players for their own tokens). If your layout has
+  no Token group, unlock the HUD and add them with "+".
+- **Token Action HUD Position** (off by default): Token Action HUD remembers the nearest screen edges
+  instead of the top-left corner. A HUD placed at the bottom (e.g. above the macro bar) stays there at
+  any resolution and on other computers; a window that is too small pushes it into view only for the
+  moment — enlarge the window and it returns to its place.
+- **Stacked Tokens Fan Out** (off by default): when the mouse rests on tokens lying on top of each
+  other, the stack spreads apart a little — only on that person's screen — so every token of it can be
+  clicked, selected or targeted. The token under the mouse never moves, so waiting and then clicking
+  always picks the token you were pointing at; the others move 30 % of their size away (adjustable),
+  evenly spread. The stack folds back when the mouse leaves it, a token is dragged or moved, or the
+  Token HUD opens. Display only: nothing is moved for real and nothing is sent to other players.
+- **Emanations in Token Size** (off by default): an emanation (an aura such as *Spirit Guardians*)
+  drawn with the Region tool or placed from a spell on a token now takes that token's size and shape
+  and follows it — even if the token wasn't highlighted at the click or isn't yours (only tokens you
+  can see count). Fixes too-small auras of Large and bigger creatures. Stationary D&D 5e templates get
+  the size but stay where they are.
+- **Self-Range Emanations on the Caster** (D&D 5e 6, off by default): emanations of activities with
+  range *Self* always go onto the caster's token, in its size, wherever you click — unless you click
+  on another token.
+- **Token Formations: preview picture in the window.** It shows where every token stands now (faint),
+  its new place (with its image or initial), an arrow in between, the front, and in red the places a
+  wall blocks.
+- **Token Formations: "Defenders in front" and "Attackers in front"** (dnd5e). Defenders: highest AC in
+  front. Attackers: melee attackers first, ordered by the attack bonus of their primary attack, then
+  reach weapons, then ranged attackers at the back.
+- **Dropping to 0 Hit Points** (dnd5e, off by default): a character or NPC that drops to 0 HP is
+  automatically Unconscious — in and out of combat — and the GM gets a whispered card to decide:
+  **Dead** (Dead status as a full-token overlay, defeated in the Combat Tracker) or **Knocked out**
+  (1 HP, Unconscious for 1 hour = a Short Rest, ending early when it regains any HP), plus **Reset**
+  for a misclick. Creatures dropped by the same attack (e.g. a Fireball) share one card with an
+  **All dead** button, and the card points out massive damage ("dead by the rules"). Unconscious ends
+  again by itself when the creature is healed.
+
+### Changed
+- **Spell Effect Auto-Apply now works for features and items, not only spells** — Rage, Draconic
+  Flight or a Potion of Flying on the list now actually apply.
+- **Token Formations: the canvas preview is easier to see.** While the window is open the real tokens
+  fade to 20 % (only on your screen), the new places are shown at 80 %, and thin outlined arrows lead
+  from each token to its place.
+- **Token Formations: identical creatures no longer swap places.** With "larger creatures first /
+  last" (and the new orders), creatures of the same rank and size each take the nearest free place in
+  their rank, and they never cross each other's paths.
+
+### Fixed
+- **Spell Effect Auto-Apply never debuffs the user:** effects of attack, save and damage activities
+  (Color Spray, the Smites, Shocking Grasp …) are never auto-applied, even when their range is Self
+  and the name is on the list.
+- **Token Formations: tokens next to the map stay there.** Tokens standing in the padding around the
+  map are no longer pulled onto the map; only places outside the whole canvas are refused, the same
+  limit Foundry uses for token movement.
+
 ## [1.11.3] — 2026-11-17
 
 ### Fixed
