@@ -4,7 +4,7 @@ All notable changes to **Darkviruzz Tweaks & QoL**. The release workflow publish
 section of the released version as the GitHub release notes, so write entries for players
 and GMs, not for developers.
 
-## [Unreleased]
+## [1.12.0] — 2026-11-22
 
 ### Added
 - **Spell Effect Auto-Apply: a clear list in the settings.** The comma-separated text field is now a
